@@ -3,6 +3,7 @@
 import Image from "next/image";
 import type { Match, Serve } from "@/lib/database.types";
 import { useLiveMatch } from "@/lib/useLiveMatch";
+import { formatClockTime } from "@/lib/format";
 import { YOUTUBE_URL } from "@/lib/config";
 
 function Row({ name, sets, game, serving }: { name: string; sets: number[]; game: string; serving: boolean }) {
@@ -87,6 +88,7 @@ export function LiveCard({ initial }: { initial: Match | null }) {
             <Row name={match.team_b_name} sets={match.team_b_sets} game={match.team_b_game} serving={serve === "B"} />
             <div className="font-sans text-[13px] text-snow/50">
               {match.session_label} · {match.venue}
+              {match.starts_at && ` · Mulai ${formatClockTime(match.starts_at)} WIB`}
             </div>
           </div>
           <div className="bg-coral text-snow rounded-full px-[26px] py-3.5 font-sans font-bold text-sm">Tonton Live</div>

@@ -30,6 +30,42 @@ export function matchElapsedSeconds(m: {
   return Math.max(0, Math.floor(elapsed));
 }
 
+/** "2026-09-10T09:00:00.000Z" -> "16:00" (WIB) */
+export function formatClockTime(iso: string): string {
+  return new Intl.DateTimeFormat("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit", hour12: false }).format(
+    new Date(iso),
+  );
+}
+
+/** starts "2026-09-10T09:00:00Z", ends "2026-09-10T13:00:00Z" -> "Kamis, 10 Sep · 16:00–20:00" (WIB) */
+export function formatStartLine(startsIso: string, endsIso?: string | null): string {
+  const parts = new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+  }).formatToParts(new Date(startsIso));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const weekday = get("weekday");
+  const day = get("day");
+  const month = get("month").replace(/\.$/, "");
+  const timePart = endsIso ? `${formatClockTime(startsIso)}–${formatClockTime(endsIso)}` : formatClockTime(startsIso);
+  return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${day} ${month} · ${timePart}`;
+}
+
+/** "2026-09-10" + "16.00–20.00" -> { starts_at, ends_at } as UTC ISO timestamps (input read as WIB wall time). */
+export function sessionTimeRangeToTimestamps(
+  sessionDate: string,
+  timeRange: string,
+): { starts_at: string | null; ends_at: string | null } {
+  const [y, mo, d] = sessionDate.split("-").map(Number);
+  const toIso = (hh: number, mm: number) => new Date(Date.UTC(y, mo - 1, d, hh - 7, mm)).toISOString();
+  const times = [...timeRange.matchAll(/(\d{1,2})[.:](\d{2})/g)];
+  const starts_at = times[0] ? toIso(Number(times[0][1]), Number(times[0][2])) : null;
+  const ends_at = times[1] ? toIso(Number(times[1][1]), Number(times[1][2])) : null;
+  return { starts_at, ends_at };
+}
+
 export function formatTimer(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
+import { sessionTimeRangeToTimestamps } from "@/lib/format";
 import type { Gender, Player, Serve } from "@/lib/database.types";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
@@ -106,14 +107,23 @@ export async function createMatch(fd: FormData) {
   const sessionId = str(fd, "session_id") || null;
   let session_label = "";
   let venue = "";
+  let starts_at: string | null = null;
+  let ends_at: string | null = null;
   if (sessionId) {
-    const { data: s } = await supabase.from("sessions").select("title, venue").eq("id", sessionId).maybeSingle();
+    const { data: s } = await supabase
+      .from("sessions")
+      .select("title, venue, session_date, time_range")
+      .eq("id", sessionId)
+      .maybeSingle();
     session_label = s?.title ?? "";
     venue = s?.venue ?? "";
+    if (s?.session_date && s?.time_range) {
+      ({ starts_at, ends_at } = sessionTimeRangeToTimestamps(s.session_date, s.time_range));
+    }
   }
   const { data, error } = await supabase
     .from("matches")
-    .insert({ session_id: sessionId, session_label, venue, status: "scheduled" })
+    .insert({ session_id: sessionId, session_label, venue, starts_at, ends_at, status: "scheduled" })
     .select("id")
     .single();
   if (error) throw new Error(error.message);

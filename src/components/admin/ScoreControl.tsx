@@ -14,12 +14,21 @@ type Side = "A" | "B";
 const inputCls =
   "bg-snow/10 border-none rounded-lg px-3.5 py-3 font-display font-bold text-[20px] text-snow w-full box-border outline-none focus:shadow-[inset_0_0_0_2px_#FFD43B]";
 
+/** ISO string -> "YYYY-MM-DDTHH:mm" in the browser's local timezone, for <input type="datetime-local">. */
+function toLocalInputValue(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function ScoreControl({ initial, players }: { initial: Match; players: Player[] }) {
   const router = useRouter();
   const remote = useLiveMatch(initial, initial.id);
   const [local, setLocal] = useState<Match>(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
   const supabaseRef = useRef(createClient());
   const debounce = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -123,15 +132,27 @@ export function ScoreControl({ initial, players }: { initial: Match; players: Pl
 
   const timerText = formatTimer(matchElapsedSeconds(m));
 
+  const copyOverlayLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/overlay?match=${m.id}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setError("Gagal menyalin link — salin manual dari address bar /overlay?match=" + m.id);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       {/* header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <div className="font-display font-bold text-[26px]">Score Control</div>
-          <div className="text-sm text-snow/60">
-            Buka <code className="text-volt">/overlay?match={m.id}</code> sebagai browser source di OBS — perubahan di sini langsung tersambung.
-            <span className="ml-2 text-snow/40">{saving ? "menyimpan…" : "tersimpan"}</span>
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            <button type="button" onClick={copyOverlayLink} className="btn py-2 px-3.5 text-xs bg-snow/10">
+              {copied ? "Link disalin ✓" : "Salin link overlay (buat OBS)"}
+            </button>
+            <span className="text-xs text-snow/40">{saving ? "menyimpan…" : "tersimpan"}</span>
           </div>
         </div>
         <button
@@ -238,16 +259,40 @@ export function ScoreControl({ initial, players }: { initial: Match; players: Pl
             <div className="label">Label set</div>
             <input className="field" value={m.set_label} onChange={(e) => update({ set_label: e.target.value }, "setlabel")} />
           </div>
-          <div className="md:col-span-3">
-            <div className="label">URL stream YouTube</div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div className="label">Mulai</div>
             <input
               className="field"
-              type="url"
-              placeholder="https://youtube.com/live/..."
-              value={m.stream_url ?? ""}
-              onChange={(e) => update({ stream_url: e.target.value || null }, "stream")}
+              type="datetime-local"
+              value={toLocalInputValue(m.starts_at)}
+              onChange={(e) =>
+                update({ starts_at: e.target.value ? new Date(e.target.value).toISOString() : null }, "startsAt")
+              }
             />
           </div>
+          <div>
+            <div className="label">Selesai</div>
+            <input
+              className="field"
+              type="datetime-local"
+              value={toLocalInputValue(m.ends_at)}
+              onChange={(e) => update({ ends_at: e.target.value ? new Date(e.target.value).toISOString() : null }, "endsAt")}
+            />
+          </div>
+        </div>
+
+        <div>
+          <div className="label">URL stream YouTube</div>
+          <input
+            className="field"
+            type="url"
+            placeholder="https://youtube.com/live/..."
+            value={m.stream_url ?? ""}
+            onChange={(e) => update({ stream_url: e.target.value || null }, "stream")}
+          />
         </div>
 
         <div className="flex items-center gap-4 pt-2 border-t border-snow/10 flex-wrap">

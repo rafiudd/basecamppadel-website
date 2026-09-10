@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLiveMatch } from "@/lib/queries";
+import { formatStartLine } from "@/lib/format";
+import { CountdownBadge } from "@/components/CountdownBadge";
 import { MountainMark } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +28,14 @@ export default async function OpeningPage({ searchParams }: Props) {
     : null;
 
   let dateLine = "";
-  if (session) {
+  if (match?.starts_at) {
+    dateLine = formatStartLine(match.starts_at, match.ends_at);
+  } else if (session) {
     const [y, m, d] = session.session_date.split("-").map(Number);
     const dt = new Date(Date.UTC(y, m - 1, d));
     dateLine = `${DAYS[dt.getUTCDay()]}, ${d} ${MONTHS[m - 1]} · ${session.time_range}`;
   }
-  const startTime = time ?? session?.time_range?.split(/[–-]/)[0]?.replace(".", ":") ?? "";
+  const fallbackTime = time ?? session?.time_range?.split(/[–-]/)[0]?.replace(".", ":") ?? "";
 
   return (
     <div className="relative w-[1920px] h-[1080px] overflow-hidden bg-ink font-sans text-snow">
@@ -42,12 +46,16 @@ export default async function OpeningPage({ searchParams }: Props) {
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1280px] px-[72px] py-16 rounded-[20px] border border-snow/25 flex flex-col items-center gap-7"
         style={{ background: "rgba(17,15,26,0.88)", backdropFilter: "blur(14px)", boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }}
       >
-        <div className="flex items-center gap-2.5 bg-coral/15 border border-coral/50 rounded-full px-5 py-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-coral animate-livepulse" />
-          <div className="font-sans font-bold text-base tracking-[0.1em] text-coral uppercase">
-            Starting Soon{startTime ? ` · ${startTime}` : ""}
+        {match?.starts_at ? (
+          <CountdownBadge startsAt={match.starts_at} />
+        ) : (
+          <div className="flex items-center gap-2.5 bg-coral/15 border border-coral/50 rounded-full px-5 py-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-coral animate-livepulse" />
+            <div className="font-sans font-bold text-base tracking-[0.1em] text-coral uppercase">
+              Starting Soon{fallbackTime ? ` · ${fallbackTime}` : ""}
+            </div>
           </div>
-        </div>
+        )}
 
         <MountainMark size={64} />
 
@@ -62,6 +70,20 @@ export default async function OpeningPage({ searchParams }: Props) {
             {match?.session_label || session?.title || "BASECAMP BATTLE"}
           </div>
         </div>
+
+        {match && (
+          <div className="flex items-center gap-6 w-full justify-center">
+            <div className="font-display font-bold text-[32px] text-snow uppercase text-right flex-1 min-w-0 truncate">
+              {match.team_a_name}
+            </div>
+            <div className="font-display font-bold text-[18px] text-ink bg-volt rounded-full w-14 h-14 flex items-center justify-center flex-none">
+              VS
+            </div>
+            <div className="font-display font-bold text-[32px] text-snow uppercase text-left flex-1 min-w-0 truncate">
+              {match.team_b_name}
+            </div>
+          </div>
+        )}
 
         <div className="font-display font-bold text-[34px] text-snow uppercase">{match?.venue || session?.venue || ""}</div>
         {dateLine && (

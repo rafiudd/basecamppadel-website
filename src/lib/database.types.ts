@@ -52,6 +52,8 @@ export type Match = {
   serve: Serve;
   is_live: boolean;
   stream_url: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
   timer_running: boolean;
   timer_start: string | null;
   timer_base_seconds: number;

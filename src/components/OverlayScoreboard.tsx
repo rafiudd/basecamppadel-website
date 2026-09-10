@@ -2,7 +2,8 @@
 
 import type { Match } from "@/lib/database.types";
 import { useLiveMatch, useTick } from "@/lib/useLiveMatch";
-import { formatTimer, matchElapsedSeconds } from "@/lib/format";
+import { formatStartLine, formatTimer, matchElapsedSeconds } from "@/lib/format";
+import { CountdownBadge } from "./CountdownBadge";
 import { MountainMark } from "./Logo";
 
 function TeamRow({ name, sets, game, serving }: { name: string; sets: number[]; game: string; serving: boolean }) {
@@ -35,12 +36,71 @@ function TeamRow({ name, sets, game, serving }: { name: string; sets: number[]; 
   );
 }
 
+function StartingSoonCard({ match }: { match: Match | null }) {
+  const dateLine = match?.starts_at ? formatStartLine(match.starts_at, match.ends_at) : null;
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <div
+        className="w-[1280px] px-[72px] py-16 rounded-[20px] border border-snow/25 flex flex-col items-center gap-7"
+        style={{ background: "rgba(17,15,26,0.88)", backdropFilter: "blur(14px)", boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }}
+      >
+        <CountdownBadge startsAt={match?.starts_at ?? null} />
+
+        <MountainMark size={64} />
+
+        <div className="flex items-center gap-6 w-full">
+          <div className="flex-1 h-px bg-snow/30" />
+          <div className="font-display font-bold text-[26px] tracking-[0.18em] text-snow">BASECAMP PADEL</div>
+          <div className="flex-1 h-px bg-snow/30" />
+        </div>
+
+        <div className="w-full bg-coral rounded-xl py-[22px] text-center">
+          <div className="font-display font-bold text-[76px] text-snow tracking-[0.02em] uppercase leading-none">
+            {match?.session_label || "BASECAMP BATTLE"}
+          </div>
+        </div>
+
+        {match && (
+          <div className="flex items-center gap-6 w-full justify-center">
+            <div className="font-display font-bold text-[32px] text-snow uppercase text-right flex-1 min-w-0 truncate">
+              {match.team_a_name}
+            </div>
+            <div className="font-display font-bold text-[18px] text-ink bg-volt rounded-full w-14 h-14 flex items-center justify-center flex-none">
+              VS
+            </div>
+            <div className="font-display font-bold text-[32px] text-snow uppercase text-left flex-1 min-w-0 truncate">
+              {match.team_b_name}
+            </div>
+          </div>
+        )}
+
+        <div className="font-display font-bold text-[34px] text-snow uppercase">{match?.venue ?? ""}</div>
+        {dateLine && (
+          <div className="font-sans font-semibold text-[20px] tracking-[0.04em] text-volt uppercase">{dateLine}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function OverlayScoreboard({ initial, matchId, showBackdrop }: { initial: Match | null; matchId?: string; showBackdrop: boolean }) {
   const match = useLiveMatch(initial, matchId);
-  useTick(!!match?.timer_running);
-
   const live = !!match?.is_live;
+  useTick(!!match?.timer_running);
   const timer = match ? formatTimer(matchElapsedSeconds(match)) : "00:00";
+
+  if (!live) {
+    return (
+      <div
+        className="relative w-[1920px] h-[1080px] overflow-hidden font-sans text-snow"
+        style={{ background: showBackdrop ? "#17151F" : "transparent" }}
+      >
+        {showBackdrop && <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,#2a2460,#17151F)]" />}
+        <StartingSoonCard match={match} />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -53,19 +113,10 @@ export function OverlayScoreboard({ initial, matchId, showBackdrop }: { initial:
         style={{ background: "linear-gradient(to bottom, rgba(23,21,31,0) 0%, rgba(27,22,80,0.75) 55%, rgba(27,22,80,0.95) 100%)" }}
       />
 
-      {/* LIVE / OFF AIR badge */}
+      {/* LIVE badge */}
       <div className="absolute top-10 left-10 flex items-center gap-2.5 bg-ink/55 px-[22px] py-3 rounded-full backdrop-blur-[6px]">
-        {live ? (
-          <>
-            <div className="w-3 h-3 rounded-full bg-coral animate-livepulse" />
-            <span className="font-display font-bold text-[22px] tracking-[0.06em] text-snow">LIVE</span>
-          </>
-        ) : (
-          <>
-            <div className="w-3 h-3 rounded-full bg-muted" />
-            <span className="font-display font-bold text-[22px] tracking-[0.06em] text-muted">OFF AIR</span>
-          </>
-        )}
+        <div className="w-3 h-3 rounded-full bg-coral animate-livepulse" />
+        <span className="font-display font-bold text-[22px] tracking-[0.06em] text-snow">LIVE</span>
       </div>
 
       {/* match clock */}
