@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  --color-coral: #ff5a3c;
+  --color-indigo: #1b1650;
+  --color-volt: #ffd43b;
+  --color-snow: #fbf7f1;
+  --color-ink: #17151f;
+  --color-ink-2: #221f30;
+  --color-ink-3: #1f1c2b;
+  --color-win: #2f9e5c;
+  --color-loss: #e5484d;
+  --color-muted: #8b8a99;
+
+  --font-display: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+  --font-sans: var(--font-inter), "Inter", sans-serif;
+
+  --animate-livepulse: livepulse 1.4s ease-in-out infinite;
+
+  @keyframes livepulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--color-snow);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Admin form controls */
+.field {
+  background: rgba(251, 247, 241, 0.1);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 15px;
+  color: #fbf7f1;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+.field:focus {
+  box-shadow: inset 0 0 0 2px #ffd43b;
+}
+.field option {
+  color: #17151f;
+}
+.label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: rgba(251, 247, 241, 0.55);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: #fbf7f1;
+  background: rgba(251, 247, 241, 0.12);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-coral {
+  background: #ff5a3c;
+}
+.btn-volt {
+  background: #ffd43b;
+  color: #1b1650;
+}
+.btn-danger {
+  background: rgba(229, 72, 77, 0.25);
+}
