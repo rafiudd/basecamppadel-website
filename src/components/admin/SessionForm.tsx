@@ -1,7 +1,9 @@
 import type { Session } from "@/lib/database.types";
 import { upsertSession } from "@/app/admin/actions";
+import { parseTimeRange } from "@/lib/format";
 
 export function SessionForm({ session }: { session?: Session }) {
+  const { start, end } = parseTimeRange(session?.time_range ?? "");
   return (
     <form action={upsertSession} className="bg-indigo rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
       {session && <input type="hidden" name="id" value={session.id} />}
@@ -22,8 +24,12 @@ export function SessionForm({ session }: { session?: Session }) {
         <input className="field" name="session_date" type="date" required defaultValue={session?.session_date} />
       </div>
       <div>
-        <div className="label">Jam</div>
-        <input className="field" name="time_range" defaultValue={session?.time_range} placeholder="16.00–20.00" />
+        <div className="label">Jam mulai</div>
+        <input className="field" name="start_time" type="time" required defaultValue={start} />
+      </div>
+      <div>
+        <div className="label">Jam selesai</div>
+        <input className="field" name="end_time" type="time" defaultValue={end} />
       </div>
       <div>
         <div className="label">Harga</div>

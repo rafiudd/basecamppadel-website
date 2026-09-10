@@ -66,6 +66,13 @@ export function sessionTimeRangeToTimestamps(
   return { starts_at, ends_at };
 }
 
+/** "16.00–20.00" -> { start: "16:00", end: "20:00" }, for prefilling <input type="time"> fields. */
+export function parseTimeRange(timeRange: string): { start: string; end: string } {
+  const times = [...timeRange.matchAll(/(\d{1,2})[.:](\d{2})/g)];
+  const fmt = (t: RegExpMatchArray) => `${t[1].padStart(2, "0")}:${t[2]}`;
+  return { start: times[0] ? fmt(times[0]) : "", end: times[1] ? fmt(times[1]) : "" };
+}
+
 export function formatTimer(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);

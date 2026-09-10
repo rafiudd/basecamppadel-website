@@ -24,12 +24,14 @@ export async function upsertSession(fd: FormData) {
   await requireAdmin();
   const supabase = await createClient();
   const id = str(fd, "id");
+  const startTime = str(fd, "start_time");
+  const endTime = str(fd, "end_time");
   const row = {
     tag: str(fd, "tag") || "Sesi Padel · Mabar",
     title: str(fd, "title"),
     venue: str(fd, "venue"),
     session_date: str(fd, "session_date"),
-    time_range: str(fd, "time_range"),
+    time_range: endTime ? `${startTime}–${endTime}` : startTime,
     price: str(fd, "price"),
     slots: intOrNull(fd, "slots"),
     whatsapp_url: str(fd, "whatsapp_url") || null,
