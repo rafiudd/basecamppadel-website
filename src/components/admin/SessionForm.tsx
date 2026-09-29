@@ -1,8 +1,8 @@
-import type { Session } from "@/lib/database.types";
+import type { Session, Venue } from "@/lib/database.types";
 import { upsertSession } from "@/app/admin/actions";
 import { parseTimeRange } from "@/lib/format";
 
-export function SessionForm({ session }: { session?: Session }) {
+export function SessionForm({ session, venues }: { session?: Session; venues: Venue[] }) {
   const { start, end } = parseTimeRange(session?.time_range ?? "");
   return (
     <form action={upsertSession} className="bg-indigo rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -17,7 +17,12 @@ export function SessionForm({ session }: { session?: Session }) {
       </div>
       <div>
         <div className="label">Venue</div>
-        <input className="field" name="venue" required defaultValue={session?.venue} placeholder="Padel Hubz" />
+        <select className="field" name="venue" required defaultValue={session?.venue ?? ""}>
+          {!session?.venue && <option value="" disabled>— pilih venue —</option>}
+          {venues.map((v) => (
+            <option key={v.id} value={v.name}>{v.name}</option>
+          ))}
+        </select>
       </div>
       <div>
         <div className="label">Tanggal</div>

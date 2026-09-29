@@ -8,13 +8,17 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
   const { match: matchId } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: matches }, { data: sessions }, { data: players }] = await Promise.all([
+  const [{ data: matches }, { data: sessions }, { data: players }, { data: courts }, { data: venues }] = await Promise.all([
     supabase.from("matches").select("*").order("created_at", { ascending: false }).limit(30),
     supabase.from("sessions").select("id, title, venue, session_date").order("session_date", { ascending: false }).limit(30),
     supabase.from("players").select("*").eq("active", true).order("name"),
+    supabase.from("courts").select("*").eq("active", true).order("name"),
+    supabase.from("venues").select("*").eq("active", true).order("name"),
   ]);
 
   const list = matches ?? [];
+  const courtList = courts ?? [];
+  const courtName = (id: string | null) => courtList.find((c) => c.id === id)?.name;
   const selected =
     list.find((m) => m.id === matchId) ??
     list.find((m) => m.is_live) ??
@@ -30,7 +34,14 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <h1 className="font-display font-bold text-[26px]">Live Match</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="font-display font-bold text-[26px]">Live Match</h1>
+          {selected && (
+            <Link href={`/admin/live/quick?match=${selected.id}`} className="text-sm text-snow/60 no-underline hover:text-volt">
+              📱 Mode HP
+            </Link>
+          )}
+        </div>
         <form action={create} className="flex items-center gap-2 flex-wrap">
           <select name="session_id" className="field w-auto text-sm">
             <option value="">Tanpa sesi</option>
@@ -38,6 +49,12 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
               <option key={s.id} value={s.id}>
                 {s.title} · {s.venue} · {s.session_date}
               </option>
+            ))}
+          </select>
+          <select name="court_id" className="field w-auto text-sm">
+            <option value="">Tanpa court</option>
+            {courtList.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
           <button className="btn btn-coral" type="submit">+ Match baru</button>
@@ -58,7 +75,10 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
                 {m.is_live && <span className="w-2 h-2 rounded-full bg-coral animate-livepulse" />}
                 {m.team_a_name} vs {m.team_b_name}
               </div>
-              <div className="text-snow/50">{m.session_label || "—"} · {m.status}</div>
+              <div className="text-snow/50">
+                {courtName(m.court_id) ? `${courtName(m.court_id)} · ` : ""}
+                {m.session_label || "—"} · {m.status}
+              </div>
             </Link>
           ))}
         </div>
@@ -66,7 +86,7 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
 
       {selected ? (
         <>
-          <ScoreControl key={selected.id} initial={selected} players={players ?? []} />
+          <ScoreControl key={selected.id} initial={selected} players={players ?? []} courts={courtList} venues={venues ?? []} />
           <form action={deleteMatch} className="flex justify-end">
             <input type="hidden" name="id" value={selected.id} />
             <button className="btn btn-danger text-xs" type="submit">Hapus match ini</button>

@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { useLiveMatch, useTick } from "@/lib/useLiveMatch";
-import { formatTimer, matchElapsedSeconds } from "@/lib/format";
+import { useMatchControl } from "@/lib/useMatchControl";
 import { POINT_OPTIONS } from "@/lib/config";
 import { finalizeMatch } from "@/app/admin/actions";
-import type { Match, Player, Serve } from "@/lib/database.types";
+import type { Court, Match, Player, Serve, Venue } from "@/lib/database.types";
 
 type Side = "A" | "B";
 
@@ -22,85 +20,36 @@ function toLocalInputValue(iso: string | null): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function ScoreControl({ initial, players }: { initial: Match; players: Player[] }) {
+export function ScoreControl({
+  initial,
+  players,
+  courts,
+  venues,
+}: {
+  initial: Match;
+  players: Player[];
+  courts: Court[];
+  venues: Venue[];
+}) {
   const router = useRouter();
-  const remote = useLiveMatch(initial, initial.id);
-  const [local, setLocal] = useState<Match>(initial);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
-  const supabaseRef = useRef(createClient());
-  const debounce = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-
-  // Realtime → local (other operators / other tabs). "Adjust state during render" pattern.
-  const [prevRemote, setPrevRemote] = useState(remote);
-  if (remote !== prevRemote) {
-    setPrevRemote(remote);
-    if (remote) setLocal(remote);
-  }
-
-  useTick(local.timer_running);
-
-  const persist = useCallback(
-    async (patch: Partial<Match>) => {
-      setSaving(true);
-      setError(null);
-      const { error } = await supabaseRef.current.from("matches").update(patch).eq("id", local.id);
-      if (error) setError(error.message);
-      setSaving(false);
-    },
-    [local.id],
-  );
-
-  /** Apply optimistically, then write to Supabase. */
-  const update = useCallback(
-    (patch: Partial<Match>, debounceKey?: string) => {
-      setLocal((m) => ({ ...m, ...patch }));
-      if (debounceKey) {
-        clearTimeout(debounce.current[debounceKey]);
-        debounce.current[debounceKey] = setTimeout(() => persist(patch), 400);
-      } else {
-        persist(patch);
-      }
-    },
-    [persist],
-  );
-
-  const m = local;
-  const finished = m.status === "finished";
-
-  const setSet = (side: Side, idx: 0 | 1, delta: number) => {
-    const key = side === "A" ? "team_a_sets" : "team_b_sets";
-    const sets = [...(m[key] ?? [0, 0])];
-    sets[idx] = Math.max(0, (sets[idx] ?? 0) + delta);
-    update({ [key]: sets } as Partial<Match>);
-  };
-
-  const setGame = (side: Side, val: string) =>
-    update(side === "A" ? { team_a_game: val } : { team_b_game: val });
-
-  const setServe = (side: Serve) => update({ serve: side });
-
-  const toggleLive = () =>
-    update({ is_live: !m.is_live, status: !m.is_live ? "live" : m.status === "finished" ? "finished" : "scheduled" });
-
-  const toggleTimer = () => {
-    if (m.timer_running) {
-      update({
-        timer_running: false,
-        timer_base_seconds: matchElapsedSeconds(m),
-        timer_start: null,
-      });
-    } else {
-      update({ timer_running: true, timer_start: new Date().toISOString() });
-    }
-  };
-
-  const resetTimer = () => update({ timer_running: false, timer_start: null, timer_base_seconds: 0 });
-
-  const resetScore = () =>
-    update({ team_a_sets: [0, 0], team_b_sets: [0, 0], team_a_game: "0", team_b_game: "0", serve: "A" });
+  const {
+    m,
+    finished,
+    saving,
+    error,
+    setError,
+    update,
+    setSet,
+    setGame,
+    setServe,
+    toggleLive,
+    toggleTimer,
+    resetTimer,
+    resetScore,
+    timerText,
+  } = useMatchControl(initial);
 
   const setTeamPlayers = (side: Side, ids: string[]) => {
     const names = ids.map((id) => players.find((p) => p.id === id)?.name).filter(Boolean).join(" / ");
@@ -129,8 +78,6 @@ export function ScoreControl({ initial, players }: { initial: Match; players: Pl
       }
     });
   };
-
-  const timerText = formatTimer(matchElapsedSeconds(m));
 
   const copyOverlayLink = async () => {
     try {
@@ -246,14 +193,28 @@ export function ScoreControl({ initial, players }: { initial: Match; players: Pl
 
       {/* session / timer */}
       <div className="bg-ink-3 rounded-2xl p-6 flex flex-col gap-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <div className="label">Sesi</div>
             <input className="field" value={m.session_label} onChange={(e) => update({ session_label: e.target.value }, "sess")} />
           </div>
           <div>
             <div className="label">Venue</div>
-            <input className="field" value={m.venue} onChange={(e) => update({ venue: e.target.value }, "venue")} />
+            <select className="field" value={m.venue} onChange={(e) => update({ venue: e.target.value })}>
+              {!m.venue && <option value="">— pilih venue —</option>}
+              {venues.map((v) => (
+                <option key={v.id} value={v.name}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <div className="label">Court</div>
+            <select className="field" value={m.court_id ?? ""} onChange={(e) => update({ court_id: e.target.value || null })}>
+              <option value="">— tanpa court —</option>
+              {courts.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <div className="label">Label set</div>

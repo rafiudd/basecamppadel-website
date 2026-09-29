@@ -55,6 +55,53 @@ export async function deleteSession(fd: FormData) {
   revalidatePublic();
 }
 
+// ---------------------------------------------------------------- venues
+export async function upsertVenue(fd: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const id = str(fd, "id");
+  const row = {
+    name: str(fd, "name"),
+    active: fd.get("active") === "on",
+  };
+  const q = id ? supabase.from("venues").update(row).eq("id", id) : supabase.from("venues").insert(row);
+  const { error } = await q;
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/venues");
+}
+
+export async function deleteVenue(fd: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from("venues").delete().eq("id", str(fd, "id"));
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/venues");
+}
+
+// ---------------------------------------------------------------- courts
+export async function upsertCourt(fd: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const id = str(fd, "id");
+  const row = {
+    name: str(fd, "name"),
+    venue_id: str(fd, "venue_id") || null,
+    active: fd.get("active") === "on",
+  };
+  const q = id ? supabase.from("courts").update(row).eq("id", id) : supabase.from("courts").insert(row);
+  const { error } = await q;
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/courts");
+}
+
+export async function deleteCourt(fd: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from("courts").delete().eq("id", str(fd, "id"));
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/courts");
+}
+
 // ---------------------------------------------------------------- players
 async function uploadPhoto(file: File | null): Promise<string | null> {
   if (!file || file.size === 0) return null;
@@ -107,6 +154,7 @@ export async function createMatch(fd: FormData) {
   await requireAdmin();
   const supabase = await createClient();
   const sessionId = str(fd, "session_id") || null;
+  const courtId = str(fd, "court_id") || null;
   let session_label = "";
   let venue = "";
   let starts_at: string | null = null;
@@ -123,9 +171,16 @@ export async function createMatch(fd: FormData) {
       ({ starts_at, ends_at } = sessionTimeRangeToTimestamps(s.session_date, s.time_range));
     }
   }
+  if (!venue && courtId) {
+    const { data: c } = await supabase.from("courts").select("venue_id").eq("id", courtId).maybeSingle();
+    if (c?.venue_id) {
+      const { data: v } = await supabase.from("venues").select("name").eq("id", c.venue_id).maybeSingle();
+      venue = v?.name ?? "";
+    }
+  }
   const { data, error } = await supabase
     .from("matches")
-    .insert({ session_id: sessionId, session_label, venue, starts_at, ends_at, status: "scheduled" })
+    .insert({ session_id: sessionId, court_id: courtId, session_label, venue, starts_at, ends_at, status: "scheduled" })
     .select("id")
     .single();
   if (error) throw new Error(error.message);

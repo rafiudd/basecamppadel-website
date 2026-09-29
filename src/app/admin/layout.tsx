@@ -32,7 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-ink text-snow font-sans flex flex-col">
-      <header className="flex items-center justify-between gap-4 px-6 h-16 border-b border-snow/10 flex-wrap">
+      <header className="flex items-center justify-between gap-x-4 gap-y-2 px-4 md:px-6 py-3 border-b border-snow/10 flex-wrap">
         <Link href="/admin" className="flex items-center gap-3 no-underline text-snow">
           <MountainMark size={28} />
           <div className="font-display font-bold text-base leading-none">

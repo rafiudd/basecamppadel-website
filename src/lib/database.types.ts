@@ -52,6 +52,7 @@ export type Match = {
   serve: Serve;
   is_live: boolean;
   stream_url: string | null;
+  court_id: string | null;
   starts_at: string | null;
   ends_at: string | null;
   timer_running: boolean;
@@ -72,6 +73,64 @@ export type MatchHistory = {
   result: MatchResult;
   points_delta: number;
   stream_url: string | null;
+  created_at: string;
+};
+
+export type Venue = {
+  id: string;
+  name: string;
+  active: boolean;
+  created_at: string;
+};
+
+export type Court = {
+  id: string;
+  name: string;
+  venue_id: string | null;
+  active: boolean;
+  created_at: string;
+};
+
+export type GenFormat = "americano" | "mexicano" | "fixed_americano" | "fixed_mexicano";
+export type GenEventStatus = "draft" | "active" | "finished";
+
+export type GenEvent = {
+  id: string;
+  title: string;
+  format: GenFormat;
+  points_target: number;
+  court_ids: string[];
+  status: GenEventStatus;
+  sync_to_leaderboard: boolean;
+  created_at: string;
+};
+
+export type GenParticipant = {
+  id: string;
+  event_id: string;
+  player_id: string | null;
+  display_name: string;
+  team_no: number | null;
+  total_points: number;
+  sits_out_count: number;
+  created_at: string;
+};
+
+export type GenRound = {
+  id: string;
+  event_id: string;
+  round_no: number;
+  created_at: string;
+};
+
+export type GenMatch = {
+  id: string;
+  round_id: string;
+  court_id: string | null;
+  team_a_participant_ids: string[];
+  team_b_participant_ids: string[];
+  team_a_points: number | null;
+  team_b_points: number | null;
   created_at: string;
 };
 
@@ -108,6 +167,42 @@ export type Database = {
         Row: { user_id: string; created_at: string };
         Insert: { user_id: string; created_at?: string };
         Update: { user_id?: string };
+        Relationships: [];
+      };
+      venues: {
+        Row: Venue;
+        Insert: Insert<Venue, "name">;
+        Update: Partial<Venue>;
+        Relationships: [];
+      };
+      courts: {
+        Row: Court;
+        Insert: Insert<Court, "name">;
+        Update: Partial<Court>;
+        Relationships: [];
+      };
+      gen_events: {
+        Row: GenEvent;
+        Insert: Insert<GenEvent, "format">;
+        Update: Partial<GenEvent>;
+        Relationships: [];
+      };
+      gen_participants: {
+        Row: GenParticipant;
+        Insert: Insert<GenParticipant, "event_id" | "display_name">;
+        Update: Partial<GenParticipant>;
+        Relationships: [];
+      };
+      gen_rounds: {
+        Row: GenRound;
+        Insert: Insert<GenRound, "event_id" | "round_no">;
+        Update: Partial<GenRound>;
+        Relationships: [];
+      };
+      gen_matches: {
+        Row: GenMatch;
+        Insert: Insert<GenMatch, "round_id">;
+        Update: Partial<GenMatch>;
         Relationships: [];
       };
     };
