@@ -2,7 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ScoreControl } from "@/components/admin/ScoreControl";
+import { NewMatchModal } from "@/components/admin/NewMatchModal";
 import { createMatch, deleteMatch } from "@/app/admin/actions";
+import type { Match } from "@/lib/database.types";
 
 export default async function LiveAdmin({ searchParams }: { searchParams: Promise<{ match?: string }> }) {
   const { match: matchId } = await searchParams;
@@ -18,12 +20,15 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
 
   const list = matches ?? [];
   const courtList = courts ?? [];
-  const courtName = (id: string | null) => courtList.find((c) => c.id === id)?.name;
+  const courtName = (id: string | null) => courtList.find((c) => c.id === id)?.name ?? "—";
   const selected =
     list.find((m) => m.id === matchId) ??
     list.find((m) => m.is_live) ??
     list.find((m) => m.status !== "finished") ??
     null;
+
+  const current = list.filter((m) => m.status !== "finished");
+  const past = list.filter((m) => m.status === "finished");
 
   async function create(fd: FormData) {
     "use server";
@@ -31,8 +36,47 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
     redirect(`/admin/live?match=${id}`);
   }
 
+  function MatchTable({ rows }: { rows: Match[] }) {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="text-left text-xs text-snow/50 uppercase tracking-wide">
+              <th className="pb-2 pr-3 font-semibold">Match</th>
+              <th className="pb-2 pr-3 font-semibold">Court</th>
+              <th className="pb-2 pr-3 font-semibold">Sesi</th>
+              <th className="pb-2 pr-3 font-semibold">Status</th>
+              <th className="pb-2 font-semibold"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((m) => (
+              <tr key={m.id} className={`border-t border-snow/10 ${selected?.id === m.id ? "bg-indigo" : ""}`}>
+                <td className="py-2.5 pr-3 font-display font-bold whitespace-nowrap">
+                  <div className="flex items-center gap-1.5">
+                    {m.is_live && <span className="w-2 h-2 rounded-full bg-coral animate-livepulse flex-none" />}
+                    {m.team_a_name} vs {m.team_b_name}
+                  </div>
+                </td>
+                <td className="py-2.5 pr-3 text-snow/70 whitespace-nowrap">{courtName(m.court_id)}</td>
+                <td className="py-2.5 pr-3 text-snow/70 whitespace-nowrap">{m.session_label || "—"}</td>
+                <td className="py-2.5 pr-3 text-snow/70">{m.status}</td>
+                <td className="py-2.5">
+                  <Link href={`/admin/live?match=${m.id}`} className="btn px-3 py-1.5 text-xs no-underline">
+                    {selected?.id === m.id ? "Dipilih" : "Pilih"}
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows.length === 0 && <p className="text-sm text-snow/50 mt-3">Belum ada match.</p>}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <h1 className="font-display font-bold text-[26px]">Live Match</h1>
@@ -42,47 +86,22 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
             </Link>
           )}
         </div>
-        <form action={create} className="flex items-center gap-2 flex-wrap">
-          <select name="session_id" className="field w-auto text-sm">
-            <option value="">Tanpa sesi</option>
-            {(sessions ?? []).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title} · {s.venue} · {s.session_date}
-              </option>
-            ))}
-          </select>
-          <select name="court_id" className="field w-auto text-sm">
-            <option value="">Tanpa court</option>
-            {courtList.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-          <button className="btn btn-coral" type="submit">+ Match baru</button>
-        </form>
+        <NewMatchModal
+          action={create}
+          sessions={(sessions ?? []).map((s) => ({ id: s.id, label: `${s.title} · ${s.venue} · ${s.session_date}` }))}
+          courts={courtList.map((c) => ({ id: c.id, label: c.name }))}
+        />
       </div>
 
-      {list.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {list.map((m) => (
-            <Link
-              key={m.id}
-              href={`/admin/live?match=${m.id}`}
-              className={`no-underline text-snow flex-none rounded-xl px-3 py-2 text-xs border ${
-                selected?.id === m.id ? "bg-indigo border-volt" : "bg-ink-3 border-transparent"
-              }`}
-            >
-              <div className="font-bold flex items-center gap-1.5">
-                {m.is_live && <span className="w-2 h-2 rounded-full bg-coral animate-livepulse" />}
-                {m.team_a_name} vs {m.team_b_name}
-              </div>
-              <div className="text-snow/50">
-                {courtName(m.court_id) ? `${courtName(m.court_id)} · ` : ""}
-                {m.session_label || "—"} · {m.status}
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+      <div className="flex flex-col gap-3">
+        <div className="font-display font-bold text-lg">Live &amp; Terjadwal</div>
+        <MatchTable rows={current} />
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="font-display font-bold text-lg">Riwayat</div>
+        <MatchTable rows={past} />
+      </div>
 
       {selected ? (
         <>
