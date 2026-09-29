@@ -32,7 +32,7 @@ export function NewMatchModal({
         onClick={(e) => {
           if (e.target === dialogRef.current) setOpen(false);
         }}
-        className="bg-transparent p-0 backdrop:bg-ink/70"
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 m-0 bg-transparent p-0 border-none backdrop:bg-ink/70"
       >
         <form
           action={action}
