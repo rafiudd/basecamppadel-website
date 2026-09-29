@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MountainMark } from "@/components/Logo";
 import { getAdminUser } from "@/lib/auth";
 import { AdminNavLinks } from "@/components/admin/AdminNavLinks";
+import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
 
 export const metadata = { title: "Admin — Basecamp Padel", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -40,7 +41,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <span className="font-sans font-medium text-xs text-snow/50 ml-2">Admin</span>
           </div>
         </Link>
-        <AdminNavLinks />
+        <div className="hidden md:block">
+          <AdminNavLinks />
+        </div>
         <div className="flex items-center gap-3 text-xs text-snow/50">
           <span className="hidden md:inline">{user.email}</span>
           <Link href="/" className="text-snow/70 no-underline hover:text-volt">Lihat situs ↗</Link>
@@ -49,7 +52,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </form>
         </div>
       </header>
-      <main className="flex-1 p-6 md:p-8 max-w-[1100px] w-full mx-auto">{children}</main>
+      <main className="flex-1 p-6 pb-24 md:p-8 max-w-[1100px] w-full mx-auto">{children}</main>
+      <AdminBottomNav />
     </div>
   );
 }
