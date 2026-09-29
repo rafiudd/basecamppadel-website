@@ -1,32 +1,19 @@
-import type { Court, Venue } from "@/lib/database.types";
+import type { Court } from "@/lib/database.types";
 import { upsertCourt } from "@/app/admin/actions";
 
-export function CourtForm({ court, venues }: { court?: Court; venues: Venue[] }) {
+export function CourtForm({ court, venueId }: { court?: Court; venueId: string }) {
   return (
-    <form action={upsertCourt} className="bg-indigo rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form action={upsertCourt} className="bg-indigo rounded-2xl p-6 flex flex-col gap-4 md:flex-row md:items-end">
       {court && <input type="hidden" name="id" value={court.id} />}
-      <div>
+      <input type="hidden" name="venue_id" value={venueId} />
+      <div className="flex-1">
         <div className="label">Nama court</div>
         <input className="field" name="name" required defaultValue={court?.name} placeholder="Court 1" />
       </div>
-      <div>
-        <div className="label">Venue</div>
-        <select className="field" name="venue_id" required defaultValue={court?.venue_id ?? ""}>
-          {!court?.venue_id && <option value="" disabled>— pilih venue —</option>}
-          {venues.map((v) => (
-            <option key={v.id} value={v.id}>{v.name}</option>
-          ))}
-        </select>
-        {venues.length === 0 && (
-          <div className="text-[11px] text-loss mt-1">Belum ada venue — tambah dulu di menu Venue.</div>
-        )}
-      </div>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-2 text-sm pb-2.5">
         <input type="checkbox" name="active" defaultChecked={court?.active ?? true} /> Aktif
       </label>
-      <div className="md:col-span-2 flex justify-end">
-        <button className="btn btn-coral" type="submit">{court ? "Simpan" : "Tambah Court"}</button>
-      </div>
+      <button className="btn btn-coral" type="submit">{court ? "Simpan" : "Tambah Court"}</button>
     </form>
   );
 }

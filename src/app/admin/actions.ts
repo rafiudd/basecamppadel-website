@@ -83,23 +83,28 @@ export async function upsertCourt(fd: FormData) {
   await requireAdmin();
   const supabase = await createClient();
   const id = str(fd, "id");
+  const venueId = str(fd, "venue_id") || null;
   const row = {
     name: str(fd, "name"),
-    venue_id: str(fd, "venue_id") || null,
+    venue_id: venueId,
     active: fd.get("active") === "on",
   };
   const q = id ? supabase.from("courts").update(row).eq("id", id) : supabase.from("courts").insert(row);
   const { error } = await q;
   if (error) throw new Error(error.message);
-  revalidatePath("/admin/courts");
+  if (venueId) revalidatePath(`/admin/venues/${venueId}`);
+  revalidatePath("/admin/live");
 }
 
 export async function deleteCourt(fd: FormData) {
   await requireAdmin();
   const supabase = await createClient();
-  const { error } = await supabase.from("courts").delete().eq("id", str(fd, "id"));
+  const id = str(fd, "id");
+  const { data: court } = await supabase.from("courts").select("venue_id").eq("id", id).maybeSingle();
+  const { error } = await supabase.from("courts").delete().eq("id", id);
   if (error) throw new Error(error.message);
-  revalidatePath("/admin/courts");
+  if (court?.venue_id) revalidatePath(`/admin/venues/${court.venue_id}`);
+  revalidatePath("/admin/live");
 }
 
 // ---------------------------------------------------------------- players

@@ -42,7 +42,11 @@ export default async function VenuesAdmin({ searchParams }: { searchParams: Prom
               {(venues ?? []).map((v) => (
                 <tr key={v.id} className={`border-t border-snow/10 ${v.id === edit ? "bg-indigo" : ""} ${v.active ? "" : "opacity-50"}`}>
                   <td className="py-2.5 pr-3 font-display font-bold whitespace-nowrap">{v.name}</td>
-                  <td className="py-2.5 pr-3 text-snow/70">{courtCount(v.id)}</td>
+                  <td className="py-2.5 pr-3 text-snow/70">
+                    <Link href={`/admin/venues/${v.id}`} className="text-volt no-underline hover:underline">
+                      {courtCount(v.id)} court →
+                    </Link>
+                  </td>
                   <td className="py-2.5 pr-3 text-snow/70">{v.active ? "Aktif" : "Nonaktif"}</td>
                   <td className="py-2.5">
                     <div className="flex items-center gap-2 justify-end">
