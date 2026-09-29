@@ -56,7 +56,7 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
         />
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap">
         <Link
           href="/admin/live?tab=live"
           className={`no-underline text-snow rounded-full px-4 py-2 text-sm font-semibold ${

@@ -85,10 +85,10 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
           <>
             <div className="flex flex-col gap-2">
               {[...teams.entries()].map(([teamNo, members]) => (
-                <div key={teamNo} className="flex items-center gap-3 bg-ink-2 rounded-lg px-3 py-2">
-                  <div className="flex-1 text-sm font-semibold">Tim {teamNo}: {members.map((m) => m.display_name).join(" / ")}</div>
-                  <div className="text-xs text-snow/50">{members[0]?.total_points ?? 0} + {members[1]?.total_points ?? 0} poin</div>
-                  <form action={removeTeam}>
+                <div key={teamNo} className="flex items-center gap-3 flex-wrap bg-ink-2 rounded-lg px-3 py-2">
+                  <div className="flex-1 min-w-[140px] text-sm font-semibold">Tim {teamNo}: {members.map((m) => m.display_name).join(" / ")}</div>
+                  <div className="flex-none text-xs text-snow/50">{members[0]?.total_points ?? 0} + {members[1]?.total_points ?? 0} poin</div>
+                  <form action={removeTeam} className="flex-none">
                     <input type="hidden" name="event_id" value={event.id} />
                     <input type="hidden" name="team_no" value={teamNo} />
                     <button className="btn btn-danger px-2.5 py-1 text-xs" type="submit">Hapus</button>
@@ -99,25 +99,25 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
             </div>
             <form action={addFixedTeam} className="flex items-center gap-2 flex-wrap">
               <input type="hidden" name="event_id" value={event.id} />
-              <select className="field w-auto text-sm" name="player_a" required defaultValue="">
+              <select className="field flex-1 min-w-[140px] text-sm" name="player_a" required defaultValue="">
                 <option value="" disabled>Pemain 1</option>
                 {(players ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              <select className="field w-auto text-sm" name="player_b" required defaultValue="">
+              <select className="field flex-1 min-w-[140px] text-sm" name="player_b" required defaultValue="">
                 <option value="" disabled>Pemain 2</option>
                 {(players ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              <button className="btn btn-coral text-sm" type="submit">+ Tambah Tim</button>
+              <button className="btn btn-coral text-sm flex-none" type="submit">+ Tambah Tim</button>
             </form>
           </>
         ) : (
           <>
             <div className="flex flex-col gap-1.5">
               {soloParticipants.map((p) => (
-                <div key={p.id} className="flex items-center gap-3 bg-ink-2 rounded-lg px-3 py-2">
-                  <div className="flex-1 text-sm font-semibold">{p.display_name}{!p.player_id && <span className="text-snow/40 font-normal"> (guest)</span>}</div>
-                  <div className="text-xs text-snow/50">{p.total_points} poin</div>
-                  <form action={removeParticipant}>
+                <div key={p.id} className="flex items-center gap-3 flex-wrap bg-ink-2 rounded-lg px-3 py-2">
+                  <div className="flex-1 min-w-[140px] text-sm font-semibold">{p.display_name}{!p.player_id && <span className="text-snow/40 font-normal"> (guest)</span>}</div>
+                  <div className="flex-none text-xs text-snow/50">{p.total_points} poin</div>
+                  <form action={removeParticipant} className="flex-none">
                     <input type="hidden" name="event_id" value={event.id} />
                     <input type="hidden" name="id" value={p.id} />
                     <button className="btn btn-danger px-2.5 py-1 text-xs" type="submit">Hapus</button>
