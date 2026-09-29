@@ -61,6 +61,41 @@ export function useLiveMatch(initial: Match | null, matchId?: string) {
   return match;
 }
 
+/**
+ * Poll a `matches` row via plain REST instead of Supabase Realtime — for
+ * public, high-traffic viewers where opening a WebSocket per visitor isn't
+ * worth eating into the project's Realtime concurrent-connection budget.
+ * Admin/OBS viewers stay on `useLiveMatch` (few clients, want instant sync).
+ */
+export function usePolledLiveMatch(initial: Match | null, intervalMs = 8000) {
+  const [match, setMatch] = useState<Match | null>(initial);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+
+    const fetchLive = async () => {
+      const { data, error } = await supabase
+        .from("matches")
+        .select("*")
+        .eq("is_live", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled && !error) setMatch(data ?? null);
+    };
+
+    fetchLive();
+    const id = setInterval(fetchLive, intervalMs);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [intervalMs]);
+
+  return match;
+}
+
 /** Re-renders every second while a timer is running so the clock ticks. */
 export function useTick(active: boolean) {
   const [, setN] = useState(0);

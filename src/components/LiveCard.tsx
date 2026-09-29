@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import type { Match, Serve } from "@/lib/database.types";
-import { useLiveMatch } from "@/lib/useLiveMatch";
+import { usePolledLiveMatch } from "@/lib/useLiveMatch";
 import { formatClockTime } from "@/lib/format";
 import { YOUTUBE_URL } from "@/lib/config";
 
@@ -49,7 +49,7 @@ function thumbnailFor(url: string | null): string | null {
 }
 
 export function LiveCard({ initial }: { initial: Match | null }) {
-  const match = useLiveMatch(initial);
+  const match = usePolledLiveMatch(initial);
   if (!match || !match.is_live) return null;
 
   const serve: Serve = match.serve;
