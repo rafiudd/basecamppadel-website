@@ -31,9 +31,9 @@ export default async function HomePage() {
   return (
     <PublicShell>
       {/* Hero */}
-      <section className="relative min-h-[640px] md:min-h-[960px] flex items-end overflow-hidden bg-ink">
+      <section className="relative min-h-[640px] md:min-h-[820px] flex items-end overflow-hidden bg-ink">
         <Image
-          src="/images/hero-placeholder.svg"
+          src="/images/cover.jpg"
           alt=""
           fill
           priority
@@ -48,7 +48,7 @@ export default async function HomePage() {
               "linear-gradient(to top, rgba(23,21,31,0.92) 10%, rgba(23,21,31,0.35) 60%, rgba(23,21,31,0.15) 100%)",
           }}
         />
-        <div className="relative px-6 pb-14 md:px-12 md:pb-[72px] max-w-[800px] flex flex-col gap-5">
+        <div className="relative px-6 pb-14 md:px-12 md:pb-[172px] max-w-[800px] flex flex-col gap-5">
           <div className="font-sans font-bold text-sm tracking-[0.12em] text-coral uppercase">
             Basecamp Padel · Komunitas
           </div>
@@ -98,7 +98,7 @@ export default async function HomePage() {
       <section className="bg-indigo px-6 md:px-12 py-16 md:py-24 grid md:grid-cols-2 gap-10 md:gap-14 items-center max-w-[1200px] mx-auto rounded-t-[24px]">
         <div className="relative w-full h-[280px] md:h-[420px] rounded-[20px] overflow-hidden">
           <Image
-            src="/images/community-placeholder.svg"
+            src="/images/bg.webp"
             alt="Sesi mabar Basecamp Padel"
             fill
             unoptimized
