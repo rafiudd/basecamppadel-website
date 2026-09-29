@@ -6,8 +6,9 @@ import { NewMatchModal } from "@/components/admin/NewMatchModal";
 import { createMatch, deleteMatch } from "@/app/admin/actions";
 import type { Match } from "@/lib/database.types";
 
-export default async function LiveAdmin({ searchParams }: { searchParams: Promise<{ match?: string }> }) {
-  const { match: matchId } = await searchParams;
+export default async function LiveAdmin({ searchParams }: { searchParams: Promise<{ match?: string; tab?: string }> }) {
+  const { match: matchId, tab } = await searchParams;
+  const activeTab = tab === "riwayat" ? "riwayat" : "live";
   const supabase = await createClient();
 
   const [{ data: matches }, { data: sessions }, { data: players }, { data: courts }, { data: venues }] = await Promise.all([
@@ -29,6 +30,7 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
 
   const current = list.filter((m) => m.status !== "finished");
   const past = list.filter((m) => m.status === "finished");
+  const rows = activeTab === "riwayat" ? past : current;
 
   async function create(fd: FormData) {
     "use server";
@@ -36,8 +38,43 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
     redirect(`/admin/live?match=${id}`);
   }
 
-  function MatchTable({ rows }: { rows: Match[] }) {
-    return (
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <h1 className="font-display font-bold text-[26px]">Live Match</h1>
+          {selected && (
+            <Link href={`/admin/live/quick?match=${selected.id}`} className="text-sm text-snow/60 no-underline hover:text-volt">
+              📱 Mode HP
+            </Link>
+          )}
+        </div>
+        <NewMatchModal
+          action={create}
+          sessions={(sessions ?? []).map((s) => ({ id: s.id, label: `${s.title} · ${s.venue} · ${s.session_date}` }))}
+          courts={courtList.map((c) => ({ id: c.id, label: c.name }))}
+        />
+      </div>
+
+      <div className="flex items-center gap-1">
+        <Link
+          href="/admin/live?tab=live"
+          className={`no-underline text-snow rounded-full px-4 py-2 text-sm font-semibold ${
+            activeTab === "live" ? "bg-indigo" : "bg-ink-3 text-snow/60"
+          }`}
+        >
+          Live &amp; Terjadwal ({current.length})
+        </Link>
+        <Link
+          href="/admin/live?tab=riwayat"
+          className={`no-underline text-snow rounded-full px-4 py-2 text-sm font-semibold ${
+            activeTab === "riwayat" ? "bg-indigo" : "bg-ink-3 text-snow/60"
+          }`}
+        >
+          Riwayat ({past.length})
+        </Link>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
@@ -62,7 +99,7 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
                 <td className="py-2.5 pr-3 text-snow/70 whitespace-nowrap">{m.session_label || "—"}</td>
                 <td className="py-2.5 pr-3 text-snow/70">{m.status}</td>
                 <td className="py-2.5">
-                  <Link href={`/admin/live?match=${m.id}`} className="btn px-3 py-1.5 text-xs no-underline">
+                  <Link href={`/admin/live?match=${m.id}&tab=${activeTab}`} className="btn px-3 py-1.5 text-xs no-underline">
                     {selected?.id === m.id ? "Dipilih" : "Pilih"}
                   </Link>
                 </td>
@@ -71,36 +108,6 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
           </tbody>
         </table>
         {rows.length === 0 && <p className="text-sm text-snow/50 mt-3">Belum ada match.</p>}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-8">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <h1 className="font-display font-bold text-[26px]">Live Match</h1>
-          {selected && (
-            <Link href={`/admin/live/quick?match=${selected.id}`} className="text-sm text-snow/60 no-underline hover:text-volt">
-              📱 Mode HP
-            </Link>
-          )}
-        </div>
-        <NewMatchModal
-          action={create}
-          sessions={(sessions ?? []).map((s) => ({ id: s.id, label: `${s.title} · ${s.venue} · ${s.session_date}` }))}
-          courts={courtList.map((c) => ({ id: c.id, label: c.name }))}
-        />
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <div className="font-display font-bold text-lg">Live &amp; Terjadwal</div>
-        <MatchTable rows={current} />
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <div className="font-display font-bold text-lg">Riwayat</div>
-        <MatchTable rows={past} />
       </div>
 
       {selected ? (
