@@ -90,3 +90,15 @@ button {
 .btn-danger {
   background: rgba(229, 72, 77, 0.25);
 }
+
+/* Hide number input spin buttons */
+input[type="number"].no-spinner::-webkit-outer-spin-button,
+input[type="number"].no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"].no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+

@@ -72,6 +72,15 @@ const LINKS = [
       </svg>
     ),
   },
+  {
+    href: "/admin/point",
+    label: "Poin",
+    icon: (
+      <svg {...iconProps}>
+        <polygon points="12 3 14.8 9 21 9.6 16.3 13.8 17.7 20 12 16.8 6.3 20 7.7 13.8 3 9.6 9.2 9" />
+      </svg>
+    ),
+  },
 ];
 
 export function AdminBottomNav() {

@@ -134,6 +134,29 @@ export type GenMatch = {
   created_at: string;
 };
 
+export type PointCategoryItem = {
+  id: string;
+  name: string;
+  desc?: string;
+  points: number | "";
+  checked: boolean;
+  isCustom?: boolean;
+};
+
+export type PointPresetRules = {
+  mabar: PointCategoryItem[];
+  kompetisi: PointCategoryItem[];
+};
+
+export type PointPreset = {
+  id: string;
+  name: string;
+  is_default: boolean;
+  rules: PointPresetRules;
+  created_at: string;
+  updated_at: string;
+};
+
 type Insert<T, Required extends keyof T> = Pick<T, Required> & Partial<Omit<T, Required>>;
 
 export type Database = {
@@ -203,6 +226,12 @@ export type Database = {
         Row: GenMatch;
         Insert: Insert<GenMatch, "round_id">;
         Update: Partial<GenMatch>;
+        Relationships: [];
+      };
+      point_presets: {
+        Row: PointPreset;
+        Insert: Insert<PointPreset, "name">;
+        Update: Partial<PointPreset>;
         Relationships: [];
       };
     };
