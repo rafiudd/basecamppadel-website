@@ -6,11 +6,9 @@ import { useMatchControl } from "@/lib/useMatchControl";
 import { POINT_OPTIONS } from "@/lib/config";
 import type { Match } from "@/lib/database.types";
 
-type Side = "A" | "B";
 type MatchSummary = Pick<Match, "id" | "team_a_name" | "team_b_name" | "is_live" | "status">;
 
 function TeamBlock({
-  side,
   name,
   sets,
   game,
@@ -20,7 +18,6 @@ function TeamBlock({
   onGame,
   onServe,
 }: {
-  side: Side;
   name: string;
   sets: number[];
   game: string;
@@ -135,7 +132,6 @@ export function QuickScoreControl({ initial, matches }: { initial: Match; matche
       )}
 
       <TeamBlock
-        side="A"
         name={m.team_a_name}
         sets={m.team_a_sets}
         game={m.team_a_game}
@@ -146,7 +142,6 @@ export function QuickScoreControl({ initial, matches }: { initial: Match; matche
         onServe={() => setServe("A")}
       />
       <TeamBlock
-        side="B"
         name={m.team_b_name}
         sets={m.team_b_sets}
         game={m.team_b_game}

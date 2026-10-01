@@ -16,6 +16,16 @@ const iconProps = {
 
 const LINKS = [
   {
+    href: "/admin/events",
+    label: "Event",
+    icon: (
+      <svg {...iconProps}>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M8 3v4M16 3v4M3 10h18" />
+      </svg>
+    ),
+  },
+  {
     href: "/admin/live",
     label: "Live",
     icon: (
@@ -26,37 +36,12 @@ const LINKS = [
     ),
   },
   {
-    href: "/admin/generator",
-    label: "Generator",
+    href: "/admin/points",
+    label: "Poin",
     icon: (
       <svg {...iconProps}>
-        <polyline points="16 3 21 3 21 8" />
-        <line x1="4" y1="20" x2="21" y2="3" />
-        <polyline points="21 16 21 21 16 21" />
-        <line x1="14" y1="14" x2="21" y2="21" />
-        <line x1="4" y1="4" x2="9" y2="9" />
-      </svg>
-    ),
-  },
-  {
-    href: "/admin/venues",
-    label: "Venue",
-    icon: (
-      <svg {...iconProps}>
-        <path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z" />
-        <circle cx="12" cy="10" r="2.5" />
-      </svg>
-    ),
-  },
-  {
-    href: "/admin/sessions",
-    label: "Jadwal",
-    icon: (
-      <svg {...iconProps}>
-        <rect x="3" y="5" width="18" height="16" rx="2" />
-        <line x1="3" y1="10" x2="21" y2="10" />
-        <line x1="8" y1="3" x2="8" y2="7" />
-        <line x1="16" y1="3" x2="16" y2="7" />
+        <path d="M12 3v18M3 12h18" />
+        <circle cx="12" cy="12" r="7" />
       </svg>
     ),
   },
@@ -69,6 +54,16 @@ const LINKS = [
         <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
         <circle cx="17.5" cy="9" r="2.3" />
         <path d="M16 14.2c2.6.4 4.5 2.6 4.5 5.3" />
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/venues",
+    label: "Venue",
+    icon: (
+      <svg {...iconProps}>
+        <path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z" />
+        <circle cx="12" cy="10" r="2.5" />
       </svg>
     ),
   },

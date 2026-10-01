@@ -3,16 +3,19 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminHome() {
   const supabase = await createClient();
-  const [{ count: sessions }, { count: players }, { data: live }] = await Promise.all([
-    supabase.from("sessions").select("*", { count: "exact", head: true }),
+  const [{ count: players }, { count: events }, { count: venues }, { data: live }] = await Promise.all([
     supabase.from("players").select("*", { count: "exact", head: true }),
+    supabase.from("events").select("*", { count: "exact", head: true }),
+    supabase.from("venues").select("*", { count: "exact", head: true }),
     supabase.from("matches").select("id, team_a_name, team_b_name").eq("is_live", true).limit(1).maybeSingle(),
   ]);
 
   const cards = [
-    { href: "/admin/live", title: "Live Match", sub: live ? `● LIVE — ${live.team_a_name} vs ${live.team_b_name}` : "Off air", accent: true },
-    { href: "/admin/sessions", title: "Jadwal", sub: `${sessions ?? 0} sesi` },
+    { href: "/admin/events", title: "Event", sub: `${events ?? 0} event` },
+    { href: "/admin/live", title: "Live", sub: live ? `● LIVE — ${live.team_a_name} vs ${live.team_b_name}` : "Off air", accent: true },
+    { href: "/admin/points", title: "Poin", sub: "Preset leaderboard" },
     { href: "/admin/players", title: "Pemain", sub: `${players ?? 0} pemain` },
+    { href: "/admin/venues", title: "Venue", sub: `${venues ?? 0} venue` },
   ];
 
   return (

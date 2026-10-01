@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS = [
-  { href: "/admin/live", label: "Live Match" },
-  { href: "/admin/generator", label: "Generator" },
-  { href: "/admin/venues", label: "Venue" },
-  { href: "/admin/sessions", label: "Jadwal" },
+  { href: "/admin/events", label: "Event" },
+  { href: "/admin/live", label: "Live" },
+  { href: "/admin/points", label: "Poin" },
   { href: "/admin/players", label: "Pemain" },
+  { href: "/admin/venues", label: "Venue" },
 ];
 
 export function AdminNavLinks() {

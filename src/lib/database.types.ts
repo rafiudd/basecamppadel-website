@@ -1,6 +1,8 @@
 // Hand-written types matching supabase/migrations/0001_init.sql.
 // Regenerate with `supabase gen types typescript` once the project is linked.
 
+import type { FinalStage, KoStage, Stage } from "@/lib/competition";
+
 export type Gender = "M" | "F";
 export type Serve = "A" | "B";
 export type MatchStatus = "scheduled" | "live" | "finished";
@@ -60,6 +62,21 @@ export type Match = {
   timer_base_seconds: number;
   status: MatchStatus;
   winner: Serve | null;
+  // competition (null / defaults for regular matches)
+  event_id: string | null;
+  stage: Stage | null;
+  group_label: string | null;
+  round_no: number | null;
+  bracket_pos: number | null;
+  team_a_id: string | null;
+  team_b_id: string | null;
+  team_a_games: number;
+  team_b_games: number;
+  winner_team_id: string | null;
+  is_wo: boolean;
+  is_bye: boolean;
+  next_match_id: string | null;
+  next_slot: Serve | null;
   created_at: string;
   updated_at: string;
 };
@@ -134,6 +151,69 @@ export type GenMatch = {
   created_at: string;
 };
 
+export type EventType = "mabar" | "kompetisi";
+export type EventStatus = "draft" | "active" | "finished";
+export type EventPoints = Record<FinalStage, number>;
+
+/** Named CompEvent to avoid clashing with the DOM Event type. */
+export type CompEvent = {
+  id: string;
+  slug: string;
+  type: EventType;
+  title: string;
+  description: string;
+  event_date: string | null; // YYYY-MM-DD
+  start_time: string | null; // HH:MM:SS
+  venue_id: string | null;
+  court_ids: string[];
+  price: string;
+  whatsapp_url: string | null;
+  num_teams: number;
+  num_groups: number;
+  advance_per_group: number;
+  ko_start: KoStage;
+  match_minutes: number;
+  points: EventPoints;
+  published: boolean;
+  status: EventStatus;
+  bracket_generated: boolean;
+  bracket_stale: boolean;
+  draw_seed: number;
+  created_at: string;
+};
+
+export type CompTeam = {
+  id: string;
+  event_id: string;
+  name: string;
+  group_label: string | null;
+  final_stage: FinalStage | null;
+  created_at: string;
+};
+
+export type CompTeamPlayer = { team_id: string; event_id: string; player_id: string; slot: number };
+
+export type PlayerAward = {
+  id: string;
+  event_id: string;
+  player_id: string;
+  team_id: string | null;
+  stage: FinalStage;
+  points: number;
+  created_at: string;
+};
+
+export type CompScoreLog = {
+  id: string;
+  event_id: string | null;
+  match_id: string | null;
+  user_id: string | null;
+  action: "finish" | "correct";
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  created_at: string;
+};
+
 type Insert<T, Required extends keyof T> = Pick<T, Required> & Partial<Omit<T, Required>>;
 
 export type Database = {
@@ -205,6 +285,36 @@ export type Database = {
         Update: Partial<GenMatch>;
         Relationships: [];
       };
+      events: {
+        Row: CompEvent;
+        Insert: Insert<CompEvent, "slug" | "title">;
+        Update: Partial<CompEvent>;
+        Relationships: [];
+      };
+      comp_teams: {
+        Row: CompTeam;
+        Insert: Insert<CompTeam, "event_id" | "name">;
+        Update: Partial<CompTeam>;
+        Relationships: [];
+      };
+      comp_team_players: {
+        Row: CompTeamPlayer;
+        Insert: Insert<CompTeamPlayer, "team_id" | "event_id" | "player_id">;
+        Update: Partial<CompTeamPlayer>;
+        Relationships: [];
+      };
+      player_awards: {
+        Row: PlayerAward;
+        Insert: Insert<PlayerAward, "event_id" | "player_id" | "stage">;
+        Update: Partial<PlayerAward>;
+        Relationships: [];
+      };
+      comp_score_log: {
+        Row: CompScoreLog;
+        Insert: Insert<CompScoreLog, "action">;
+        Update: Partial<CompScoreLog>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -216,6 +326,14 @@ export type Database = {
           p_win_points: number;
           p_loss_points: number;
         };
+        Returns: undefined;
+      };
+      comp_set_result: {
+        Args: { p_match_id: string; p_games_a: number; p_games_b: number; p_wo?: Serve | null };
+        Returns: undefined;
+      };
+      comp_finish_event: {
+        Args: { p_event_id: string; p_stages: { team_id: string; stage: FinalStage }[] };
         Returns: undefined;
       };
     };

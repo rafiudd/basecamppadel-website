@@ -3,6 +3,7 @@
 @theme {
   --color-coral: #ff5a3c;
   --color-indigo: #1b1650;
+  --color-yellow: #ffd43b;
   --color-volt: #ffd43b;
   --color-snow: #fbf7f1;
   --color-ink: #17151f;
@@ -82,6 +83,10 @@ button {
 }
 .btn-coral {
   background: #ff5a3c;
+}
+.btn-yellow {
+  background: #ffd43b;
+  color: #1b1650;
 }
 .btn-volt {
   background: #ffd43b;
