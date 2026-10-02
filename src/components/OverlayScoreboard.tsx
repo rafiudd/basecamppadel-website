@@ -82,7 +82,7 @@ function StartingSoonCard({ match }: { match: Match | null }) {
         )}
 
         <div className="w-full pt-5 mt-1 border-t border-snow/15 flex justify-center">
-          <SponsorStrip height={32} />
+          <SponsorStrip height={64} />
         </div>
       </div>
     </div>
@@ -141,6 +141,11 @@ export function OverlayScoreboard({
         <span className="font-display font-bold text-[24px] text-volt tracking-[0.02em] tabular-nums">{timer}</span>
       </div>
 
+      {/* sponsor bar */}
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-ink/55 px-8 py-3.5 rounded-full backdrop-blur-[6px]">
+        <SponsorStrip height={48} />
+      </div>
+
       {/* lower third */}
       <div className="absolute left-0 right-0 bottom-0 h-[190px] bg-indigo border-t-4 border-volt flex items-stretch">
         <div className="flex-none w-[260px] flex items-center gap-4 px-8 border-r border-snow/15">
@@ -160,9 +165,6 @@ export function OverlayScoreboard({
           <div className="font-sans font-bold text-[15px] tracking-[0.08em] text-coral uppercase">{match?.session_label ?? "—"}</div>
           <div className="font-display font-bold text-[22px] text-snow">{match?.venue ?? ""}</div>
           <div className="font-sans font-semibold text-base text-snow/65">{match?.set_label ?? ""}</div>
-          <div className="pt-2 mt-1 border-t border-snow/15">
-            <SponsorStrip height={18} label={false} />
-          </div>
         </div>
       </div>
     </div>

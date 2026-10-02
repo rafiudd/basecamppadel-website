@@ -6,7 +6,7 @@ export const LEVELS = ["Beginner", "Upper Beginner", "Intermediate", "Upper Inte
 
 /** Sponsor logos shown on the OBS overlay (Starting Soon screen + live lower-third). */
 export const SPONSOR_LOGOS = [
-  "/images/sponsors/sponsor-1.svg",
-  "/images/sponsors/sponsor-2.svg",
-  "/images/sponsors/sponsor-3.svg",
+  "/images/sponsors/padellens.png",
+  "/images/sponsors/mewah-jaya.jpeg",
+  "/images/sponsors/kaliandra.jpeg",
 ];
