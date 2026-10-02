@@ -5,6 +5,7 @@ import { useLiveMatch, useTick } from "@/lib/useLiveMatch";
 import { formatStartLine, formatTimer, matchElapsedSeconds } from "@/lib/format";
 import { CountdownBadge } from "./CountdownBadge";
 import { MountainMark } from "./Logo";
+import { SponsorStrip } from "./SponsorStrip";
 
 function TeamRow({ name, sets, game, serving }: { name: string; sets: number[]; game: string; serving: boolean }) {
   return (
@@ -79,6 +80,10 @@ function StartingSoonCard({ match }: { match: Match | null }) {
         {dateLine && (
           <div className="font-sans font-semibold text-[20px] tracking-[0.04em] text-volt uppercase">{dateLine}</div>
         )}
+
+        <div className="w-full pt-5 mt-1 border-t border-snow/15 flex justify-center">
+          <SponsorStrip height={32} />
+        </div>
       </div>
     </div>
   );
@@ -155,6 +160,9 @@ export function OverlayScoreboard({
           <div className="font-sans font-bold text-[15px] tracking-[0.08em] text-coral uppercase">{match?.session_label ?? "—"}</div>
           <div className="font-display font-bold text-[22px] text-snow">{match?.venue ?? ""}</div>
           <div className="font-sans font-semibold text-base text-snow/65">{match?.set_label ?? ""}</div>
+          <div className="pt-2 mt-1 border-t border-snow/15">
+            <SponsorStrip height={18} label={false} />
+          </div>
         </div>
       </div>
     </div>

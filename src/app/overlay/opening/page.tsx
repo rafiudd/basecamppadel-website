@@ -3,6 +3,7 @@ import { getEventIdBySlug, getLiveMatch } from "@/lib/queries";
 import { formatStartLine } from "@/lib/format";
 import { CountdownBadge } from "@/components/CountdownBadge";
 import { MountainMark } from "@/components/Logo";
+import { SponsorStrip } from "@/components/SponsorStrip";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,10 @@ export default async function OpeningPage({ searchParams }: Props) {
         {dateLine && (
           <div className="font-sans font-semibold text-[20px] tracking-[0.04em] text-volt uppercase">{dateLine}</div>
         )}
+
+        <div className="w-full pt-5 mt-1 border-t border-snow/15 flex justify-center">
+          <SponsorStrip height={32} />
+        </div>
       </div>
     </div>
   );
