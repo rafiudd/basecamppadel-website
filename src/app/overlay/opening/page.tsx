@@ -92,7 +92,7 @@ export default async function OpeningPage({ searchParams }: Props) {
         )}
 
         <div className="w-full pt-5 mt-1 border-t border-snow/15 flex justify-center">
-          <SponsorStrip height={32} />
+          <SponsorStrip height={64} />
         </div>
       </div>
     </div>
