@@ -144,19 +144,22 @@ export function OverlayScoreboard({
       </div>
 
       {/* sponsor bar */}
-      <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-ink/55 pl-8 pr-6 py-3 rounded-full backdrop-blur-[6px] flex items-center gap-6">
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-ink/55 px-8 py-3 rounded-full backdrop-blur-[6px]">
         <SponsorStrip height={68} shape="circle" />
-        <div className="w-px h-10 bg-snow/20" />
-        <SponsorStrip logos={MEDIA_PARTNER_LOGOS} height={26} label="Media Partner" />
       </div>
 
       {/* lower third */}
       <div className="absolute left-0 right-0 bottom-0 h-[190px] bg-indigo border-t-4 border-volt flex items-stretch">
-        <div className="flex-none w-[260px] flex items-center gap-4 px-8 border-r border-snow/15">
-          <MountainMark size={40} />
-          <div className="font-display font-bold leading-[1.15]">
-            <div className="text-[20px] text-snow">BASECAMP</div>
-            <div className="text-[20px] text-coral">PADEL</div>
+        <div className="flex-none w-[260px] flex flex-col justify-center gap-3 px-8 border-r border-snow/15">
+          <div className="flex items-center gap-4">
+            <MountainMark size={40} />
+            <div className="font-display font-bold leading-[1.15]">
+              <div className="text-[20px] text-snow">BASECAMP</div>
+              <div className="text-[20px] text-coral">PADEL</div>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-snow/15">
+            <SponsorStrip logos={MEDIA_PARTNER_LOGOS} height={20} label="Media Partner" />
           </div>
         </div>
 
