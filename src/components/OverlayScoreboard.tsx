@@ -3,6 +3,7 @@
 import type { Match } from "@/lib/database.types";
 import { useLiveMatch, useTick } from "@/lib/useLiveMatch";
 import { formatStartLine, formatTimer, matchElapsedSeconds } from "@/lib/format";
+import { MEDIA_PARTNER_LOGOS } from "@/lib/config";
 import { CountdownBadge } from "./CountdownBadge";
 import { MountainMark } from "./Logo";
 import { SponsorStrip } from "./SponsorStrip";
@@ -81,8 +82,9 @@ function StartingSoonCard({ match }: { match: Match | null }) {
           <div className="font-sans font-semibold text-[20px] tracking-[0.04em] text-volt uppercase">{dateLine}</div>
         )}
 
-        <div className="w-full pt-5 mt-1 border-t border-snow/15 flex justify-center">
-          <SponsorStrip height={64} />
+        <div className="w-full pt-5 mt-1 border-t border-snow/15 flex flex-col items-center gap-3">
+          <SponsorStrip height={76} shape="circle" />
+          <SponsorStrip logos={MEDIA_PARTNER_LOGOS} height={26} label="Media Partner" />
         </div>
       </div>
     </div>
@@ -130,8 +132,10 @@ export function OverlayScoreboard({ initial, matchId, showBackdrop }: { initial:
       </div>
 
       {/* sponsor bar */}
-      <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-ink/55 px-8 py-3.5 rounded-full backdrop-blur-[6px]">
-        <SponsorStrip height={48} />
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-ink/55 pl-8 pr-6 py-3 rounded-full backdrop-blur-[6px] flex items-center gap-6">
+        <SponsorStrip height={56} shape="circle" />
+        <div className="w-px h-9 bg-snow/20" />
+        <SponsorStrip logos={MEDIA_PARTNER_LOGOS} height={22} label="Media Partner" />
       </div>
 
       {/* lower third */}

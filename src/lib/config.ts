@@ -4,9 +4,13 @@ export const YOUTUBE_URL =
 export const POINT_OPTIONS = ["0", "15", "30", "40", "AD"] as const;
 export const LEVELS = ["Beginner", "Upper Beginner", "Intermediate", "Upper Intermediate", "Advanced"];
 
-/** Sponsor logos shown on the OBS overlay (Starting Soon screen + live lower-third). */
+/** Main sponsor logos shown on the OBS overlay (Starting Soon screen + live lower-third). */
 export const SPONSOR_LOGOS = [
-  "/images/sponsors/padellens.png",
   "/images/sponsors/mewah-jaya.jpeg",
   "/images/sponsors/kaliandra.jpeg",
+];
+
+/** Media partner logos — shown smaller, separate from the main sponsors. */
+export const MEDIA_PARTNER_LOGOS = [
+  "/images/sponsors/padellens.png",
 ];
