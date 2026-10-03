@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { ScoreControl } from "@/components/admin/ScoreControl";
 import { NewMatchModal } from "@/components/admin/NewMatchModal";
 import { createMatch, deleteMatch } from "@/app/admin/actions";
-import type { Match } from "@/lib/database.types";
 
 export default async function LiveAdmin({ searchParams }: { searchParams: Promise<{ match?: string; tab?: string }> }) {
   const { match: matchId, tab } = await searchParams;

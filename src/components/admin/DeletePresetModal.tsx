@@ -101,7 +101,7 @@ export function DeletePresetModal({
           </h2>
           <p className="text-sm text-snow/75 leading-relaxed m-0">
             Apakah Anda yakin ingin menghapus preset{" "}
-            <span className="font-bold text-snow">"{presetName}"</span>?
+            <span className="font-bold text-snow">&ldquo;{presetName}&rdquo;</span>?
             Kategori dan bobot poin yang tersimpan pada preset ini akan dihapus secara permanen.
           </p>
         </div>

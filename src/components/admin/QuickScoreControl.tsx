@@ -10,7 +10,7 @@ type Side = "A" | "B";
 type MatchSummary = Pick<Match, "id" | "team_a_name" | "team_b_name" | "is_live" | "status">;
 
 function TeamBlock({
-  side,
+  _side,
   name,
   sets,
   game,
@@ -20,7 +20,7 @@ function TeamBlock({
   onGame,
   onServe,
 }: {
-  side: Side;
+  _side?: Side;
   name: string;
   sets: number[];
   game: string;
@@ -135,7 +135,7 @@ export function QuickScoreControl({ initial, matches }: { initial: Match; matche
       )}
 
       <TeamBlock
-        side="A"
+        _side="A"
         name={m.team_a_name}
         sets={m.team_a_sets}
         game={m.team_a_game}
@@ -146,7 +146,7 @@ export function QuickScoreControl({ initial, matches }: { initial: Match; matche
         onServe={() => setServe("A")}
       />
       <TeamBlock
-        side="B"
+        _side="B"
         name={m.team_b_name}
         sets={m.team_b_sets}
         game={m.team_b_game}

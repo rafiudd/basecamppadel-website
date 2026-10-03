@@ -1,0 +1,185 @@
+{
+  "matches": {
+    "battle-oktober": {
+      "liveMatch": {
+        "court": "Court 1",
+        "time": "20:00",
+        "round": "Semifinal 1",
+        "team1": { "name": "Rayhan / Andra", "score": 3, "serving": true, "game": 30 },
+        "team2": { "name": "Pao Pao / Temmy", "score": 2, "serving": false, "game": 15 },
+        "streamUrl": "https://youtube.com/@basecamppadel/live"
+      },
+      "knockout": [
+        {
+          "round": "Semifinal 1",
+          "court": "Court 1 · 20:00",
+          "status": "live",
+          "team1": { "name": "Rayhan / Andra", "score": "3" },
+          "team2": { "name": "Pao Pao / Temmy", "score": "2" },
+          "streamUrl": "https://youtube.com/@basecamppadel/live"
+        },
+        {
+          "round": "Semifinal 2",
+          "court": "Court 2 · 20:00",
+          "status": "next",
+          "team1": { "name": "Rendi / Fauzi", "score": "" },
+          "team2": { "name": "Bob Hintama / Angga Aswiyanda", "score": "" }
+        },
+        {
+          "round": "Final",
+          "court": "Court 1 · 20:40",
+          "status": "waiting",
+          "team1": { "name": "Pemenang SF1", "score": "" },
+          "team2": { "name": "Pemenang SF2", "score": "" }
+        }
+      ],
+      "quarterfinals": [
+        {
+          "round": "QF1",
+          "court": "Court 1 · 19:20",
+          "status": "finished",
+          "team1": { "name": "Rayhan / Andra", "score": "6", "winner": true },
+          "team2": { "name": "Agung Setiadi / Fajar SSA", "score": "2", "winner": false }
+        },
+        {
+          "round": "QF2",
+          "court": "Court 2 · 19:20",
+          "status": "finished",
+          "team1": { "name": "Yonathan / Nauval", "score": "4", "winner": false },
+          "team2": { "name": "Pao Pao / Temmy", "score": "6", "winner": true }
+        },
+        {
+          "round": "QF3",
+          "court": "Court 3 · 19:20",
+          "status": "finished",
+          "team1": { "name": "Rendi / Fauzi", "score": "6", "winner": true },
+          "team2": { "name": "Albert / Temen Fajar", "score": "4", "winner": false }
+        },
+        {
+          "round": "QF4",
+          "court": "Court 1 · 19:40",
+          "status": "finished",
+          "team1": { "name": "Bob Hintama / Angga Aswiyanda", "score": "6", "winner": true },
+          "team2": { "name": "Dimas / Fikri", "score": "3", "winner": false }
+        }
+      ],
+      "groupMatches": [
+        {
+          "group": "Grup A",
+          "court": "Court 1 · 18:00",
+          "status": "finished",
+          "team1": { "name": "Rayhan / Andra", "score": "6", "winner": true },
+          "team2": { "name": "Pao Pao / Temmy", "score": "4", "winner": false }
+        },
+        {
+          "group": "Grup A",
+          "court": "Court 1 · 18:20",
+          "status": "finished",
+          "team1": { "name": "Rayhan / Andra", "score": "6", "winner": true },
+          "team2": { "name": "Timotius / Coco", "score": "1", "winner": false }
+        },
+        {
+          "group": "Grup A",
+          "court": "Court 1 · 18:40",
+          "status": "finished",
+          "team1": { "name": "Pao Pao / Temmy", "score": "6", "winner": true },
+          "team2": { "name": "Timotius / Coco", "score": "3", "winner": false }
+        }
+      ],
+      "groups": [
+        {
+          "name": "Grup A",
+          "rows": [
+            { "rank": 1, "team": "Rayhan / Andra", "points": 6, "wl": "2–0", "diff": "+7", "qualified": "Lolos · A1" },
+            { "rank": 2, "team": "Pao Pao / Temmy", "points": 3, "wl": "1–1", "diff": "+1", "qualified": "Lolos · A2" },
+            { "rank": 3, "team": "Timotius / Coco", "points": 0, "wl": "0–2", "diff": "−8" }
+          ]
+        },
+        {
+          "name": "Grup B",
+          "rows": [
+            { "rank": 1, "team": "Bob Hintama / Angga Aswiyanda", "points": 6, "wl": "2–0", "diff": "+6", "qualified": "Lolos · B1" },
+            { "rank": 2, "team": "Dimas / Fikri", "points": 3, "wl": "1–1", "diff": "0", "qualified": "Lolos · B2" },
+            { "rank": 3, "team": "Sari / Tasya", "points": 0, "wl": "0–2", "diff": "−6" }
+          ]
+        },
+        {
+          "name": "Grup C",
+          "rows": [
+            { "rank": 1, "team": "Rendi / Fauzi", "points": 6, "wl": "2–0", "diff": "+5", "qualified": "Lolos · C1" },
+            { "rank": 2, "team": "Albert / Temen Fajar", "points": 3, "wl": "1–1", "diff": "+1", "qualified": "Lolos · C2" },
+            { "rank": 3, "team": "Gabriel / Alfie", "points": 0, "wl": "0–2", "diff": "−6" }
+          ]
+        },
+        {
+          "name": "Grup D",
+          "rows": [
+            { "rank": 1, "team": "Yonathan / Nauval", "points": 3, "wl": "1–0", "diff": "+2", "qualified": "Lolos · D1" },
+            { "rank": 2, "team": "Agung Setiadi / Fajar SSA", "points": 0, "wl": "0–1", "diff": "−2", "qualified": "Lolos · D2" }
+          ]
+        }
+      ]
+    },
+    "battle-september": {
+      "knockout": [
+        {
+          "round": "Final",
+          "court": "Court 1 · 20:40",
+          "status": "finished",
+          "team1": { "name": "Bob Hintama / Angga Aswiyanda", "score": "6", "winner": true },
+          "team2": { "name": "Rendi / Fauzi", "score": "4", "winner": false }
+        },
+        {
+          "round": "Semifinal 1",
+          "court": "Court 1 · 20:00",
+          "status": "finished",
+          "team1": { "name": "Bob Hintama / Angga Aswiyanda", "score": "6", "winner": true },
+          "team2": { "name": "Yonathan / Nauval", "score": "3", "winner": false }
+        },
+        {
+          "round": "Semifinal 2",
+          "court": "Court 2 · 20:00",
+          "status": "finished",
+          "team1": { "name": "Rendi / Fauzi", "score": "6", "winner": true },
+          "team2": { "name": "Dimas / Fikri", "score": "4", "winner": false }
+        }
+      ],
+      "groups": [
+        {
+          "name": "Grup A",
+          "rows": [
+            { "rank": 1, "team": "Bob Hintama / Angga Aswiyanda", "points": 6, "wl": "2–0", "diff": "+6", "qualified": "Lolos · A1" },
+            { "rank": 2, "team": "Dimas / Fikri", "points": 3, "wl": "1–1", "diff": "0", "qualified": "Lolos · A2" },
+            { "rank": 3, "team": "Gabriel / Alfie", "points": 0, "wl": "0–2", "diff": "−6" }
+          ]
+        },
+        {
+          "name": "Grup B",
+          "rows": [
+            { "rank": 1, "team": "Rendi / Fauzi", "points": 6, "wl": "2–0", "diff": "+5", "qualified": "Lolos · B1" },
+            { "rank": 2, "team": "Yonathan / Nauval", "points": 3, "wl": "1–1", "diff": "+1", "qualified": "Lolos · B2" },
+            { "rank": 3, "team": "Albert / Temen Fajar", "points": 0, "wl": "0–2", "diff": "−6" }
+          ]
+        }
+      ]
+    },
+    "mabar-25-okt": {
+      "rounds": [
+        { "round": "Ronde 7", "time": "08:45", "status": "finished", "p1": "Bob Hintama", "p2": "Fauzi", "s1": 21, "s2": 18 },
+        { "round": "Ronde 6", "time": "08:30", "status": "finished", "p1": "Rayhan", "p2": "Dimas", "s1": 21, "s2": 19 },
+        { "round": "Ronde 5", "time": "08:15", "status": "finished", "p1": "Bob Hintama", "p2": "Rayhan", "s1": 21, "s2": 15 }
+      ],
+      "groups": [
+        {
+          "name": "Klasemen Akhir",
+          "rows": [
+            { "rank": 1, "team": "Bob Hintama", "points": 28, "wl": "6–1", "diff": "+32", "qualified": "Juara" },
+            { "rank": 2, "team": "Fauzi", "points": 25, "wl": "5–2", "diff": "+18", "qualified": "Runner-up" },
+            { "rank": 3, "team": "Rayhan", "points": 24, "wl": "5–2", "diff": "+14", "qualified": "3rd" },
+            { "rank": 4, "team": "Dimas", "points": 22, "wl": "4–3", "diff": "+8" }
+          ]
+        }
+      ]
+    }
+  }
+}

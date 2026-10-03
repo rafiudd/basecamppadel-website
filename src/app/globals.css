@@ -14,19 +14,24 @@
 
   --font-display: var(--font-space-grotesk), "Space Grotesk", sans-serif;
   --font-sans: var(--font-inter), "Inter", sans-serif;
+}
 
-  --animate-livepulse: livepulse 1.4s ease-in-out infinite;
-
-  @keyframes livepulse {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.35;
-    }
+@keyframes livepulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
   }
 }
+
+.animate-livepulse {
+  animation: livepulse 1.4s ease-in-out infinite;
+}
+
 
 html,
 body {
