@@ -7,9 +7,10 @@ import type { Match } from "@/lib/database.types";
 /**
  * Keeps a `matches` row in sync via Supabase Realtime.
  * - With `matchId`: follows that specific row (used by the overlay/admin).
- * - Without: follows whichever row is currently `is_live` (used by Home).
+ * - With `eventId`: follows whichever row of that event is `is_live` (OBS link of an event).
+ * - Without either: follows whichever row is currently `is_live` (used by Home).
  */
-export function useLiveMatch(initial: Match | null, matchId?: string) {
+export function useLiveMatch(initial: Match | null, matchId?: string, eventId?: string) {
   const [match, setMatch] = useState<Match | null>(initial);
 
   useEffect(() => {
@@ -17,22 +18,24 @@ export function useLiveMatch(initial: Match | null, matchId?: string) {
 
     const refetch = async () => {
       let q = supabase.from("matches").select("*");
-      q = matchId
-        ? q.eq("id", matchId)
-        : q.eq("is_live", true).order("updated_at", { ascending: false });
+      if (matchId) q = q.eq("id", matchId);
+      else {
+        if (eventId) q = q.eq("event_id", eventId);
+        q = q.eq("is_live", true).order("updated_at", { ascending: false });
+      }
       const { data, error } = await q.limit(1).maybeSingle();
       if (!error) setMatch(data ?? null); // on network error keep what we have
     };
 
     const channel = supabase
-      .channel(`matches-${matchId ?? "live"}`)
+      .channel(`matches-${matchId ?? (eventId ? `event-${eventId}` : "live")}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "matches",
-          ...(matchId ? { filter: `id=eq.${matchId}` } : {}),
+          ...(matchId ? { filter: `id=eq.${matchId}` } : eventId ? { filter: `event_id=eq.${eventId}` } : {}),
         },
         (payload) => {
           if (payload.eventType === "DELETE") {
@@ -56,7 +59,7 @@ export function useLiveMatch(initial: Match | null, matchId?: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [matchId]);
+  }, [matchId, eventId]);
 
   return match;
 }

@@ -1,67 +1,55 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { QuickScoreControl } from "@/components/admin/QuickScoreControl";
-import type { Match } from "@/lib/database.types";
+import { courtNameOf, loadCompetition } from "@/lib/compData";
+import { matchSection } from "@/lib/compLabels";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { QuickScoreControl } from "@/components/admin/live/QuickScoreControl";
+import { FinishedNotice } from "@/components/admin/live/FinishedNotice";
+import { pickCurrentMatch } from "@/components/admin/live/MatchQueue";
 
-export default async function QuickLiveAdmin({ searchParams }: { searchParams: Promise<{ match?: string; court?: string }> }) {
-  const { match: matchId, court: courtParam } = await searchParams;
+export default async function QuickLiveAdmin({ searchParams }: { searchParams: Promise<{ match?: string; event?: string; done?: string }> }) {
+  const { match: matchId, event: eventParam, done: doneParam } = await searchParams;
   const supabase = await createClient();
-  const [{ data: matches }, { data: courts }] = await Promise.all([
-    supabase.from("matches").select("*").order("created_at", { ascending: false }).limit(50),
-    supabase.from("courts").select("*").eq("active", true).order("name"),
-  ]);
 
-  const list = matches ?? [];
-  const courtList = courts ?? [];
-
-  const currentForCourt = (courtId: string | null): Match | null =>
-    list.find((m) => m.court_id === courtId && m.is_live) ??
-    list.find((m) => m.court_id === courtId && m.status !== "finished") ??
-    list.find((m) => m.court_id === courtId) ??
-    null;
-
-  const tabs = [...courtList.map((c) => ({ id: c.id as string | null, label: c.name })), { id: null, label: "Tanpa court" }];
-
-  const activeCourtId =
-    matchId != null
-      ? list.find((m) => m.id === matchId)?.court_id ?? null
-      : courtParam !== undefined
-        ? courtParam || null
-        : courtList[0]?.id ?? null;
-
-  const selected = matchId ? list.find((m) => m.id === matchId) ?? null : currentForCourt(activeCourtId);
-  const matchesForTab = list.filter((m) => m.court_id === activeCourtId);
+  // the event: from the URL, else the event of the requested match, else the one ON AIR
+  const { data: seed } = matchId
+    ? await supabase.from("matches").select("event_id").eq("id", matchId).maybeSingle()
+    : await supabase.from("matches").select("event_id").eq("is_live", true).not("event_id", "is", null).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  const eventId = eventParam ?? seed?.event_id ?? null;
+  const data = eventId ? await loadCompetition(supabase, { id: eventId }) : null;
+  const match = data ? pickCurrentMatch(data.matches, matchId) : null;
+  const done = data?.matches.find((m) => m.id === doneParam && m.status === "finished") ?? null;
+  const where = match ? [matchSection(match), match.court_id ? courtNameOf(data?.courts ?? [], match.court_id) : null].filter(Boolean).join(" · ") : "";
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display font-bold text-[22px]">Skor Cepat</h1>
-        <Link href="/admin/live" className="text-sm text-snow/60 no-underline hover:text-volt">Kontrol lengkap</Link>
-      </div>
-
-      {tabs.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {tabs.map((t) => (
-            <Link
-              key={t.id ?? "none"}
-              href={`/admin/live/quick?court=${t.id ?? ""}`}
-              className={`no-underline flex-none rounded-full px-4 py-2.5 text-sm font-semibold ${
-                activeCourtId === t.id ? "bg-indigo text-snow" : "bg-ink-3 text-snow/60"
-              }`}
-            >
-              {t.label}
-            </Link>
-          ))}
-        </div>
+    <div className="flex flex-col gap-4 max-w-140 mx-auto w-full">
+      <PageHeader
+        title="Skor Cepat"
+        size="md"
+        actions={
+          <Link href={match ? `/admin/live?event=${match.event_id ?? ""}&match=${match.id}` : "/admin/live"} className="text-sm text-snow/80 no-underline hover:text-volt">
+            Kontrol lengkap →
+          </Link>
+        }
+      />
+      {done && data && (
+        <FinishedNotice done={done} next={match} all={data.matches} dismissHref={`/admin/live/quick?event=${data.event.id}${match ? `&match=${match.id}` : ""}`} />
       )}
-
-      {selected ? (
-        <QuickScoreControl key={selected.id} initial={selected} matches={matchesForTab} />
+      {match && data ? (
+        <>
+          <div className="bg-ink-3 rounded-card px-4 py-3 flex flex-col gap-1">
+            <div className="text-xs font-bold tracking-tag text-snow/70 uppercase">{data.event.title}</div>
+            <div className="font-display font-bold text-base">{where || `${match.team_a_name} vs ${match.team_b_name}`}</div>
+          </div>
+          <QuickScoreControl key={match.id} initial={match} />
+        </>
       ) : (
-        <div className="flex flex-col gap-3 items-center text-center py-10">
-          <p className="text-sm text-snow/60">Belum ada match di court ini.</p>
-          <Link href="/admin/live" className="btn btn-coral no-underline">Buat match di kontrol lengkap</Link>
-        </div>
+        !done && (
+          <div className="flex flex-col gap-3 items-center text-center py-10">
+            <p className="text-sm text-snow/70 m-0">Belum ada match yang ON AIR. Pilih match di halaman Live.</p>
+            <Link href="/admin/live" className="btn btn-volt no-underline">Buka Live</Link>
+          </div>
+        )
       )}
     </div>
   );

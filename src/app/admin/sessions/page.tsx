@@ -17,7 +17,7 @@ export default async function SessionsAdmin({ searchParams }: { searchParams: Pr
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-display font-bold text-[26px]">Jadwal</h1>
+        <h1 className="font-display font-bold text-page">Jadwal</h1>
         {showForm ? (
           <Link href="/admin/sessions" className="text-sm text-snow/60 no-underline hover:text-volt">Batal</Link>
         ) : (

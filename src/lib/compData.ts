@@ -1,4 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
+import { courtLabel } from "@/lib/format";
 import {
   computeStandings,
   findConflicts,
@@ -33,8 +34,13 @@ export type CompetitionData = {
   groupStageComplete: boolean;
   koStarted: boolean;
   conflicts: Conflict[];
-  teamName: (id: string | null) => string;
-  courtName: (id: string | null) => string;
+};
+
+// plain helpers instead of closures on CompetitionData, so the data can be passed to client components
+export const teamNameOf = (teams: { id: string; name: string }[], id: string | null) => teams.find((t) => t.id === id)?.name ?? "—";
+export const courtNameOf = (courts: { id: string; name: string }[], id: string | null) => {
+  const c = courts.find((x) => x.id === id);
+  return c ? courtLabel(c.name) : "—";
 };
 
 export const toResult = (m: Match): ResultMatch => ({
@@ -70,7 +76,7 @@ export async function loadCompetition(supabase: Supa, by: { id?: string; slug?: 
   const [{ data: teams }, { data: links }, { data: matches }, { data: courts }, { data: venue }] = await Promise.all([
     supabase.from("comp_teams").select("*").eq("event_id", event.id).order("created_at"),
     supabase.from("comp_team_players").select("*").eq("event_id", event.id).order("slot"),
-    supabase.from("matches").select("*").eq("event_id", event.id).order("starts_at", { nullsFirst: false }).order("bracket_pos"),
+    supabase.from("matches").select("*").eq("event_id", event.id).order("starts_at", { nullsFirst: false }).order("bracket_pos").order("created_at"),
     supabase.from("courts").select("*").order("name"),
     event.venue_id
       ? supabase.from("venues").select("*").eq("id", event.venue_id).maybeSingle()
@@ -131,8 +137,6 @@ export async function loadCompetition(supabase: Supa, by: { id?: string; slug?: 
     groupStageComplete: groups.length > 0 && groups.every((g) => g.complete),
     koStarted: koMatches.some((m) => !m.is_bye && (m.status !== "scheduled" || m.team_a_games + m.team_b_games > 0)),
     conflicts: findConflicts(timed, event.match_minutes),
-    teamName: (id) => teamList.find((t) => t.id === id)?.name ?? "—",
-    courtName: (id) => courtList.find((c) => c.id === id)?.name ?? "—",
   };
 }
 

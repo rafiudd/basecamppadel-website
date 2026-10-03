@@ -77,6 +77,7 @@ export type Match = {
   is_bye: boolean;
   next_match_id: string | null;
   next_slot: Serve | null;
+  gen_match_id: string | null; // mabar court (0007)
   created_at: string;
   updated_at: string;
 };
@@ -130,6 +131,8 @@ export type GenParticipant = {
   team_no: number | null;
   total_points: number;
   sits_out_count: number;
+  checked_in: boolean;
+  active: boolean;
   created_at: string;
 };
 
@@ -179,8 +182,19 @@ export type CompEvent = {
   bracket_generated: boolean;
   bracket_stale: boolean;
   draw_seed: number;
+  // mabar (0006)
+  mabar_format: GenFormat | null;
+  points_target: number;
+  rounds: number;
+  gen_event_id: string | null;
+  point_preset_id: string | null;
+  mabar_points: MabarPoints;
+  quota: number | null;
   created_at: string;
 };
+
+/** Leaderboard points for a mabar: `ranks[i]` for final position i + 1, `participant` for everyone else. */
+export type MabarPoints = { ranks: number[]; participant: number };
 
 export type CompTeam = {
   id: string;
@@ -198,7 +212,8 @@ export type PlayerAward = {
   event_id: string;
   player_id: string;
   team_id: string | null;
-  stage: FinalStage;
+  stage: FinalStage | "mabar";
+  rank: number | null; // mabar final place
   points: number;
   created_at: string;
 };
@@ -212,6 +227,29 @@ export type CompScoreLog = {
   before: Record<string, unknown> | null;
   after: Record<string, unknown> | null;
   created_at: string;
+};
+
+export type PointCategoryItem = {
+  id: string;
+  name: string;
+  desc?: string;
+  points: number | "";
+  checked: boolean;
+  isCustom?: boolean;
+};
+
+export type PointPresetRules = {
+  mabar: PointCategoryItem[];
+  kompetisi: PointCategoryItem[];
+};
+
+export type PointPreset = {
+  id: string;
+  name: string;
+  is_default: boolean;
+  rules: PointPresetRules;
+  created_at: string;
+  updated_at: string;
 };
 
 type Insert<T, Required extends keyof T> = Pick<T, Required> & Partial<Omit<T, Required>>;
@@ -313,6 +351,12 @@ export type Database = {
         Row: CompScoreLog;
         Insert: Insert<CompScoreLog, "action">;
         Update: Partial<CompScoreLog>;
+        Relationships: [];
+      };
+      point_presets: {
+        Row: PointPreset;
+        Insert: Insert<PointPreset, "name">;
+        Update: Partial<PointPreset>;
         Relationships: [];
       };
     };
