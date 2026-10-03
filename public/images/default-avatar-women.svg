@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
+  <defs>
+    <linearGradient id="womenBg" x1="16" y1="12" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4A192C" />
+      <stop offset="60%" stop-color="#2D1124" />
+      <stop offset="100%" stop-color="#1B1650" />
+    </linearGradient>
+    <linearGradient id="womenCoral" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF5A3C" />
+      <stop offset="100%" stop-color="#FFD43B" />
+    </linearGradient>
+    <linearGradient id="womenSkin" x1="64" y1="40" x2="64" y2="82" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FDF3E7" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#EEDAC5" stop-opacity="0.85" />
+    </linearGradient>
+    <linearGradient id="womenTop" x1="32" y1="90" x2="96" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF5A3C" />
+      <stop offset="100%" stop-color="#D9381E" />
+    </linearGradient>
+    <filter id="womenShadow" x="-8" y="-8" width="144" height="144" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Background Circle with Coral/Volt sports border -->
+  <circle cx="64" cy="64" r="63" fill="url(#womenBg)" />
+  <circle cx="64" cy="64" r="61" stroke="url(#womenCoral)" stroke-width="2" stroke-opacity="0.8" />
+
+  <!-- Geometric Court Mesh Accent (Subtle) -->
+  <path d="M20 32 L108 32 M12 64 L116 64 M20 96 L108 96" stroke="#FF5A3C" stroke-width="1" stroke-opacity="0.1" stroke-dasharray="3 3" />
+  <path d="M40 16 L40 112 M64 12 L64 116 M88 16 L88 112" stroke="#FF5A3C" stroke-width="1" stroke-opacity="0.1" stroke-dasharray="3 3" />
+
+  <!-- Avatar Group clipped to circle -->
+  <g clip-path="url(#womenAvatarClip)">
+    <clipPath id="womenAvatarClip">
+      <circle cx="64" cy="64" r="60" />
+    </clipPath>
+
+    <!-- High Ponytail hair behind head -->
+    <path d="M72 40 C84 32 94 38 98 48 C96 52 86 50 76 46 Z" fill="#221A15" />
+
+    <!-- Torso / Racerback Tank -->
+    <path d="M24 128 C26 99 40 88 53 86 L56 94 L72 94 L75 86 C88 88 102 99 104 128 Z" fill="url(#womenTop)" />
+    <!-- Straps & Neckline -->
+    <path d="M53 86 L64 97 L75 86" stroke="#FFD43B" stroke-width="2.5" stroke-linecap="round" fill="none" />
+
+    <!-- Neck -->
+    <path d="M55 72 L55 86 C55 91 73 91 73 86 L73 72 Z" fill="url(#womenSkin)" />
+
+    <!-- Head / Face silhouette -->
+    <ellipse cx="64" cy="56" rx="18" ry="21" fill="url(#womenSkin)" />
+
+    <!-- Hair / Visor -->
+    <path d="M45 52 C45 38 52 32 64 32 C74 32 81 37 82 48 C76 48 54 48 45 52 Z" fill="#221A15" />
+    <!-- Sporty Sun Visor -->
+    <path d="M42 49 C48 45 78 45 86 49 C89 51 86 54 80 54 C66 54 46 53 42 49 Z" fill="#FF5A3C" />
+    <path d="M48 47 Q64 45 80 47" stroke="#FFD43B" stroke-width="2" />
+
+    <!-- Athletic Eye Line / Sleek shades -->
+    <path d="M49 53 Q64 56 79 53 Q77 60 64 60 Q51 60 49 53 Z" fill="#17151F" fill-opacity="0.9" />
+    <path d="M51 54 Q64 57 77 54" stroke="#FF5A3C" stroke-width="1.2" stroke-opacity="0.9" />
+  </g>
+
+  <!-- Padel Racket Badge in Bottom-Right -->
+  <g transform="translate(82, 82) scale(0.38)" filter="url(#womenShadow)">
+    <circle cx="50" cy="50" r="38" fill="#1B1650" stroke="#FF5A3C" stroke-width="6" />
+    <g fill="#FFD43B">
+      <circle cx="50" cy="32" r="3.5" />
+      <circle cx="38" cy="42" r="3.5" />
+      <circle cx="50" cy="42" r="3.5" />
+      <circle cx="62" cy="42" r="3.5" />
+      <circle cx="32" cy="52" r="3.5" />
+      <circle cx="44" cy="52" r="3.5" />
+      <circle cx="56" cy="52" r="3.5" />
+      <circle cx="68" cy="52" r="3.5" />
+      <circle cx="38" cy="62" r="3.5" />
+      <circle cx="50" cy="62" r="3.5" />
+      <circle cx="62" cy="62" r="3.5" />
+      <circle cx="50" cy="72" r="3.5" />
+    </g>
+    <path d="M42 85 L38 98 L62 98 L58 85 Z" fill="#FF5A3C" />
+    <rect x="44" y="98" width="12" height="32" rx="4" fill="#FBF7F1" />
+    <line x1="44" y1="106" x2="56" y2="110" stroke="#17151F" stroke-width="2" />
+    <line x1="44" y1="114" x2="56" y2="118" stroke="#17151F" stroke-width="2" />
+    <line x1="44" y1="122" x2="56" y2="126" stroke="#17151F" stroke-width="2" />
+  </g>
+</svg>

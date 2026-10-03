@@ -48,7 +48,12 @@ export default async function PlayersAdmin({ searchParams }: { searchParams: Pro
                 <td className="py-2 pr-3">
                   <div className="relative w-9 h-11 rounded-md bg-ink/40 overflow-hidden">
                     <Image
-                      src={p.photo_url || "/images/player-placeholder.svg"}
+                      src={
+                        p.photo_url ||
+                        (p.gender === "F"
+                          ? "/images/player-placeholder-women.svg"
+                          : "/images/player-placeholder-men.svg")
+                      }
                       alt=""
                       fill
                       sizes="36px"

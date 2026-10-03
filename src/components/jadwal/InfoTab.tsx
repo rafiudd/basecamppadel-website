@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { WHATSAPP_URL, YOUTUBE_URL } from "@/lib/config";
 import type { EventItem } from "@/lib/events";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 
 export function InfoTab({ event }: { event: EventItem }) {
   const isLive = event.status === "live";
@@ -136,9 +137,7 @@ export function InfoTab({ event }: { event: EventItem }) {
 
               {event.registeredParticipants?.map((p) => (
                 <div key={p.id} className="flex items-center gap-3 py-1.5 border-b border-ink/6 last:border-b-0">
-                  <div className="w-8 h-8 rounded-full bg-indigo text-snow flex items-center justify-center font-display font-bold text-xs flex-none">
-                    {p.avatar}
-                  </div>
+                  <PlayerAvatar name={p.name} size="sm" showPadelBadge />
                   <div className="flex-1 min-w-0">
                     <span className="font-semibold text-sm block truncate">{p.name}</span>
                     <span className="text-xs text-ink/60 block">{p.level}</span>
@@ -148,9 +147,7 @@ export function InfoTab({ event }: { event: EventItem }) {
 
               {event.registeredTeams?.map((t) => (
                 <div key={t.id} className="flex items-center gap-3 py-1.5 border-b border-ink/6 last:border-b-0">
-                  <div className="w-8 h-8 rounded-full bg-indigo text-snow flex items-center justify-center font-display font-bold text-xs flex-none">
-                    {t.avatar}
-                  </div>
+                  <PlayerAvatar name={t.name} size="sm" showPadelBadge />
                   <span className="font-semibold text-sm truncate">{t.name}</span>
                 </div>
               ))}

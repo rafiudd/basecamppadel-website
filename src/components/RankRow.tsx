@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { RankedPlayer } from "@/lib/queries";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 
 export function PlayerHeroCard({
   player,
@@ -20,6 +21,10 @@ export function PlayerHeroCard({
   const isRank1 = player.rank === 1;
   const rank1Accent = gender === "men" ? "#FFD43B" : "#FF5A3C";
   const rankColor = isRank1 ? rank1Accent : "#FBF7F1";
+  const defaultCutout =
+    gender === "women"
+      ? "/images/player-placeholder-women.svg"
+      : "/images/player-placeholder-men.svg";
 
   return (
     <Link
@@ -49,7 +54,7 @@ export function PlayerHeroCard({
       {/* Player cutout photo */}
       <div className="absolute left-6 sm:left-[68px] bottom-0 w-[166px] sm:w-[224px] h-[224px] sm:h-[280px] z-[2] flex items-end justify-center rounded-b-2xl overflow-hidden pointer-events-none">
         <Image
-          src={player.photo_url || "/images/player-placeholder.svg"}
+          src={player.photo_url || defaultCutout}
           alt={`Foto ${player.name}`}
           width={224}
           height={276}
@@ -79,6 +84,7 @@ export function PlayerHeroCard({
 export function PlayerCompactRow({
   player,
   isFirst = false,
+  gender = "men",
 }: {
   player: {
     id: string;
@@ -88,15 +94,11 @@ export function PlayerCompactRow({
     points: number;
     wins?: number;
     losses?: number;
+    photo_url?: string | null;
   };
   isFirst?: boolean;
+  gender?: "men" | "women";
 }) {
-  const initials = player.name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-
   return (
     <Link
       href={`/leaderboard/${player.id}`}
@@ -107,9 +109,13 @@ export function PlayerCompactRow({
       <div className="font-display font-bold text-base w-6 text-center text-indigo flex-none">
         {player.rank}
       </div>
-      <div className="w-9 h-9 rounded-full flex-none bg-ink/7 text-ink flex items-center justify-center font-display font-bold text-[13px]">
-        {initials || "BP"}
-      </div>
+      <PlayerAvatar
+        src={player.photo_url}
+        name={player.name}
+        gender={gender}
+        size="md"
+        showPadelBadge
+      />
       <div className="flex-1 min-w-0">
         <div className="font-display font-bold text-[15px] text-ink truncate">
           {player.name}
@@ -131,3 +137,4 @@ export function RankRow({ player, accent }: { player: RankedPlayer; accent: stri
   const gender = accent === "#FF5A3C" ? "women" : "men";
   return <PlayerHeroCard player={player} gender={gender} />;
 }
+

@@ -122,7 +122,12 @@ export default async function PlayerPage({ params }: Props) {
           {/* Photo */}
           <div className="flex-none self-center md:self-end w-[260px] sm:w-[300px] md:w-[320px] h-[340px] md:h-[412px] relative">
             <Image
-              src={player.photo_url || "/images/player-placeholder.svg"}
+              src={
+                player.photo_url ||
+                (player.gender?.toLowerCase() === "women"
+                  ? "/images/player-placeholder-women.svg"
+                  : "/images/player-placeholder-men.svg")
+              }
               alt={`Foto ${player.name}`}
               width={320}
               height={412}

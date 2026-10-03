@@ -115,7 +115,12 @@ export function LeaderboardClient({ initialData }: { initialData: LeaderboardDat
               {filteredMenOther.length > 0 && (
                 <div className="bg-white border border-ink/8 rounded-2xl p-5 md:p-6 mt-6 shadow-xs flex flex-col">
                   {filteredMenOther.map((p, idx) => (
-                    <PlayerCompactRow key={p.id} player={p} isFirst={idx === 0} />
+                    <PlayerCompactRow
+                      key={p.id}
+                      player={p}
+                      isFirst={idx === 0}
+                      gender="men"
+                    />
                   ))}
                 </div>
               )}
@@ -147,7 +152,12 @@ export function LeaderboardClient({ initialData }: { initialData: LeaderboardDat
               {filteredWomenOther.length > 0 && (
                 <div className="bg-white border border-ink/8 rounded-2xl p-5 md:p-6 mt-6 shadow-xs flex flex-col">
                   {filteredWomenOther.map((p, idx) => (
-                    <PlayerCompactRow key={p.id} player={p} isFirst={idx === 0} />
+                    <PlayerCompactRow
+                      key={p.id}
+                      player={p}
+                      isFirst={idx === 0}
+                      gender="women"
+                    />
                   ))}
                 </div>
               )}

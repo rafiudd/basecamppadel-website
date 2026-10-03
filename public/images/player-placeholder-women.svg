@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 540" width="400" height="540" fill="none">
+  <defs>
+    <!-- Gradients for Female Athletic Silhouette -->
+    <linearGradient id="bodyWomenGrad" x1="200" y1="120" x2="200" y2="540" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FBF7F1" stop-opacity="0.38" />
+      <stop offset="60%" stop-color="#FBF7F1" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#FBF7F1" stop-opacity="0.10" />
+    </linearGradient>
+    <linearGradient id="racketWomenGrad" x1="250" y1="120" x2="360" y2="340" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF5A3C" stop-opacity="0.95" />
+      <stop offset="60%" stop-color="#FF5A3C" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#FFD43B" stop-opacity="0.6" />
+    </linearGradient>
+    <linearGradient id="glowWomen" x1="200" y1="180" x2="200" y2="540" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF5A3C" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#2D1124" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Ambient Sporty Aura -->
+  <ellipse cx="200" cy="320" rx="140" ry="180" fill="url(#glowWomen)" />
+
+  <!-- Dynamic Court Accent Grid lines in background -->
+  <g stroke="#FF5A3C" stroke-width="1.2" stroke-opacity="0.1" stroke-dasharray="4 6">
+    <line x1="60" y1="200" x2="340" y2="200" />
+    <line x1="40" y1="320" x2="360" y2="320" />
+    <line x1="30" y1="440" x2="370" y2="440" />
+    <line x1="140" y1="120" x2="140" y2="520" />
+    <line x1="260" y1="120" x2="260" y2="520" />
+  </g>
+
+  <!-- Athletic Player Silhouette Group -->
+  <g>
+    <!-- Left Arm & Shoulder in Ready Stance -->
+    <path d="M130 240 C105 270 80 320 78 368 C76 388 95 392 104 378 C116 358 132 318 145 285 Z" fill="url(#bodyWomenGrad)" />
+
+    <!-- High Ponytail Hair Silhouette -->
+    <path d="M215 110 C240 95 265 108 275 128 C265 136 242 132 225 124 Z" fill="#FBF7F1" fill-opacity="0.45" />
+
+    <!-- Torso / Racerback Tank Athletic Fit -->
+    <path d="M136 220 C118 260 102 360 92 540 L308 540 C298 380 282 270 264 220 C246 200 224 195 200 195 C176 195 154 200 136 220 Z" fill="url(#bodyWomenGrad)" />
+
+    <!-- Athletic Tank Neckline & Contours -->
+    <path d="M136 220 C160 245 200 250 200 288" stroke="#FF5A3C" stroke-width="2" stroke-opacity="0.45" stroke-linecap="round" fill="none" />
+    <path d="M264 220 C240 245 200 250 200 288" stroke="#FFD43B" stroke-width="1.8" stroke-opacity="0.35" stroke-linecap="round" fill="none" />
+    <path d="M200 288 L200 420" stroke="#FF5A3C" stroke-width="1.5" stroke-opacity="0.2" stroke-linecap="round" stroke-dasharray="4 4" />
+
+    <!-- Neck -->
+    <path d="M182 175 L176 215 C188 222 212 222 224 215 L218 175 Z" fill="#FBF7F1" fill-opacity="0.32" />
+    <path d="M176 215 L200 236 L224 215" stroke="#FF5A3C" stroke-width="2.5" stroke-linecap="round" fill="none" />
+
+    <!-- Head / Athletic Visor Profile -->
+    <path d="M168 144 C168 106 182 84 200 84 C218 84 232 106 232 144 C232 168 218 178 200 178 C182 178 168 168 168 144 Z" fill="#FBF7F1" fill-opacity="0.36" />
+    <!-- Visor -->
+    <path d="M164 126 C164 96 178 86 200 86 C218 86 234 96 234 126 C220 122 180 122 164 126 Z" fill="#FF5A3C" fill-opacity="0.65" />
+    <path d="M156 124 C160 118 172 122 174 128 C168 132 160 130 156 124 Z" fill="#FFD43B" fill-opacity="0.9" />
+
+    <!-- Right Arm Holding Racket (Forward angled) -->
+    <path d="M260 230 C285 260 305 290 312 335 C314 350 298 360 288 352 C276 342 262 315 248 280 Z" fill="url(#bodyWomenGrad)" />
+    <!-- Forearm leading to racket handle -->
+    <path d="M308 338 L322 310 C328 312 332 322 328 330 L316 352 Z" fill="#FBF7F1" fill-opacity="0.4" />
+  </g>
+
+  <!-- Padel Racket in Hand -->
+  <g transform="translate(4, -10)">
+    <!-- Racket Handle & Grip Wrap -->
+    <rect x="325" y="278" width="13" height="42" rx="3" transform="rotate(-28 325 278)" fill="#FBF7F1" fill-opacity="0.8" />
+    <line x1="324" y1="288" x2="336" y2="294" stroke="#17151F" stroke-width="1.5" stroke-opacity="0.6" transform="rotate(-28 325 278)" />
+    <line x1="324" y1="298" x2="336" y2="304" stroke="#17151F" stroke-width="1.5" stroke-opacity="0.6" transform="rotate(-28 325 278)" />
+    <line x1="324" y1="308" x2="336" y2="314" stroke="#17151F" stroke-width="1.5" stroke-opacity="0.6" transform="rotate(-28 325 278)" />
+
+    <!-- Safety Wrist Cord (Padel signature cordón) -->
+    <path d="M338 318 Q346 340 334 355 Q326 350 324 340" stroke="#FF5A3C" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2 2" fill="none" />
+
+    <!-- Racket Throat (Triangular Bridge) -->
+    <path d="M328 265 L314 225 L346 214 L342 258 Z" fill="#FF5A3C" fill-opacity="0.85" />
+    <polygon points="325,242 333,228 338,240" fill="#1B1650" fill-opacity="0.7" />
+
+    <!-- Padel Racket Head (Perforated Solid Frame) -->
+    <ellipse cx="328" cy="168" rx="46" ry="58" transform="rotate(-24 328 168)" fill="url(#racketWomenGrad)" stroke="#FFD43B" stroke-width="4" stroke-opacity="0.95" />
+
+    <!-- Padel Holes Grid (Perforations) -->
+    <g fill="#1B1650" fill-opacity="0.85" transform="rotate(-24 328 168)">
+      <circle cx="328" cy="138" r="4.2" />
+      <circle cx="314" cy="152" r="4.2" />
+      <circle cx="328" cy="152" r="4.2" />
+      <circle cx="342" cy="152" r="4.2" />
+      <circle cx="304" cy="168" r="4.2" />
+      <circle cx="320" cy="168" r="4.2" />
+      <circle cx="336" cy="168" r="4.2" />
+      <circle cx="352" cy="168" r="4.2" />
+      <circle cx="314" cy="184" r="4.2" />
+      <circle cx="328" cy="184" r="4.2" />
+      <circle cx="342" cy="184" r="4.2" />
+      <circle cx="328" cy="198" r="4.2" />
+    </g>
+  </g>
+
+  <!-- Subtle Dynamic Energy Arc -->
+  <path d="M70 480 C120 505 280 505 340 460" stroke="#FF5A3C" stroke-width="2" stroke-opacity="0.35" stroke-linecap="round" fill="none" />
+</svg>

@@ -1,24 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 540" width="400" height="540" fill="none">
   <defs>
-    <!-- Gradients for Universal Athletic Silhouette -->
-    <linearGradient id="bodyGenGrad" x1="200" y1="120" x2="200" y2="540" gradientUnits="userSpaceOnUse">
+    <!-- Gradients for Male Athletic Silhouette -->
+    <linearGradient id="bodyMenGrad" x1="200" y1="120" x2="200" y2="540" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#FBF7F1" stop-opacity="0.38" />
       <stop offset="60%" stop-color="#FBF7F1" stop-opacity="0.22" />
       <stop offset="100%" stop-color="#FBF7F1" stop-opacity="0.10" />
     </linearGradient>
-    <linearGradient id="racketGenGrad" x1="250" y1="120" x2="360" y2="340" gradientUnits="userSpaceOnUse">
+    <linearGradient id="racketMenGrad" x1="250" y1="120" x2="360" y2="340" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#FFD43B" stop-opacity="0.9" />
-      <stop offset="60%" stop-color="#FF5A3C" stop-opacity="0.75" />
+      <stop offset="60%" stop-color="#FFD43B" stop-opacity="0.65" />
       <stop offset="100%" stop-color="#FBF7F1" stop-opacity="0.4" />
     </linearGradient>
-    <linearGradient id="glowGen" x1="200" y1="180" x2="200" y2="540" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#FFD43B" stop-opacity="0.1" />
+    <linearGradient id="highlightMen" x1="120" y1="140" x2="280" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFD43B" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#FFD43B" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="glowMen" x1="200" y1="180" x2="200" y2="540" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFD43B" stop-opacity="0.12" />
       <stop offset="100%" stop-color="#1B1650" stop-opacity="0" />
     </linearGradient>
   </defs>
 
   <!-- Ambient Sporty Aura -->
-  <ellipse cx="200" cy="320" rx="140" ry="180" fill="url(#glowGen)" />
+  <ellipse cx="200" cy="320" rx="140" ry="180" fill="url(#glowMen)" />
 
   <!-- Dynamic Court Accent Grid lines in background -->
   <g stroke="#FBF7F1" stroke-width="1.2" stroke-opacity="0.08" stroke-dasharray="4 6">
@@ -32,28 +36,30 @@
   <!-- Athletic Player Silhouette Group -->
   <g>
     <!-- Left Arm & Shoulder in Ready Stance -->
-    <path d="M128 240 C100 270 75 320 72 370 C70 390 88 394 98 380 C110 360 130 320 144 285 Z" fill="url(#bodyGenGrad)" />
+    <path d="M125 240 C95 270 70 320 68 370 C66 390 85 395 96 380 C108 360 128 320 142 285 Z" fill="url(#bodyMenGrad)" />
 
-    <!-- Torso / Athletic Fit Top -->
-    <path d="M132 220 C112 260 98 360 88 540 L312 540 C302 380 288 270 268 220 C248 200 224 195 200 195 C176 195 152 200 132 220 Z" fill="url(#bodyGenGrad)" />
+    <!-- Torso / Athletic Athletic Polo & Chest -->
+    <path d="M130 220 C110 260 95 360 85 540 L315 540 C305 380 290 270 270 220 C250 200 225 195 200 195 C175 195 150 200 130 220 Z" fill="url(#bodyMenGrad)" />
 
-    <!-- Athletic Contours -->
-    <path d="M132 220 C156 245 200 250 200 290" stroke="#FFD43B" stroke-width="2" stroke-opacity="0.35" stroke-linecap="round" fill="none" />
-    <path d="M268 220 C244 245 200 250 200 290" stroke="#FF5A3C" stroke-width="1.8" stroke-opacity="0.3" stroke-linecap="round" fill="none" />
+    <!-- Athletic Chest Contour Lines -->
+    <path d="M130 220 C155 245 200 250 200 290" stroke="#FFD43B" stroke-width="2" stroke-opacity="0.35" stroke-linecap="round" fill="none" />
+    <path d="M270 220 C245 245 200 250 200 290" stroke="#FBF7F1" stroke-width="1.5" stroke-opacity="0.25" stroke-linecap="round" fill="none" />
     <path d="M200 290 L200 420" stroke="#FBF7F1" stroke-width="1.5" stroke-opacity="0.18" stroke-linecap="round" stroke-dasharray="4 4" />
 
-    <!-- Neck -->
-    <path d="M180 175 L174 215 C186 223 214 223 226 215 L220 175 Z" fill="#FBF7F1" fill-opacity="0.32" />
-    <path d="M174 215 L200 238 L226 215" stroke="#FFD43B" stroke-width="2.5" stroke-linecap="round" fill="none" />
+    <!-- Collar / Neck -->
+    <path d="M178 175 L172 215 C185 224 215 224 228 215 L222 175 Z" fill="#FBF7F1" fill-opacity="0.32" />
+    <path d="M172 215 L200 240 L228 215" stroke="#FFD43B" stroke-width="2.5" stroke-linecap="round" fill="none" />
 
     <!-- Head / Athletic Cap Profile -->
-    <path d="M166 145 C166 105 180 83 200 83 C220 83 234 105 234 145 C234 170 220 180 200 180 C180 180 166 170 166 145 Z" fill="#FBF7F1" fill-opacity="0.36" />
-    <!-- Visor/Cap -->
-    <path d="M164 128 C164 97 178 85 200 85 C222 85 236 97 236 128 C220 124 180 124 164 128 Z" fill="#FFD43B" fill-opacity="0.5" />
+    <path d="M165 145 C165 105 180 82 200 82 C220 82 235 105 235 145 C235 170 220 180 200 180 C180 180 165 170 165 145 Z" fill="#FBF7F1" fill-opacity="0.36" />
+    <!-- Backward Sporty Cap -->
+    <path d="M165 130 C165 98 178 84 200 84 C222 84 235 98 235 130 C220 125 180 125 165 130 Z" fill="#FFD43B" fill-opacity="0.5" />
+    <path d="M156 128 C160 123 166 126 168 132 C164 135 158 134 156 128 Z" fill="#FFD43B" fill-opacity="0.8" />
 
     <!-- Right Arm Holding Racket (Forward angled) -->
-    <path d="M264 230 C288 260 308 290 314 335 C316 350 300 360 290 352 C278 342 264 315 250 280 Z" fill="url(#bodyGenGrad)" />
-    <path d="M310 338 L324 310 C330 312 334 322 330 330 L318 352 Z" fill="#FBF7F1" fill-opacity="0.4" />
+    <path d="M265 230 C290 260 310 290 316 335 C318 350 302 360 292 352 C280 342 265 315 250 280 Z" fill="url(#bodyMenGrad)" />
+    <!-- Forearm leading to racket handle -->
+    <path d="M312 338 L326 310 C332 312 336 322 332 330 L320 352 Z" fill="#FBF7F1" fill-opacity="0.4" />
   </g>
 
   <!-- Padel Racket in Hand -->
@@ -64,17 +70,17 @@
     <line x1="324" y1="298" x2="336" y2="304" stroke="#17151F" stroke-width="1.5" stroke-opacity="0.6" transform="rotate(-28 325 278)" />
     <line x1="324" y1="308" x2="336" y2="314" stroke="#17151F" stroke-width="1.5" stroke-opacity="0.6" transform="rotate(-28 325 278)" />
 
-    <!-- Safety Wrist Cord -->
+    <!-- Safety Wrist Cord (Padel signature cordón) -->
     <path d="M338 318 Q346 340 334 355 Q326 350 324 340" stroke="#FFD43B" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2 2" fill="none" />
 
-    <!-- Racket Throat -->
+    <!-- Racket Throat (Triangular Bridge) -->
     <path d="M328 265 L314 225 L346 214 L342 258 Z" fill="#FF5A3C" fill-opacity="0.8" />
     <polygon points="325,242 333,228 338,240" fill="#1B1650" fill-opacity="0.7" />
 
-    <!-- Padel Racket Head -->
-    <ellipse cx="328" cy="168" rx="46" ry="58" transform="rotate(-24 328 168)" fill="url(#racketGenGrad)" stroke="#FFD43B" stroke-width="4" stroke-opacity="0.95" />
+    <!-- Padel Racket Head (Perforated Solid Frame) -->
+    <ellipse cx="328" cy="168" rx="46" ry="58" transform="rotate(-24 328 168)" fill="url(#racketMenGrad)" stroke="#FFD43B" stroke-width="4" stroke-opacity="0.95" />
 
-    <!-- Padel Holes Grid -->
+    <!-- Padel Holes Grid (Perforations) -->
     <g fill="#1B1650" fill-opacity="0.85" transform="rotate(-24 328 168)">
       <circle cx="328" cy="138" r="4.2" />
       <circle cx="314" cy="152" r="4.2" />
@@ -91,6 +97,6 @@
     </g>
   </g>
 
-  <!-- Speed Line -->
+  <!-- Subtle Dynamic Energy Arc (Speed line) -->
   <path d="M70 480 C120 505 280 505 340 460" stroke="#FFD43B" stroke-width="2" stroke-opacity="0.3" stroke-linecap="round" fill="none" />
 </svg>

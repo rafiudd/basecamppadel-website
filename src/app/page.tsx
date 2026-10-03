@@ -2,16 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { PublicShell } from "@/components/PublicShell";
 import { LiveCard } from "@/components/LiveCard";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { getActivePlayers, getLiveMatch, rankByGender } from "@/lib/queries";
 import { WHATSAPP_URL } from "@/lib/config";
 
 export const revalidate = 0;
-
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return (name.slice(0, 2) || "BP").toUpperCase();
-}
 
 const WHY = [
   {
@@ -187,20 +182,13 @@ export default async function HomePage() {
                     } text-inherit hover:bg-ink/3 -mx-2 px-2 rounded-lg transition-colors`}
                   >
                     <div className="font-display font-bold text-[22px] w-6 text-indigo">{p.rank}</div>
-                    <div className="w-10 h-10 rounded-full flex-none bg-indigo text-snow flex items-center justify-center font-display font-bold text-sm overflow-hidden">
-                      {p.photo_url ? (
-                        <Image
-                          src={p.photo_url}
-                          alt={p.name}
-                          width={40}
-                          height={40}
-                          unoptimized
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        getInitials(p.name)
-                      )}
-                    </div>
+                    <PlayerAvatar
+                      src={p.photo_url}
+                      name={p.name}
+                      gender="men"
+                      size="lg"
+                      showPadelBadge
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="font-display font-bold text-base text-ink truncate">{p.name}</div>
                       <div className="text-[13px] text-ink/65 truncate">
