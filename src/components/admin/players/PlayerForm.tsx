@@ -5,11 +5,11 @@ import { LEVELS } from "@/lib/config";
 
 export function PlayerForm({ player }: { player?: Player }) {
   return (
-    <form action={upsertPlayer} className="bg-indigo rounded-2xl p-6 grid grid-cols-1 md:grid-cols-[160px_1fr] gap-6">
+    <form action={upsertPlayer} className="bg-ink-2 rounded-2xl p-5 md:p-6 grid grid-cols-1 md:grid-photo-form gap-6">
       {player && <input type="hidden" name="id" value={player.id} />}
 
       <div className="flex flex-col gap-3">
-        <div className="relative w-[160px] h-[200px] rounded-xl bg-ink/40 overflow-hidden">
+        <div className="relative w-40 h-50 rounded-xl bg-ink/40 overflow-hidden">
           <Image
             src={player?.photo_url || "/images/player-placeholder.svg"}
             alt=""
@@ -57,7 +57,7 @@ export function PlayerForm({ player }: { player?: Player }) {
         <div>
           <div className="label">Koreksi poin (manual)</div>
           <input className="field" name="points_adjustment" type="number" defaultValue={player?.points_adjustment ?? 0} />
-          <div className="text-[11px] text-snow/40 mt-1">
+          <div className="text-2xs text-snow/40 mt-1">
             Poin = total dari riwayat match + koreksi ini. {player && <>Saat ini: <b className="text-snow">{player.points}</b> poin, {player.wins}–{player.losses}.</>}
           </div>
         </div>

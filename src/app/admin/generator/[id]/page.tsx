@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { courtLabel } from "@/lib/format";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -43,7 +44,7 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
   const matchList = matches ?? [];
 
   const nameById = new Map(participantList.map((p) => [p.id, p.display_name]));
-  const courtNameById = new Map((courts ?? []).map((c) => [c.id, c.name]));
+  const courtNameById = new Map((courts ?? []).map((c) => [c.id, courtLabel(c.name)]));
   const teamName = (ids: string[]) => ids.map((pid) => nameById.get(pid) ?? "?").join(" / ");
 
   const latestRound = roundList[0];
@@ -66,7 +67,7 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <Link href="/admin/generator" className="text-sm text-snow/60 no-underline hover:text-volt">← Generator</Link>
-          <h1 className="font-display font-bold text-[26px] mt-1">{event.title || "Mabar"}</h1>
+          <h1 className="font-display font-bold text-page mt-1">{event.title || "Mabar"}</h1>
           <div className="text-sm text-snow/60">{FORMAT_LABEL[event.format]} · {event.status}</div>
         </div>
         {event.status !== "finished" && participantList.length > 0 && (
@@ -86,7 +87,7 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
             <div className="flex flex-col gap-2">
               {[...teams.entries()].map(([teamNo, members]) => (
                 <div key={teamNo} className="flex items-center gap-3 flex-wrap bg-ink-2 rounded-lg px-3 py-2">
-                  <div className="flex-1 min-w-[140px] text-sm font-semibold">Tim {teamNo}: {members.map((m) => m.display_name).join(" / ")}</div>
+                  <div className="flex-1 min-w-35 text-sm font-semibold">Tim {teamNo}: {members.map((m) => m.display_name).join(" / ")}</div>
                   <div className="flex-none text-xs text-snow/50">{members[0]?.total_points ?? 0} + {members[1]?.total_points ?? 0} poin</div>
                   <form action={removeTeam} className="flex-none">
                     <input type="hidden" name="event_id" value={event.id} />
@@ -99,11 +100,11 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
             </div>
             <form action={addFixedTeam} className="flex items-center gap-2 flex-wrap">
               <input type="hidden" name="event_id" value={event.id} />
-              <select className="field flex-1 min-w-[140px] text-sm" name="player_a" required defaultValue="">
+              <select className="field flex-1 min-w-35 text-sm" name="player_a" required defaultValue="">
                 <option value="" disabled>Pemain 1</option>
                 {(players ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              <select className="field flex-1 min-w-[140px] text-sm" name="player_b" required defaultValue="">
+              <select className="field flex-1 min-w-35 text-sm" name="player_b" required defaultValue="">
                 <option value="" disabled>Pemain 2</option>
                 {(players ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
@@ -115,7 +116,7 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
             <div className="flex flex-col gap-1.5">
               {soloParticipants.map((p) => (
                 <div key={p.id} className="flex items-center gap-3 flex-wrap bg-ink-2 rounded-lg px-3 py-2">
-                  <div className="flex-1 min-w-[140px] text-sm font-semibold">{p.display_name}{!p.player_id && <span className="text-snow/40 font-normal"> (guest)</span>}</div>
+                  <div className="flex-1 min-w-35 text-sm font-semibold">{p.display_name}{!p.player_id && <span className="text-snow/40 font-normal"> (guest)</span>}</div>
                   <div className="flex-none text-xs text-snow/50">{p.total_points} poin</div>
                   <form action={removeParticipant} className="flex-none">
                     <input type="hidden" name="event_id" value={event.id} />
@@ -130,7 +131,7 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
               <input type="hidden" name="event_id" value={event.id} />
               <div>
                 <div className="label">Pemain terdaftar</div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 max-h-[220px] overflow-y-auto bg-ink-2 rounded-lg p-2.5">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5 max-h-55 overflow-y-auto bg-ink-2 rounded-lg p-2.5">
                   {(players ?? []).map((p) => (
                     <label key={p.id} className="flex items-center gap-1.5 text-sm">
                       <input type="checkbox" name="player_ids" value={p.id} /> {p.name}

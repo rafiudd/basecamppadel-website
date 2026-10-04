@@ -1,16 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Player } from "@/lib/database.types";
 
-export async function getLiveMatch() {
+/** The ON AIR match, optionally only within one event. */
+export async function getLiveMatch(eventId?: string) {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("matches")
-    .select("*")
-    .eq("is_live", true)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  let q = supabase.from("matches").select("*").eq("is_live", true);
+  if (eventId) q = q.eq("event_id", eventId);
+  const { data } = await q.order("updated_at", { ascending: false }).limit(1).maybeSingle();
   return data;
+}
+
+/** OBS links address an event by slug. */
+export async function getEventIdBySlug(slug: string | undefined) {
+  if (!slug) return undefined;
+  const supabase = await createClient();
+  const { data } = await supabase.from("events").select("id").eq("slug", slug).maybeSingle();
+  return data?.id;
 }
 
 export async function getPublishedSessions() {
