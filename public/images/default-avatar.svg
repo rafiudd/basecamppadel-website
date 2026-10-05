@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="16" y1="12" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#261E6B" />
+      <stop offset="60%" stop-color="#1B1650" />
+      <stop offset="100%" stop-color="#110D33" />
+    </linearGradient>
+    <linearGradient id="voltGrad" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFD43B" />
+      <stop offset="100%" stop-color="#FF5A3C" />
+    </linearGradient>
+    <linearGradient id="skinGrad" x1="64" y1="40" x2="64" y2="82" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FBF7F1" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#E5DEC9" stop-opacity="0.8" />
+    </linearGradient>
+    <linearGradient id="jerseyGrad" x1="32" y1="90" x2="96" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF5A3C" />
+      <stop offset="100%" stop-color="#D94025" />
+    </linearGradient>
+    <filter id="shadow" x="-8" y="-8" width="144" height="144" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Background Circle with sporty border -->
+  <circle cx="64" cy="64" r="63" fill="url(#bgGrad)" />
+  <circle cx="64" cy="64" r="61" stroke="url(#voltGrad)" stroke-width="2" stroke-opacity="0.65" />
+
+  <!-- Geometric Court Mesh Accent (Subtle) -->
+  <path d="M20 32 L108 32 M12 64 L116 64 M20 96 L108 96" stroke="#FBF7F1" stroke-width="1" stroke-opacity="0.06" stroke-dasharray="3 3" />
+  <path d="M40 16 L40 112 M64 12 L64 116 M88 16 L88 112" stroke="#FBF7F1" stroke-width="1" stroke-opacity="0.06" stroke-dasharray="3 3" />
+
+  <!-- Avatar Group clipped to circle -->
+  <g clip-path="url(#avatarClip)">
+    <clipPath id="avatarClip">
+      <circle cx="64" cy="64" r="60" />
+    </clipPath>
+
+    <!-- Torso / Athletic Jersey -->
+    <path d="M22 128 C24 100 38 88 52 86 L56 94 L72 94 L76 86 C90 88 104 100 106 128 Z" fill="url(#jerseyGrad)" />
+    <!-- Jersey Collar Accent -->
+    <path d="M52 86 L64 99 L76 86" stroke="#FFD43B" stroke-width="2.5" stroke-linecap="round" fill="none" />
+
+    <!-- Neck -->
+    <path d="M54 74 L54 88 C54 94 74 94 74 88 L74 74 Z" fill="url(#skinGrad)" />
+
+    <!-- Head / Face silhouette -->
+    <ellipse cx="64" cy="57" rx="19" ry="22" fill="url(#skinGrad)" />
+
+    <!-- Sporty Cap / Hair visor -->
+    <path d="M44 54 C44 40 50 34 64 34 C78 34 84 40 84 54 C78 52 50 52 44 54 Z" fill="#1B1650" />
+    <!-- Cap Visor -->
+    <path d="M42 50 C48 48 80 48 88 52 C91 53 87 56 80 56 C68 56 46 54 42 50 Z" fill="#FFD43B" />
+
+    <!-- Athletic Sunglasses / Visor glass -->
+    <path d="M48 54 Q64 57 80 54 Q78 62 64 62 Q50 62 48 54 Z" fill="#17151F" fill-opacity="0.85" />
+    <path d="M50 55 Q64 58 78 55" stroke="#FFD43B" stroke-width="1" stroke-opacity="0.8" />
+  </g>
+
+  <!-- Padel Racket Badge in Bottom-Right -->
+  <g transform="translate(82, 82) scale(0.38)" filter="url(#shadow)">
+    <!-- Racket Head -->
+    <circle cx="50" cy="50" r="38" fill="#1B1650" stroke="#FFD43B" stroke-width="6" />
+    <!-- Padel Racket Perforations -->
+    <g fill="#FFD43B">
+      <circle cx="50" cy="32" r="3.5" />
+      <circle cx="38" cy="42" r="3.5" />
+      <circle cx="50" cy="42" r="3.5" />
+      <circle cx="62" cy="42" r="3.5" />
+      <circle cx="32" cy="52" r="3.5" />
+      <circle cx="44" cy="52" r="3.5" />
+      <circle cx="56" cy="52" r="3.5" />
+      <circle cx="68" cy="52" r="3.5" />
+      <circle cx="38" cy="62" r="3.5" />
+      <circle cx="50" cy="62" r="3.5" />
+      <circle cx="62" cy="62" r="3.5" />
+      <circle cx="50" cy="72" r="3.5" />
+    </g>
+    <!-- Racket Throat -->
+    <path d="M42 85 L38 98 L62 98 L58 85 Z" fill="#FF5A3C" />
+    <!-- Handle -->
+    <rect x="44" y="98" width="12" height="32" rx="4" fill="#FBF7F1" />
+    <!-- Handle Wrap lines -->
+    <line x1="44" y1="106" x2="56" y2="110" stroke="#17151F" stroke-width="2" />
+    <line x1="44" y1="114" x2="56" y2="118" stroke="#17151F" stroke-width="2" />
+    <line x1="44" y1="122" x2="56" y2="126" stroke="#17151F" stroke-width="2" />
+  </g>
+</svg>

@@ -1,0 +1,286 @@
+{
+  "men": {
+    "hero": [
+      {
+        "id": "1",
+        "rank": 1,
+        "name": "Andra",
+        "points": 30,
+        "level": "Intermediate",
+        "region": "Cilacap",
+        "photo_url": "/images/players/andra.png",
+        "wins": 3,
+        "losses": 0
+      },
+      {
+        "id": "2",
+        "rank": 2,
+        "name": "Bob Hintama",
+        "points": 15,
+        "level": "Beginner",
+        "region": "Beginner",
+        "photo_url": "/images/players/bob-hintama.png",
+        "wins": 2,
+        "losses": 1
+      },
+      {
+        "id": "3",
+        "rank": 2,
+        "name": "Rayhan",
+        "points": 15,
+        "level": "Intermediate",
+        "region": "Purwokerto",
+        "photo_url": "/images/players/rayhan.png",
+        "wins": 2,
+        "losses": 1
+      },
+      {
+        "id": "4",
+        "rank": 2,
+        "name": "Temmy",
+        "points": 15,
+        "level": "Beginner",
+        "region": "Beginner",
+        "photo_url": "/images/players/temmy.png",
+        "wins": 2,
+        "losses": 1
+      },
+      {
+        "id": "5",
+        "rank": 5,
+        "name": "Angga Aswiyanda",
+        "points": 10,
+        "level": "Beginner",
+        "region": "Beginner",
+        "photo_url": "/images/players/angga-aswiyanda.png",
+        "wins": 1,
+        "losses": 1
+      }
+    ],
+    "others": [
+      { "id": "6", "rank": 6, "name": "Agung Setiadi", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "7", "rank": 6, "name": "Albert", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "8", "rank": 6, "name": "Alfie", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "9", "rank": 6, "name": "Dimas", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "10", "rank": 6, "name": "Fajar SSA", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "11", "rank": 6, "name": "Gabriel", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "12", "rank": 6, "name": "Nauval", "level": "Intermediate", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "13", "rank": 6, "name": "Pao Pao", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "14", "rank": 6, "name": "Rendi", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "15", "rank": 6, "name": "Fauzi", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "16", "rank": 6, "name": "Fikri", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "17", "rank": 6, "name": "Temen Fajar", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "18", "rank": 6, "name": "Timotius", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "19", "rank": 6, "name": "Coco", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "20", "rank": 6, "name": "Yonathan", "level": "Intermediate", "points": 0, "wins": 0, "losses": 0 },
+      { "id": "21", "rank": 6, "name": "Zidan", "level": "Beginner", "points": 0, "wins": 0, "losses": 0 }
+    ]
+  },
+  "women": {
+    "hero": [
+      {
+        "id": "w1",
+        "rank": 1,
+        "name": "Sari",
+        "points": 0,
+        "level": "Beginner",
+        "region": "Purwokerto",
+        "photo_url": "/images/players/sari.png",
+        "wins": 0,
+        "losses": 0
+      },
+      {
+        "id": "w2",
+        "rank": 1,
+        "name": "Tasya",
+        "points": 0,
+        "level": "Beginner",
+        "region": "Purwokerto",
+        "photo_url": "/images/players/tasya.png",
+        "wins": 0,
+        "losses": 0
+      }
+    ],
+    "others": []
+  },
+  "playerDetails": {
+    "1": {
+      "id": "1",
+      "name": "Andra",
+      "rank": 1,
+      "gender": "Men",
+      "level": "Intermediate",
+      "city": "Cilacap",
+      "points": 30,
+      "wins": 3,
+      "losses": 0,
+      "photo_url": "/images/players/andra.png",
+      "events": [
+        {
+          "date": "30 Okt",
+          "title": "Basecamp Battle Oktober #1",
+          "type": "Kompetisi",
+          "stage": "Semifinal · berjalan",
+          "points": "menunggu"
+        },
+        {
+          "date": "25 Okt",
+          "title": "Mabar Rutin Minggu",
+          "type": "Mabar",
+          "stage": "Ronde 7",
+          "points": "15 poin"
+        },
+        {
+          "date": "26 Sep",
+          "title": "Basecamp Battle September",
+          "type": "Kompetisi",
+          "stage": "8 besar",
+          "points": "15 poin"
+        }
+      ],
+      "matches": [
+        {
+          "round": "Semifinal 1",
+          "court": "Court 1",
+          "status": "live",
+          "partner": "Rayhan",
+          "opponents": "Pao Pao / Temmy",
+          "score": "3–2",
+          "isWin": null
+        },
+        {
+          "round": "8 besar",
+          "court": "Court 1",
+          "status": "finished",
+          "partner": "Rayhan",
+          "opponents": "Agung Setiadi / Fajar SSA",
+          "score": "6–2",
+          "isWin": true
+        },
+        {
+          "round": "Grup A match 2",
+          "court": "Court 1",
+          "status": "finished",
+          "partner": "Rayhan",
+          "opponents": "Timotius / Coco",
+          "score": "6–1",
+          "isWin": true
+        },
+        {
+          "round": "Grup A match 1",
+          "court": "Court 1",
+          "status": "finished",
+          "partner": "Rayhan",
+          "opponents": "Pao Pao / Temmy",
+          "score": "6–4",
+          "isWin": true
+        }
+      ]
+    },
+    "2": {
+      "id": "2",
+      "name": "Bob Hintama",
+      "rank": 2,
+      "gender": "Men",
+      "level": "Beginner",
+      "city": "Beginner",
+      "points": 15,
+      "wins": 2,
+      "losses": 1,
+      "photo_url": "/images/players/bob-hintama.png",
+      "events": [
+        {
+          "date": "30 Okt",
+          "title": "Basecamp Battle Oktober #1",
+          "type": "Kompetisi",
+          "stage": "Semifinal · berikutnya",
+          "points": "menunggu"
+        },
+        {
+          "date": "25 Okt",
+          "title": "Mabar Rutin Minggu",
+          "type": "Mabar",
+          "stage": "Juara 1",
+          "points": "15 poin"
+        }
+      ],
+      "matches": [
+        {
+          "round": "8 besar",
+          "court": "Court 1",
+          "status": "finished",
+          "partner": "Angga Aswiyanda",
+          "opponents": "Dimas / Fikri",
+          "score": "6–3",
+          "isWin": true
+        },
+        {
+          "round": "Grup B match 2",
+          "court": "Court 2",
+          "status": "finished",
+          "partner": "Angga Aswiyanda",
+          "opponents": "Sari / Tasya",
+          "score": "6–0",
+          "isWin": true
+        },
+        {
+          "round": "Grup B match 1",
+          "court": "Court 2",
+          "status": "finished",
+          "partner": "Angga Aswiyanda",
+          "opponents": "Dimas / Fikri",
+          "score": "6–2",
+          "isWin": true
+        }
+      ]
+    },
+    "3": {
+      "id": "3",
+      "name": "Rayhan",
+      "rank": 2,
+      "gender": "Men",
+      "level": "Intermediate",
+      "city": "Purwokerto",
+      "points": 15,
+      "wins": 2,
+      "losses": 1,
+      "photo_url": "/images/players/rayhan.png",
+      "events": [
+        {
+          "date": "30 Okt",
+          "title": "Basecamp Battle Oktober #1",
+          "type": "Kompetisi",
+          "stage": "Semifinal · berjalan",
+          "points": "menunggu"
+        },
+        {
+          "date": "25 Okt",
+          "title": "Mabar Rutin Minggu",
+          "type": "Mabar",
+          "stage": "Peringkat 3",
+          "points": "15 poin"
+        }
+      ],
+      "matches": [
+        {
+          "round": "Semifinal 1",
+          "court": "Court 1",
+          "status": "live",
+          "partner": "Andra",
+          "opponents": "Pao Pao / Temmy",
+          "score": "3–2",
+          "isWin": null
+        },
+        {
+          "round": "8 besar",
+          "court": "Court 1",
+          "status": "finished",
+          "partner": "Andra",
+          "opponents": "Agung Setiadi / Fajar SSA",
+          "score": "6–2",
+          "isWin": true
+        }
+      ]
+    }
+  }
+}

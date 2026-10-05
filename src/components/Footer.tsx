@@ -11,10 +11,11 @@ export function Footer() {
         href="https://instagram.com/basecamppadel"
         target="_blank"
         rel="noopener"
-        className="font-sans text-sm text-snow/60 no-underline hover:text-volt"
+        className="font-sans text-sm text-snow/60 no-underline hover:text-volt transition-colors"
       >
         @basecamppadel
       </a>
     </footer>
   );
 }
+
