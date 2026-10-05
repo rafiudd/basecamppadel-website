@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { MountainMark } from "@/components/Logo";
 import { getAdminUser } from "@/lib/auth";
-import { AdminNavLinks } from "@/components/admin/AdminNavLinks";
-import { AdminBottomNav } from "@/components/admin/AdminBottomNav";
+import { AdminNavLinks } from "@/components/admin/shell/AdminNavLinks";
+import { AdminBottomNav } from "@/components/admin/shell/AdminBottomNav";
+import { AdminAccountMenu } from "@/components/admin/shell/AdminAccountMenu";
 
 export const metadata = { title: "Admin — Basecamp Padel", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-ink text-snow font-sans flex items-center justify-center p-6">
-        <div className="max-w-[440px] bg-indigo rounded-2xl p-8 flex flex-col gap-4">
+        <div className="max-w-110 bg-indigo rounded-2xl p-8 flex flex-col gap-4">
           <div className="font-display font-bold text-xl">Akun belum jadi admin</div>
           <p className="text-sm text-snow/70">
             Kamu login sebagai <b>{user.email}</b>, tapi akun ini belum ada di tabel <code>admin_users</code>.
@@ -33,26 +34,29 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-ink text-snow font-sans flex flex-col">
-      <header className="flex items-center justify-between gap-x-4 gap-y-2 px-4 md:px-6 py-3 border-b border-snow/10 flex-wrap">
-        <Link href="/admin" className="flex items-center gap-3 no-underline text-snow">
+      <header className="flex-none flex items-center justify-between gap-3 md:gap-4 h-14 md:h-auto pl-4 pr-2 py-1.5 md:px-6 md:py-3 border-b border-snow/10">
+        <Link href="/admin/events" className="flex items-center gap-2.5 no-underline text-snow">
           <MountainMark size={28} />
-          <div className="font-display font-bold text-base leading-none">
+          <div className="font-display font-bold text-base leading-none whitespace-nowrap">
             BASECAMP <span className="text-coral">PADEL</span>
-            <span className="font-sans font-medium text-xs text-snow/50 ml-2">Admin</span>
+            <span className="font-sans font-medium text-xs text-snow/65 ml-2">Admin</span>
           </div>
         </Link>
-        <div className="hidden md:block">
+        <div className="hidden md:block min-w-0">
           <AdminNavLinks />
         </div>
-        <div className="flex items-center gap-3 text-xs text-snow/50">
-          <span className="hidden md:inline">{user.email}</span>
-          <Link href="/" className="text-snow/70 no-underline hover:text-volt">Lihat situs ↗</Link>
+        <div className="hidden md:flex items-center gap-3 text-caption text-snow/65">
+          <span className="hidden lg:inline">{user.email}</span>
+          <Link href="/" className="text-snow/80 no-underline hover:text-volt whitespace-nowrap">Lihat situs ↗</Link>
           <form action="/auth/signout" method="post">
-            <button className="btn px-3 py-1.5 text-xs">Keluar</button>
+            <button className="btn min-h-10 px-4.5 py-2.5 tracking-button whitespace-nowrap">Keluar</button>
           </form>
         </div>
+        <div className="md:hidden">
+          <AdminAccountMenu email={user.email ?? ""} />
+        </div>
       </header>
-      <main className="flex-1 p-6 pb-24 md:p-8 max-w-[1100px] w-full mx-auto">{children}</main>
+      <main className="flex-1 px-4 pt-5 pb-24 md:px-8 md:pt-8 md:pb-12 max-w-360 w-full box-border mx-auto">{children}</main>
       <AdminBottomNav />
     </div>
   );

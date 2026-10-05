@@ -1,4 +1,5 @@
 import type { Court } from "@/lib/database.types";
+import { courtLabel } from "@/lib/format";
 import { createEvent } from "@/app/admin/generator/actions";
 
 const FORMATS: { value: string; label: string }[] = [
@@ -31,10 +32,10 @@ export function GenEventForm({ courts }: { courts: Court[] }) {
         <div className="label">Court yang dipakai</div>
         <select className="field" name="court_ids" multiple size={Math.min(5, Math.max(3, courts.length))}>
           {courts.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+            <option key={c.id} value={c.id}>{courtLabel(c.name)}</option>
           ))}
         </select>
-        <div className="text-[11px] text-snow/40 mt-1">Ctrl/Cmd+klik buat pilih lebih dari satu. Kosong = 1 court virtual.</div>
+        <div className="text-2xs text-snow/40 mt-1">Ctrl/Cmd+klik buat pilih lebih dari satu. Kosong = 1 court virtual.</div>
       </div>
       <label className="flex items-center gap-2 text-sm md:col-span-2">
         <input type="checkbox" name="sync_to_leaderboard" /> Poin hasil event ini ditambahkan ke leaderboard utama saat difinalisasi

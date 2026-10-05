@@ -53,19 +53,6 @@ export function formatStartLine(startsIso: string, endsIso?: string | null): str
   return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)}, ${day} ${month} · ${timePart}`;
 }
 
-/** "2026-09-10" + "16.00–20.00" -> { starts_at, ends_at } as UTC ISO timestamps (input read as WIB wall time). */
-export function sessionTimeRangeToTimestamps(
-  sessionDate: string,
-  timeRange: string,
-): { starts_at: string | null; ends_at: string | null } {
-  const [y, mo, d] = sessionDate.split("-").map(Number);
-  const toIso = (hh: number, mm: number) => new Date(Date.UTC(y, mo - 1, d, hh - 7, mm)).toISOString();
-  const times = [...timeRange.matchAll(/(\d{1,2})[.:](\d{2})/g)];
-  const starts_at = times[0] ? toIso(Number(times[0][1]), Number(times[0][2])) : null;
-  const ends_at = times[1] ? toIso(Number(times[1][1]), Number(times[1][2])) : null;
-  return { starts_at, ends_at };
-}
-
 /** "16.00–20.00" -> { start: "16:00", end: "20:00" }, for prefilling <input type="time"> fields. */
 export function parseTimeRange(timeRange: string): { start: string; end: string } {
   const times = [...timeRange.matchAll(/(\d{1,2})[.:](\d{2})/g)];
@@ -79,4 +66,11 @@ export function formatTimer(totalSeconds: number): string {
   const s = totalSeconds % 60;
   const pad = (n: number) => String(n).padStart(2, "0");
   return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
+/** Court names are often stored as just "1", "2", "A" — show them as "Court 1". Longer names pass through. */
+export function courtLabel(name: string | null | undefined): string {
+  const n = (name ?? "").trim();
+  if (!n) return "Court";
+  return /^[0-9a-z]{1,3}$/i.test(n) ? `Court ${n}` : n;
 }

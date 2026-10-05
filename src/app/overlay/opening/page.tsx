@@ -1,12 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import { getLiveMatch } from "@/lib/queries";
+import { getEventIdBySlug, getLiveMatch } from "@/lib/queries";
 import { formatStartLine } from "@/lib/format";
 import { CountdownBadge } from "@/components/CountdownBadge";
 import { MountainMark } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
-type Props = { searchParams: Promise<{ match?: string; time?: string }> };
+type Props = { searchParams: Promise<{ match?: string; event?: string; time?: string }> };
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -14,14 +14,28 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 /**
  * Opening / starting-soon title card (OBS scene 1), 1920x1080.
  *   /overlay/opening?match=ID&time=16:00
+ *   /overlay/opening?event=SLUG   the event's ON AIR match, else its next scheduled one
  */
 export default async function OpeningPage({ searchParams }: Props) {
-  const { match: matchId, time } = await searchParams;
+  const { match: matchId, event, time } = await searchParams;
   const supabase = await createClient();
+  const eventId = matchId ? undefined : await getEventIdBySlug(event);
 
   const match = matchId
     ? (await supabase.from("matches").select("*").eq("id", matchId).maybeSingle()).data
-    : await getLiveMatch();
+    : ((await getLiveMatch(eventId)) ??
+      (eventId
+        ? (
+            await supabase
+              .from("matches")
+              .select("*")
+              .eq("event_id", eventId)
+              .eq("status", "scheduled")
+              .order("starts_at", { nullsFirst: false })
+              .limit(1)
+              .maybeSingle()
+          ).data
+        : null));
 
   const session = match?.session_id
     ? (await supabase.from("sessions").select("*").eq("id", match.session_id).maybeSingle()).data

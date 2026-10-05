@@ -84,8 +84,18 @@ function StartingSoonCard({ match }: { match: Match | null }) {
   );
 }
 
-export function OverlayScoreboard({ initial, matchId, showBackdrop }: { initial: Match | null; matchId?: string; showBackdrop: boolean }) {
-  const match = useLiveMatch(initial, matchId);
+export function OverlayScoreboard({
+  initial,
+  matchId,
+  eventId,
+  showBackdrop,
+}: {
+  initial: Match | null;
+  matchId?: string;
+  eventId?: string;
+  showBackdrop: boolean;
+}) {
+  const match = useLiveMatch(initial, matchId, eventId);
   const live = !!match?.is_live;
   useTick(!!match?.timer_running);
   const timer = match ? formatTimer(matchElapsedSeconds(match)) : "00:00";

@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
-import { sessionTimeRangeToTimestamps } from "@/lib/format";
-import type { Gender, Player, Serve } from "@/lib/database.types";
+import type { Gender, Player } from "@/lib/database.types";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 const intOrNull = (fd: FormData, k: string) => {
@@ -68,6 +68,7 @@ export async function upsertVenue(fd: FormData) {
   const { error } = await q;
   if (error) throw new Error(error.message);
   revalidatePath("/admin/venues");
+  redirect("/admin/venues");
 }
 
 export async function deleteVenue(fd: FormData) {
@@ -94,6 +95,7 @@ export async function upsertCourt(fd: FormData) {
   if (error) throw new Error(error.message);
   if (venueId) revalidatePath(`/admin/venues/${venueId}`);
   revalidatePath("/admin/live");
+  if (id && venueId) redirect(`/admin/venues/${venueId}`); // leave edit mode; adding keeps the form ready for the next court
 }
 
 export async function deleteCourt(fd: FormData) {
@@ -143,6 +145,7 @@ export async function upsertPlayer(fd: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath("/admin/players");
   revalidatePublic();
+  redirect("/admin/players");
 }
 
 export async function deletePlayer(fd: FormData) {
@@ -151,67 +154,5 @@ export async function deletePlayer(fd: FormData) {
   const { error } = await supabase.from("players").delete().eq("id", str(fd, "id"));
   if (error) throw new Error(error.message);
   revalidatePath("/admin/players");
-  revalidatePublic();
-}
-
-// ---------------------------------------------------------------- matches
-export async function createMatch(fd: FormData) {
-  await requireAdmin();
-  const supabase = await createClient();
-  const sessionId = str(fd, "session_id") || null;
-  const courtId = str(fd, "court_id") || null;
-  let session_label = "";
-  let venue = "";
-  let starts_at: string | null = null;
-  let ends_at: string | null = null;
-  if (sessionId) {
-    const { data: s } = await supabase
-      .from("sessions")
-      .select("title, venue, session_date, time_range")
-      .eq("id", sessionId)
-      .maybeSingle();
-    session_label = s?.title ?? "";
-    venue = s?.venue ?? "";
-    if (s?.session_date && s?.time_range) {
-      ({ starts_at, ends_at } = sessionTimeRangeToTimestamps(s.session_date, s.time_range));
-    }
-  }
-  if (!venue && courtId) {
-    const { data: c } = await supabase.from("courts").select("venue_id").eq("id", courtId).maybeSingle();
-    if (c?.venue_id) {
-      const { data: v } = await supabase.from("venues").select("name").eq("id", c.venue_id).maybeSingle();
-      venue = v?.name ?? "";
-    }
-  }
-  const { data, error } = await supabase
-    .from("matches")
-    .insert({ session_id: sessionId, court_id: courtId, session_label, venue, starts_at, ends_at, status: "scheduled" })
-    .select("id")
-    .single();
-  if (error) throw new Error(error.message);
-  revalidatePath("/admin/live");
-  return data.id as string;
-}
-
-export async function finalizeMatch(matchId: string, winner: Serve, winPoints: number, lossPoints: number) {
-  await requireAdmin();
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("finalize_match", {
-    p_match_id: matchId,
-    p_winner: winner,
-    p_win_points: winPoints,
-    p_loss_points: lossPoints,
-  });
-  if (error) throw new Error(error.message);
-  revalidatePath("/admin/live");
-  revalidatePublic();
-}
-
-export async function deleteMatch(fd: FormData) {
-  await requireAdmin();
-  const supabase = await createClient();
-  const { error } = await supabase.from("matches").delete().eq("id", str(fd, "id"));
-  if (error) throw new Error(error.message);
-  revalidatePath("/admin/live");
   revalidatePublic();
 }
