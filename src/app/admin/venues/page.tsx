@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { VenueForm } from "@/components/admin/venues/VenueForm";
 import { InlineDelete } from "@/components/admin/InlineDelete";
+import { MOBILE_CARD } from "@/components/admin/cardStyles";
 import { Badge } from "@/components/ui/Badge";
 import { deleteVenue } from "@/app/admin/actions";
 
@@ -33,8 +34,8 @@ export default async function VenuesAdmin({ searchParams }: { searchParams: Prom
       {showForm ? (
         <VenueForm key={editing?.id ?? "new"} venue={editing} />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
+        <div>
+          <table className="hidden md:table w-full border-collapse text-sm">
             <thead>
               <tr className="text-left text-xs text-snow/65 uppercase tracking-table">
                 <th className="pb-2.5 pr-3 font-semibold">Nama</th>
@@ -68,6 +69,30 @@ export default async function VenuesAdmin({ searchParams }: { searchParams: Prom
               })}
             </tbody>
           </table>
+          <div className="md:hidden flex flex-col gap-2">
+            {(venues ?? []).map((v) => {
+              const n = courtCount(v.id);
+              return (
+                <div key={v.id} className={`${MOBILE_CARD} relative`}>
+                  <div className="flex-1 min-w-40 flex flex-col gap-1">
+                    <div className="font-display font-bold text-base flex items-center gap-2">
+                      <span className={v.active ? "" : "text-snow/60"}>{v.name}</span>
+                      {!v.active && <Badge tone="faint">Nonaktif</Badge>}
+                    </div>
+                    {/* the ::after stretches the link over the whole card, so tapping anywhere opens the courts */}
+                    <Link href={`/admin/venues/${v.id}`} className={`no-underline text-sm after:absolute after:inset-0 after:content-[''] ${n ? "text-volt" : "text-snow/70"}`}>
+                      {n ? `${n} court →` : "Belum ada court →"}
+                    </Link>
+                  </div>
+                  <div className="relative z-10">
+                    <InlineDelete action={deleteVenue} id={v.id} name={v.name} noun="venue">
+                      <Link href={`/admin/venues?edit=${v.id}`} className="btn min-h-10 px-4.5 tracking-button no-underline text-snow">Edit</Link>
+                    </InlineDelete>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
           {venues?.length === 0 && <p className="text-sm text-snow/50 mt-3">Belum ada venue.</p>}
         </div>
       )}

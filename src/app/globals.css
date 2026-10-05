@@ -71,7 +71,10 @@
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); /* player list + pairing preview */
 }
 @utility grid-team-row {
-  grid-template-columns: --spacing(11) minmax(0, 1fr) minmax(0, 1fr) --spacing(10); /* "Tim n" + 2 players + remove */
+  grid-template-columns: --spacing(7) minmax(0, 1fr) minmax(0, 1fr) --spacing(9); /* "Tn" + 2 players + remove */
+  @variant md {
+    grid-template-columns: --spacing(11) minmax(0, 1fr) minmax(0, 1fr) --spacing(10); /* "Tim n" + 2 players + remove */
+  }
 }
 @utility grid-photo-form {
   grid-template-columns: --spacing(40) minmax(0, 1fr); /* player photo + fields */
@@ -106,6 +109,16 @@ button {
 }
 .field:focus {
   box-shadow: inset 0 0 0 2px var(--color-volt);
+}
+/* iOS Safari zooms the page in when a control under 16px gets focus (and never zooms back out).
+   Unlayered, so it wins over text-sm / text-input utilities on phones. */
+@media (max-width: 767px) {
+  /* :not(#_) lifts specificity above .field (15px) without !important */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select:not(#_),
+  textarea:not(#_) {
+    font-size: 16px;
+  }
 }
 /* Dropdowns (all on the dark admin): dark native popup with light text, so options stay readable */
 /* Own chevron, inset from the right edge (the native arrow sits flush against the corner).
@@ -185,6 +198,12 @@ input[type="number"].no-spinner {
 }
 
 
+/* Narrow selects in dense rows (wizard team pairs): smaller chevron gutter so names keep room. */
+select.select-tight {
+  padding-right: 22px;
+  background-position: right 8px center;
+  background-size: 10px 10px;
+}
 /* Small group picker ("A ⌄"): letter and chevron centered together as one compact chip. */
 select.select-chip {
   width: 52px;

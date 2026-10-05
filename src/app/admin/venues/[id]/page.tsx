@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CourtForm } from "@/components/admin/venues/CourtForm";
 import { InlineDelete } from "@/components/admin/InlineDelete";
+import { MOBILE_CARD } from "@/components/admin/cardStyles";
 import { ActiveBadge } from "@/components/ui/Badge";
 import { deleteCourt } from "@/app/admin/actions";
 
@@ -39,7 +40,8 @@ export default async function VenueDetail({
           Court <span className="font-sans font-medium text-sm text-snow/70">· {list.length}</span>
         </div>
         {list.length ? (
-          <table className="w-full border-collapse text-sm">
+          <>
+          <table className="hidden md:table w-full border-collapse text-sm">
             <thead>
               <tr className="text-left text-xs text-snow/65 uppercase tracking-table">
                 <th className="pb-2.5 pr-3 font-semibold">Nama</th>
@@ -61,6 +63,20 @@ export default async function VenueDetail({
               ))}
             </tbody>
           </table>
+          <div className="md:hidden flex flex-col gap-2">
+            {list.map((c) => (
+              <div key={c.id} className={MOBILE_CARD}>
+                <div className="flex-1 min-w-40 flex flex-col items-start gap-1">
+                  <div className="font-display font-bold text-base">{courtLabel(c.name)}</div>
+                  <ActiveBadge active={c.active} />
+                </div>
+                <InlineDelete action={deleteCourt} id={c.id} name={courtLabel(c.name)} noun="court">
+                  <Link href={`/admin/venues/${id}?edit=${c.id}`} className="btn min-h-10 px-4.5 tracking-button no-underline text-snow">Edit</Link>
+                </InlineDelete>
+              </div>
+            ))}
+          </div>
+          </>
         ) : (
           <p className="text-sm text-snow/55 m-0">Belum ada court di venue ini.</p>
         )}

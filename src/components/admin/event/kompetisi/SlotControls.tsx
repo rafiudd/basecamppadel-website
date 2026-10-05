@@ -30,7 +30,7 @@ export function SlotControls({ m, data, locked, label }: { m: Match; data: Compe
         disabled={locked || pending}
         defaultValue={m.court_id ?? ""}
         onChange={(e) => save(e.target.value, time)}
-        className={`${compactInputClass} w-26 px-2`}
+        className={`${compactInputClass} w-24 md:w-26 px-2`}
       >
         <option value="">—</option>
         {courts.map((c) => <option key={c.id} value={c.id}>{courtLabel(c.name)}</option>)}
@@ -41,7 +41,7 @@ export function SlotControls({ m, data, locked, label }: { m: Match; data: Compe
         disabled={locked || pending}
         defaultValue={time}
         onBlur={(e) => e.target.value !== time && save(m.court_id ?? "", e.target.value)}
-        className={`${compactInputClass} w-21 text-center px-1.5 scheme-dark`}
+        className={`${compactInputClass} w-26 md:w-21 text-center px-1.5 scheme-dark`}
       />
       {error && <span role="alert" className="text-xs text-coral-soft">!</span>}
     </div>

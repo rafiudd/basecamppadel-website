@@ -17,7 +17,7 @@ export function CourtForm({ court, venueId, nextName }: { court?: Court; venueId
       </label>
       <div className="flex items-center gap-2">
         {court && <Link href={`/admin/venues/${venueId}`} className="btn bg-transparent text-snow/85 no-underline min-h-10">Batal</Link>}
-        <button className="btn btn-coral text-ink min-h-10 tracking-button whitespace-nowrap" type="submit">{court ? "Simpan" : "+ Tambah Court"}</button>
+        <button className="btn btn-coral text-ink min-h-10 tracking-button whitespace-nowrap flex-1 md:flex-none" type="submit">{court ? "Simpan" : "+ Tambah Court"}</button>
       </div>
     </form>
   );
