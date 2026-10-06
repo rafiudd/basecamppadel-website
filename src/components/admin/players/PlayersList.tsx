@@ -50,7 +50,7 @@ export function PlayersList({ players }: { players: Player[] }) {
     <>
       <div className="flex flex-col gap-2.5">
         <div className="flex gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-55">
+          <div className="relative w-full md:w-auto md:flex-1 md:min-w-55">
             <SearchIcon className="absolute left-3 top-3 text-snow/65" />
             <input aria-label="Cari pemain" placeholder="Cari nama atau region" value={q} onChange={(e) => setQ(e.target.value)} className={`${inputClass} pl-10`} />
           </div>

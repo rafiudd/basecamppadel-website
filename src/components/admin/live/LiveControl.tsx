@@ -40,13 +40,14 @@ export function LiveControl({ initial, label }: { initial: Match; label: string 
         <button type="button" onClick={ctl.toggleTimer} className="btn min-h-10 px-4.5 tracking-button">{m.timer_running ? "Jeda" : "Mulai"}</button>
         <button type="button" onClick={ctl.resetTimer} className="btn bg-transparent text-snow/85 min-h-10 px-4.5 tracking-button">Reset timer</button>
         <div className="flex-1" />
-        <span className="text-xs text-snow/50">{ctl.saving ? "menyimpan…" : "tersimpan"}</span>
+        {/* phones: under the full-width finish button */}
+        <span className="text-xs text-snow/50 order-last md:order-none w-full md:w-auto text-center">{ctl.saving ? "menyimpan…" : "tersimpan"}</span>
         <button
           type="button"
           disabled={!ctl.canFinish}
           title={!finished && !ctl.canFinish ? "Skor masih seri" : undefined}
           onClick={() => setFinishing(true)}
-          className="btn btn-volt min-h-10 px-4.5 tracking-button"
+          className="btn btn-volt min-h-10 px-4.5 tracking-button w-full md:w-auto"
         >
           Selesaikan match
         </button>
@@ -100,7 +101,7 @@ function OnAirToggle({ on, disabled, onClick }: { on: boolean; disabled: boolean
       onClick={onClick}
       disabled={disabled}
       aria-pressed={on}
-      className={`rounded-full min-h-11 pl-4 pr-2 py-1.5 flex items-center justify-between gap-3 text-snow border ${on ? "border-coral/60 bg-coral/14" : "border-snow/20 bg-snow/6"}`}
+      className={`w-full md:w-auto rounded-full min-h-11 pl-4 pr-2 py-1.5 flex items-center justify-between gap-3 text-snow border ${on ? "border-coral/60 bg-coral/14" : "border-snow/20 bg-snow/6"}`}
     >
       <span className="flex items-center gap-2 font-bold text-sm">
         <span className={`w-2.5 h-2.5 rounded-full ${on ? "bg-coral" : "bg-snow/40"}`} />

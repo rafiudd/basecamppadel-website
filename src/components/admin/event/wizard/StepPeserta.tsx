@@ -43,7 +43,7 @@ function TeamPairsEditor({ w, players }: { w: EventWizard; players: PlayerSummar
       <div className="flex flex-col gap-1.5 max-h-90 overflow-y-auto">
         {teams.list.map((t, i) => (
           <div key={i} className="grid grid-team-row gap-1.5 items-center">
-            <span className="text-xs font-bold text-snow/70">Tim {i + 1}</span>
+            <span className="text-xs font-bold text-snow/70"><span className="md:hidden">T</span><span className="hidden md:inline">Tim </span>{i + 1}</span>
             {(["p1", "p2"] as const).map((k, j) => (
               <select
                 key={k}
@@ -51,7 +51,7 @@ function TeamPairsEditor({ w, players }: { w: EventWizard; players: PlayerSummar
                 aria-invalid={w.invalid(`team:${i}:${k}`)}
                 value={t[k]}
                 onChange={(e) => teams.setPlayer(i, k, e.target.value)}
-                className={`${compactInputClass} font-semibold px-2 min-w-0 w-full ${invalidIf(w.invalid(`team:${i}:${k}`))}`}
+                className={`select-tight ${compactInputClass} font-semibold px-2 min-w-0 w-full ${invalidIf(w.invalid(`team:${i}:${k}`))}`}
               >
                 <option value="">Pilih pemain</option>
                 {players.map((p) => (

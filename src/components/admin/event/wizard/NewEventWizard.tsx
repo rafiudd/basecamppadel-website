@@ -86,12 +86,14 @@ function Stepper({ w }: { w: EventWizard }) {
             onClick={() => w.back(s.n)}
             disabled={!done}
             aria-current={on ? "step" : undefined}
+            aria-label={`Langkah ${s.n}: ${s.label}`}
             className={`flex-1 basis-0 border-none rounded-tile min-h-12 px-2 py-1.5 text-sm font-bold flex items-center justify-center gap-2 disabled:cursor-default disabled:opacity-100 ${
               on ? "bg-volt text-indigo" : done ? "bg-transparent text-snow" : "bg-transparent text-snow/50"
             }`}
           >
             <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-none ${on ? "bg-indigo/15" : "bg-snow/12"}`}>{done ? "✓" : s.n}</span>
-            <span className={on ? "" : "hidden sm:inline"}>{s.label}</span>
+            {/* phones show the numbers only; labels from sm up */}
+            <span className="hidden sm:inline">{s.label}</span>
           </button>
         );
       })}

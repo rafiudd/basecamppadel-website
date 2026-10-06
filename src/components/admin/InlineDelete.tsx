@@ -29,7 +29,8 @@ export function InlineDelete({
     );
   }
   return (
-    <form action={action} className="flex items-center gap-2 justify-end flex-wrap">
+    // data-confirm-delete lets a parent card highlight itself while asking (has-[[data-confirm-delete]]:…)
+    <form action={action} data-confirm-delete className="flex items-center gap-2 justify-end flex-wrap">
       <input type="hidden" name="id" value={id} />
       <span className="text-caption text-snow/85">Hapus {noun} ini?</span>
       <button type="button" onClick={() => setAsking(false)} className="btn bg-transparent text-snow/85 min-h-10 px-4.5 tracking-button">Batal</button>
