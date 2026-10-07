@@ -6,27 +6,44 @@ import { CloseButton } from "@/components/ui/Modal";
 /** How long the copy button shows its check mark. */
 const COPIED_FEEDBACK_MS = 1500;
 import { CheckIcon, CopyIcon } from "@/components/ui/icons";
+import { courtLabel } from "@/lib/format";
 
-/** OBS browser-source links of an event (stay the same for the whole event). */
-export function ObsLinks({ slug, onClose }: { slug: string; onClose?: () => void }) {
+type CourtRef = { id: string; name: string };
+
+/**
+ * OBS browser-source links of an event (stay the same for the whole event). Several matches can be
+ * ON AIR at once (one per court), so with more than one court each court gets its own links.
+ */
+export function ObsLinks({ slug, courts = [], onClose }: { slug: string; courts?: CourtRef[]; onClose?: () => void }) {
   return (
     <>
       <div className="flex items-center justify-between gap-2">
         <div className="font-bold">Link OBS event ini</div>
         {onClose && <CloseButton onClick={onClose} />}
       </div>
-      <p className="text-xs leading-normal text-snow/70 mt-0.5 mb-1.5">Tetap sama sepanjang event, overlay ikut match yang ON AIR.</p>
-      <CopyRow label="Scoreboard lower-third" path={`/overlay?event=${slug}`} />
+      <p className="text-xs leading-normal text-snow/70 mt-0.5 mb-1.5">
+        Tetap sama sepanjang event, overlay ikut match yang ON AIR.
+        {courts.length > 1 && " Kalau lebih dari 1 match ON AIR, pakai link per court supaya tiap kamera menampilkan match di court-nya."}
+      </p>
+      <CopyRow label={courts.length > 1 ? "Scoreboard · ON AIR terbaru" : "Scoreboard lower-third"} path={`/overlay?event=${slug}`} />
       <CopyRow label="Opening card" path={`/overlay/opening?event=${slug}`} />
+      {courts.length > 1 &&
+        courts.map((c) => (
+          <div key={c.id}>
+            <div className="pt-3 pb-0.5 border-t border-snow/8 text-2xs font-bold tracking-caps text-snow/60 uppercase">{courtLabel(c.name)}</div>
+            <CopyRow label="Scoreboard" path={`/overlay?event=${slug}&court=${c.id}`} />
+            <CopyRow label="Opening card" path={`/overlay/opening?event=${slug}&court=${c.id}`} />
+          </div>
+        ))}
     </>
   );
 }
 
 /** The links card as a popover under a toggle button. */
-export function ObsPopover({ slug, onClose, top = "top-20" }: { slug: string; onClose: () => void; top?: string }) {
+export function ObsPopover({ slug, courts, onClose, top = "top-20" }: { slug: string; courts?: CourtRef[]; onClose: () => void; top?: string }) {
   return (
-    <div className={`absolute right-0 ${top} z-20 w-full md:w-105 bg-ink-3 border border-snow/12 rounded-card px-4 pt-4 pb-1.5 shadow-pop`}>
-      <ObsLinks slug={slug} onClose={onClose} />
+    <div className={`absolute right-0 ${top} z-20 w-full md:w-105 max-h-[70vh] overflow-y-auto bg-ink-3 border border-snow/12 rounded-card px-4 pt-4 pb-1.5 shadow-pop`}>
+      <ObsLinks slug={slug} courts={courts} onClose={onClose} />
     </div>
   );
 }

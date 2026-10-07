@@ -1,3 +1,4 @@
+import { ActionForm } from "@/components/admin/ActionForm";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { GenEventForm } from "@/components/admin/GenEventForm";
@@ -61,10 +62,10 @@ export default async function GeneratorAdmin({ searchParams }: { searchParams: P
                   <td className="py-2.5">
                     <div className="flex items-center gap-2 justify-end">
                       <Link href={`/admin/generator/${e.id}`} className="btn px-3 py-1.5 text-xs no-underline">Buka</Link>
-                      <form action={deleteEvent}>
+                      <ActionForm action={deleteEvent} successText="Event dihapus">
                         <input type="hidden" name="id" value={e.id} />
                         <button className="btn btn-danger px-3 py-1.5 text-xs" type="submit">Hapus</button>
-                      </form>
+                      </ActionForm>
                     </div>
                   </td>
                 </tr>

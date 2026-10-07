@@ -88,14 +88,16 @@ export function OverlayScoreboard({
   initial,
   matchId,
   eventId,
+  courtId,
   showBackdrop,
 }: {
   initial: Match | null;
   matchId?: string;
   eventId?: string;
+  courtId?: string;
   showBackdrop: boolean;
 }) {
-  const match = useLiveMatch(initial, matchId, eventId);
+  const match = useLiveMatch(initial, matchId, eventId, courtId);
   const live = !!match?.is_live;
   useTick(!!match?.timer_running);
   const timer = match ? formatTimer(matchElapsedSeconds(match)) : "00:00";

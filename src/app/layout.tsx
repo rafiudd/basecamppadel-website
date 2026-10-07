@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { inter, spaceGrotesk } from "./fonts";
 import "./globals.css";
+import { TopLoader } from "@/components/TopLoader";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://basecamppadel.vercel.app";
 const title = "Basecamp Padel — Start. Settle in. Level up.";
@@ -31,7 +32,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id" className={`${inter.variable} ${spaceGrotesk.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <TopLoader />
+        {children}
+      </body>
     </html>
   );
 }

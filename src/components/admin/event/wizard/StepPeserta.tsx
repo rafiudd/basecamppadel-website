@@ -5,6 +5,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { GenderBadge } from "@/components/ui/Badge";
 import { CloseIcon, SearchIcon } from "@/components/ui/icons";
 import { compactInputClass, inputClass, invalidIf } from "@/components/ui/Field";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 import { groupLabel } from "@/lib/competition";
 import type { PlayerSummary } from "@/components/admin/event/types";
 import type { EventWizard } from "./useEventWizard";
@@ -45,19 +46,21 @@ function TeamPairsEditor({ w, players }: { w: EventWizard; players: PlayerSummar
           <div key={i} className="grid grid-team-row gap-1.5 items-center">
             <span className="text-xs font-bold text-snow/70"><span className="md:hidden">T</span><span className="hidden md:inline">Tim </span>{i + 1}</span>
             {(["p1", "p2"] as const).map((k, j) => (
-              <select
+              <SearchSelect
                 key={k}
                 aria-label={`Tim ${i + 1} pemain ${j + 1}`}
                 aria-invalid={w.invalid(`team:${i}:${k}`)}
                 value={t[k]}
-                onChange={(e) => teams.setPlayer(i, k, e.target.value)}
-                className={`select-tight ${compactInputClass} font-semibold px-2 min-w-0 w-full ${invalidIf(w.invalid(`team:${i}:${k}`))}`}
-              >
-                <option value="">Pilih pemain</option>
-                {players.map((p) => (
-                  <option key={p.id} value={p.id} disabled={p.id !== t[k] && teams.chosen.includes(p.id)}>{p.name}</option>
-                ))}
-              </select>
+                onChange={(v) => teams.setPlayer(i, k, v)}
+                placeholder="Cari pemain"
+                options={players.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                  hint: [p.level, p.region].filter(Boolean).join(" · "),
+                  disabled: p.id !== t[k] && teams.chosen.includes(p.id),
+                }))}
+                className={`${compactInputClass} font-semibold px-2 min-w-0 ${invalidIf(w.invalid(`team:${i}:${k}`))}`}
+              />
             ))}
             <button type="button" aria-label={`Hapus tim ${i + 1}`} onClick={() => teams.remove(i)} className="w-9 h-9 border-none bg-transparent text-snow/70 p-0 flex items-center justify-center">
               <CloseIcon />

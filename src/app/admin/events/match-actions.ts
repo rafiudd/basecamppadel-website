@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import {
@@ -18,7 +17,7 @@ import type { Match, Serve } from "@/lib/database.types";
 import type { ActionState } from "@/lib/actionState";
 import { assertEditableRoster, guard, int, load, revalidateEvent, str, type Supa } from "./_shared";
 
-/** Kompetisi matches: scheduling, ON AIR, results, knockout bracket and finishing the event. */
+/** Kompetisi matches: scheduling, results, knockout bracket and finishing the event. Mulai / ON AIR: live-actions.ts. */
 
 // ---------------------------------------------------------------- scheduling
 
@@ -155,22 +154,7 @@ export async function updateMatchSlot(_: ActionState, fd: FormData): Promise<Act
   });
 }
 
-// ---------------------------------------------------------------- live & results
-
-/** "Live-kan": put this match ON AIR (only one ON AIR match per event). */
-export async function goLive(_: ActionState, fd: FormData): Promise<ActionState> {
-  return guard(async () => {
-    await requireAdmin();
-    const supabase = await createClient();
-    const id = str(fd, "event_id");
-    const matchId = str(fd, "match_id");
-    await supabase.from("matches").update({ is_live: false }).eq("event_id", id).neq("id", matchId);
-    const { error } = await supabase.from("matches").update({ is_live: true, status: "live" }).eq("id", matchId).neq("status", "finished");
-    if (error) throw new Error(error.message);
-    revalidateEvent(id);
-    if (fd.get("open") === "1") redirect(`/admin/live?match=${matchId}`);
-  });
-}
+// ---------------------------------------------------------------- results (Mulai / ON AIR: live-actions.ts)
 
 /** Selesaikan Match (also used for corrections). `wo` = walkover winner side. */
 export async function setCompResult(

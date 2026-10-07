@@ -4,11 +4,22 @@ import { getAdminUser } from "@/lib/auth";
 import { AdminNavLinks } from "@/components/admin/shell/AdminNavLinks";
 import { AdminBottomNav } from "@/components/admin/shell/AdminBottomNav";
 import { AdminAccountMenu } from "@/components/admin/shell/AdminAccountMenu";
+import { Toaster } from "@/components/ui/Toast";
+import { SignOutForm } from "@/components/admin/shell/SignOutForm";
 
 export const metadata = { title: "Admin — Basecamp Padel", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <AdminContent>{children}</AdminContent>
+      <Toaster />
+    </>
+  );
+}
+
+async function AdminContent({ children }: { children: React.ReactNode }) {
   const { user, isAdmin } = await getAdminUser();
 
   // /admin/login renders without the shell (proxy.ts already redirects anon users elsewhere)
@@ -24,9 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             Jalankan di SQL editor Supabase:
           </p>
           <pre className="text-xs bg-ink rounded-lg p-3 overflow-x-auto">{`insert into public.admin_users (user_id)\nselect id from auth.users where email = '${user.email}';`}</pre>
-          <form action="/auth/signout" method="post">
-            <button className="btn">Keluar</button>
-          </form>
+          <SignOutForm className="btn" />
         </div>
       </div>
     );
@@ -48,9 +57,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="hidden md:flex items-center gap-3 text-caption text-snow/65">
           <span className="hidden lg:inline">{user.email}</span>
           <Link href="/" className="text-snow/80 no-underline hover:text-volt whitespace-nowrap">Lihat situs ↗</Link>
-          <form action="/auth/signout" method="post">
-            <button className="btn min-h-10 px-4.5 py-2.5 tracking-button whitespace-nowrap">Keluar</button>
-          </form>
+          <SignOutForm className="btn min-h-10 px-4.5 py-2.5 tracking-button whitespace-nowrap" />
         </div>
         <div className="md:hidden">
           <AdminAccountMenu email={user.email ?? ""} />

@@ -16,6 +16,7 @@ export function ScoreModal({ m, onClose }: { m: Match; onClose: () => void }) {
           if (!res?.error) onClose();
           return res;
         }}
+        successText="Skor tersimpan"
         className="flex flex-col gap-4"
       >
         <input type="hidden" name="match_id" value={m.id} />

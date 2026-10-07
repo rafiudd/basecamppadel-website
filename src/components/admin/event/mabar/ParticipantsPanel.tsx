@@ -4,6 +4,9 @@ import { useState, useTransition } from "react";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { Badge } from "@/components/ui/Badge";
 import { compactInputClass } from "@/components/ui/Field";
+import { SearchSelect } from "@/components/ui/SearchSelect";
+import { toast } from "@/components/ui/Toast";
+import { Spinner } from "@/components/ui/Spinner";
 import { addMabarWalkIn, removeMabarParticipant, setMabarCheckIn, substituteMabarPlayer } from "@/app/admin/events/mabar-actions";
 import { isFixedFormat } from "@/lib/events";
 import { mabarUnits } from "@/lib/mabar";
@@ -77,9 +80,11 @@ function ParticipantRow({
   removable: boolean;
 }) {
   const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const [swapping, setSwapping] = useState(false);
-  const toggle = (checked: boolean) => start(async () => setError((await setMabarCheckIn(event.id, p.id, checked))?.error ?? null));
+  const toggle = (checked: boolean) =>
+    start(async () => {
+      toast.result(await setMabarCheckIn(event.id, p.id, checked), checked ? `${p.display_name} check-in` : `Check-in ${p.display_name} dibatalkan`);
+    });
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -94,6 +99,7 @@ function ParticipantRow({
             className="w-4.5 h-4.5 accent-volt flex-none"
           />
           <span className={`text-sm font-semibold truncate ${p.active ? "" : "text-snow/50 line-through"}`}>{p.display_name}</span>
+          {pending && <Spinner className="text-volt text-xs" />}
           {!p.player_id && <Badge tone="faint">Tamu</Badge>}
           {!p.active && <Badge tone="faint">Diganti</Badge>}
         </label>
@@ -103,16 +109,15 @@ function ParticipantRow({
           </button>
         )}
         {removable && !locked && (
-          <ActionForm action={removeMabarParticipant} danger confirmText={`Hapus ${p.display_name} dari event?`}>
+          <ActionForm action={removeMabarParticipant} danger successText="Peserta dihapus" confirmText={`Hapus ${p.display_name} dari event?`}>
             <input type="hidden" name="event_id" value={event.id} />
             <input type="hidden" name="participant_id" value={p.id} />
             <button type="submit" className="btn bg-transparent text-snow/70 min-h-9 px-2.5 py-1.5 text-caption hover:text-loss">Hapus</button>
           </ActionForm>
         )}
       </div>
-      {error && <div role="alert" className="text-xs text-coral-soft">{error}</div>}
       {swapping && (
-        <ActionForm action={substituteMabarPlayer} className="flex items-center gap-2 flex-wrap pl-7 pb-1">
+        <ActionForm action={substituteMabarPlayer} successText="Pemain diganti" className="flex items-center gap-2 flex-wrap pl-7 pb-1">
           <input type="hidden" name="event_id" value={event.id} />
           <input type="hidden" name="participant_id" value={p.id} />
           <span className="text-caption text-snow/70">Diganti oleh</span>
@@ -126,7 +131,7 @@ function ParticipantRow({
 
 function WalkInForm({ event, free, fixed }: { event: CompEvent; free: PlayerOption[]; fixed: boolean }) {
   return (
-    <ActionForm action={addMabarWalkIn} className="flex items-center gap-2 flex-wrap pt-3 mt-1 border-t border-snow/8">
+    <ActionForm action={addMabarWalkIn} successText="Walk-in ditambahkan" className="flex items-center gap-2 flex-wrap pt-3 mt-1 border-t border-snow/8">
       <input type="hidden" name="event_id" value={event.id} />
       <span className="text-caption font-bold">+ Walk-in</span>
       <PersonPicker name="p1" free={free} />
@@ -144,10 +149,16 @@ function PersonPicker({ name, free }: { name: string; free: PlayerOption[] }) {
       {guest ? (
         <input name={`${name}_guest`} required placeholder="Nama tamu" className={`${compactInputClass} px-2.5 w-40`} />
       ) : (
-        <select name={name} required defaultValue="" className={`${compactInputClass} px-2 w-44`}>
-          <option value="">Pilih pemain</option>
-          {free.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
+        <span className="w-48">
+          <SearchSelect
+            name={name}
+            required
+            aria-label="Pemain"
+            placeholder="Cari pemain"
+            options={free.map((p) => ({ value: p.id, label: p.name }))}
+            className={`${compactInputClass} px-2.5`}
+          />
+        </span>
       )}
       <button type="button" onClick={() => setGuest((g) => !g)} className="border-none bg-transparent p-0 text-xs font-semibold text-snow/70 underline">
         {guest ? "pemain" : "tamu"}

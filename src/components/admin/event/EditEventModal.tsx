@@ -20,6 +20,7 @@ export function EditEventModal({ event, venues, courts, onClose }: { event: Comp
           if (!res?.error) onClose();
           return res;
         }}
+        successText="Event diperbarui"
         className="flex flex-col gap-4"
       >
         <input type="hidden" name="event_id" value={event.id} />

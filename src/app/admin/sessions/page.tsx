@@ -1,3 +1,4 @@
+import { ActionForm } from "@/components/admin/ActionForm";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SessionForm } from "@/components/admin/SessionForm";
@@ -53,10 +54,10 @@ export default async function SessionsAdmin({ searchParams }: { searchParams: Pr
                 <td className="py-2.5">
                   <div className="flex items-center gap-2 justify-end">
                     <Link href={`/admin/sessions?edit=${s.id}`} className="btn px-3 py-1.5 text-xs no-underline">Edit</Link>
-                    <form action={deleteSession}>
+                    <ActionForm action={deleteSession} successText="Sesi dihapus">
                       <input type="hidden" name="id" value={s.id} />
                       <button className="btn btn-danger px-3 py-1.5 text-xs" type="submit">Hapus</button>
-                    </form>
+                    </ActionForm>
                   </div>
                 </td>
               </tr>

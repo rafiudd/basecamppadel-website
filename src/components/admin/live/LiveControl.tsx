@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import type { Match } from "@/lib/database.types";
 import { useMatchControl, type MatchControl } from "./useMatchControl";
 import { GameButtons, ServeButton, SetSteppers, StatusNotes } from "./ScoreInputs";
@@ -23,7 +23,7 @@ export function LiveControl({ initial, label }: { initial: Match; label: string 
           <div className="text-xs font-bold tracking-caps text-snow/70 uppercase">{label}</div>
           <div className="font-display font-bold text-title">{m.team_a_name} vs {m.team_b_name}</div>
         </div>
-        <OnAirToggle on={m.is_live} disabled={finished || ctl.pending} onClick={ctl.toggleOnAir} />
+        <OnAirToggle on={m.is_live} disabled={finished || ctl.pending} loading={ctl.pending} onClick={ctl.toggleOnAir} />
       </div>
 
       <StatusNotes error={ctl.error} finished={finished} games={[m.team_a_games, m.team_b_games]} />
@@ -94,12 +94,13 @@ function TeamPanel({ side, ctl }: { side: "A" | "B"; ctl: MatchControl }) {
 }
 
 /** ON AIR switch: pill with a dot and a toggle track. */
-function OnAirToggle({ on, disabled, onClick }: { on: boolean; disabled: boolean; onClick: () => void }) {
+function OnAirToggle({ on, disabled, loading, onClick }: { on: boolean; disabled: boolean; loading: boolean; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      data-loading={loading || undefined}
       aria-pressed={on}
       className={`w-full md:w-auto rounded-full min-h-11 pl-4 pr-2 py-1.5 flex items-center justify-between gap-3 text-snow border ${on ? "border-coral/60 bg-coral/14" : "border-snow/20 bg-snow/6"}`}
     >

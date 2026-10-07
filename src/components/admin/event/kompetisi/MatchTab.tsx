@@ -94,7 +94,7 @@ function ScheduleCard({ event }: { event: CompEvent }) {
           {event.court_ids.length || 1} court{start ? ` · mulai ${start}` : ""} · {event.match_minutes} menit per match. Court &amp; jam tiap match bisa diubah manual.
         </div>
       </div>
-      <ActionForm action={rescheduleAuto} confirmLabel="Ya, susun ulang" confirmText="Susun ulang court dan jam semua match yang belum dimainkan?">
+      <ActionForm action={rescheduleAuto} successText="Jadwal disusun ulang" confirmLabel="Ya, susun ulang" confirmText="Susun ulang court dan jam semua match yang belum dimainkan?">
         <input type="hidden" name="event_id" value={event.id} />
         <button type="submit" className="btn min-h-10 px-4.5 tracking-button whitespace-nowrap">Susun ulang otomatis</button>
       </ActionForm>

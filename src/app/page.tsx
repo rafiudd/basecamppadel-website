@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PublicShell } from "@/components/PublicShell";
 import { LiveCard } from "@/components/LiveCard";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { getActivePlayers, getLiveMatch, rankByGender } from "@/lib/queries";
+import { getActivePlayers, getLiveMatches, rankByGender } from "@/lib/queries";
 import { WHATSAPP_URL } from "@/lib/config";
 
 export const revalidate = 0;
@@ -28,7 +28,7 @@ const WHY = [
 
 export default async function HomePage() {
   const [live, players] = await Promise.all([
-    getLiveMatch(),
+    getLiveMatches(),
     getActivePlayers(),
   ]);
   const { men } = rankByGender(players);

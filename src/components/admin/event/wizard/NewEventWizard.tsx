@@ -49,7 +49,7 @@ export function NewEventWizard({ players, venues, courts, presets }: { players: 
       ) : (
         // the capture handler runs before the form's submit, so an incomplete step 4 never posts
         <div onSubmitCapture={(e) => !w.canSubmit() && e.preventDefault()}>
-          <ActionForm action={createCompetition} className="flex flex-col gap-5">
+          <ActionForm action={createCompetition} successText="Event dibuat" className="flex flex-col gap-5">
             <EarlierStepsFields w={w} />
             <StepDetail w={w} venues={venues} presets={presets} />
             <StepErrors messages={w.stepErrors} />

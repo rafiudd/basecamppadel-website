@@ -18,7 +18,7 @@ export function PlayoffTab({ data }: { data: CompetitionData }) {
         <EmptyState
           action={
             data.groupStageComplete && (
-              <ActionForm action={generateBracket}>
+              <ActionForm action={generateBracket} successText="Bracket dibuat">
                 <input type="hidden" name="event_id" value={event.id} />
                 <button type="submit" className="btn btn-coral text-ink">Buat bracket</button>
               </ActionForm>
@@ -43,7 +43,7 @@ function StaleBracketAlert({ data }: { data: CompetitionData }) {
         <div className="text-caption text-snow/80">Skor fase grup dikoreksi setelah bracket dibuat. Susunan playoff mungkin berubah.</div>
       </div>
       {!data.koStarted && (
-        <ActionForm action={generateBracket} confirmLabel="Ya, buat ulang" confirmText="Buat ulang bracket dari klasemen terbaru?">
+        <ActionForm action={generateBracket} successText="Bracket dibuat ulang" confirmLabel="Ya, buat ulang" confirmText="Buat ulang bracket dari klasemen terbaru?">
           <input type="hidden" name="event_id" value={data.event.id} />
           <button type="submit" className="btn btn-coral text-ink">Buat ulang bracket</button>
         </ActionForm>
@@ -58,7 +58,7 @@ function SwapTeamsForm({ data }: { data: CompetitionData }) {
   const teams = data.teams.filter((t) => inFirstRound.has(t.id));
   if (teams.length < 2) return null;
   return (
-    <ActionForm action={swapBracketTeams} className="bg-ink-3 rounded-card px-4.5 py-3.5 flex items-end gap-2.5 flex-wrap">
+    <ActionForm action={swapBracketTeams} successText="Posisi tim ditukar" className="bg-ink-3 rounded-card px-4.5 py-3.5 flex items-end gap-2.5 flex-wrap">
       <input type="hidden" name="event_id" value={data.event.id} />
       <div className="basis-full text-caption font-bold">Tukar posisi tim babak pertama</div>
       {(["team_x", "team_y"] as const).map((n) => (

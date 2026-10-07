@@ -1,34 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Match } from "@/lib/database.types";
 
 /**
  * Keeps a `matches` row in sync via Supabase Realtime.
  * - With `matchId`: follows that specific row (used by the overlay/admin).
- * - With `eventId`: follows whichever row of that event is `is_live` (OBS link of an event).
- * - Without either: follows whichever row is currently `is_live` (used by Home).
+ * - With `eventId` (+ `courtId`): follows an ON AIR row of that event (of that court) — OBS links.
+ * - Without either: follows an ON AIR row (used by Home).
+ * Several rows can be ON AIR, so a followed row is kept while it stays ON AIR (and in the court);
+ * only when it goes off air does it switch to the latest other ON AIR row.
  */
-export function useLiveMatch(initial: Match | null, matchId?: string, eventId?: string) {
+export function useLiveMatch(initial: Match | null, matchId?: string, eventId?: string, courtId?: string) {
   const [match, setMatch] = useState<Match | null>(initial);
+  const followed = useRef<string | null>(initial?.id ?? null);
 
   useEffect(() => {
     const supabase = createClient();
+    const follow = (row: Match | null) => {
+      followed.current = row?.id ?? null;
+      setMatch(row);
+    };
 
     const refetch = async () => {
       let q = supabase.from("matches").select("*");
       if (matchId) q = q.eq("id", matchId);
       else {
         if (eventId) q = q.eq("event_id", eventId);
+        if (courtId) q = q.eq("court_id", courtId);
         q = q.eq("is_live", true).order("updated_at", { ascending: false });
       }
       const { data, error } = await q.limit(1).maybeSingle();
-      if (!error) setMatch(data ?? null); // on network error keep what we have
+      if (!error) follow(data ?? null); // on network error keep what we have
     };
 
     const channel = supabase
-      .channel(`matches-${matchId ?? (eventId ? `event-${eventId}` : "live")}`)
+      .channel(`matches-${matchId ?? (eventId ? `event-${eventId}${courtId ? `-${courtId}` : ""}` : "live")}`)
       .on(
         "postgres_changes",
         {
@@ -44,12 +52,16 @@ export function useLiveMatch(initial: Match | null, matchId?: string, eventId?: 
           }
           const row = payload.new as Match;
           if (matchId) {
-            setMatch(row);
-          } else if (row.is_live) {
-            setMatch(row);
-          } else {
-            // The row we were following went off air — look for another live one.
-            refetch();
+            follow(row);
+            return;
+          }
+          const fits = row.is_live && (!courtId || row.court_id === courtId);
+          if (row.id === followed.current) {
+            // The row we follow: keep it while it fits, else look for another ON AIR one.
+            if (fits) follow(row);
+            else refetch();
+          } else if (fits && !followed.current) {
+            follow(row);
           }
         },
       )
@@ -59,19 +71,21 @@ export function useLiveMatch(initial: Match | null, matchId?: string, eventId?: 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [matchId, eventId]);
+  }, [matchId, eventId, courtId]);
 
   return match;
 }
 
+/** At most this many ON AIR matches are shown on Home. */
+const MAX_POLLED = 6;
+
 /**
- * Poll a `matches` row via plain REST instead of Supabase Realtime — for
- * public, high-traffic viewers where opening a WebSocket per visitor isn't
- * worth eating into the project's Realtime concurrent-connection budget.
- * Admin/OBS viewers stay on `useLiveMatch` (few clients, want instant sync).
+ * Poll the ON AIR `matches` rows (latest first) via plain REST instead of Supabase Realtime — for
+ * public, high-traffic viewers where opening a WebSocket per visitor isn't worth eating into the
+ * project's Realtime concurrent-connection budget. Admin/OBS viewers stay on `useLiveMatch`.
  */
-export function usePolledLiveMatch(initial: Match | null, intervalMs = 8000) {
-  const [match, setMatch] = useState<Match | null>(initial);
+export function usePolledLiveMatches(initial: Match[], intervalMs = 8000) {
+  const [matches, setMatches] = useState<Match[]>(initial);
 
   useEffect(() => {
     const supabase = createClient();
@@ -83,9 +97,8 @@ export function usePolledLiveMatch(initial: Match | null, intervalMs = 8000) {
         .select("*")
         .eq("is_live", true)
         .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!cancelled && !error) setMatch(data ?? null);
+        .limit(MAX_POLLED);
+      if (!cancelled && !error) setMatches(data ?? []);
     };
 
     fetchLive();
@@ -96,7 +109,7 @@ export function usePolledLiveMatch(initial: Match | null, intervalMs = 8000) {
     };
   }, [intervalMs]);
 
-  return match;
+  return matches;
 }
 
 /** Re-renders every second while a timer is running so the clock ticks. */

@@ -1,3 +1,4 @@
+import { ActionForm } from "@/components/admin/ActionForm";
 import type { Court } from "@/lib/database.types";
 import { courtLabel } from "@/lib/format";
 import { createEvent } from "@/app/admin/generator/actions";
@@ -11,7 +12,7 @@ const FORMATS: { value: string; label: string }[] = [
 
 export function GenEventForm({ courts }: { courts: Court[] }) {
   return (
-    <form action={createEvent} className="bg-indigo rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+    <ActionForm action={createEvent} successText="Event dibuat" className="bg-indigo rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="md:col-span-2">
         <div className="label">Judul event</div>
         <input className="field" name="title" placeholder="Mabar Minggu Pagi" />
@@ -43,6 +44,6 @@ export function GenEventForm({ courts }: { courts: Court[] }) {
       <div className="md:col-span-2 flex justify-end">
         <button className="btn btn-coral" type="submit">Buat Event</button>
       </div>
-    </form>
+    </ActionForm>
   );
 }

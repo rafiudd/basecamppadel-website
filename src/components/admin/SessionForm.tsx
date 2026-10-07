@@ -1,3 +1,4 @@
+import { ActionForm } from "@/components/admin/ActionForm";
 import type { Session, Venue } from "@/lib/database.types";
 import { upsertSession } from "@/app/admin/actions";
 import { parseTimeRange } from "@/lib/format";
@@ -5,7 +6,7 @@ import { parseTimeRange } from "@/lib/format";
 export function SessionForm({ session, venues }: { session?: Session; venues: Venue[] }) {
   const { start, end } = parseTimeRange(session?.time_range ?? "");
   return (
-    <form action={upsertSession} className="bg-indigo rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+    <ActionForm action={upsertSession} successText="Sesi tersimpan" className="bg-indigo rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
       {session && <input type="hidden" name="id" value={session.id} />}
       <div className="md:col-span-2">
         <div className="label">Judul</div>
@@ -54,6 +55,6 @@ export function SessionForm({ session, venues }: { session?: Session; venues: Ve
       <div className="flex justify-end gap-2">
         <button className="btn btn-coral" type="submit">{session ? "Simpan" : "Tambah Sesi"}</button>
       </div>
-    </form>
+    </ActionForm>
   );
 }
