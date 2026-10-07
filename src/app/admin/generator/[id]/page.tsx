@@ -1,7 +1,9 @@
+import { ActionForm } from "@/components/admin/ActionForm";
 import Link from "next/link";
 import { courtLabel } from "@/lib/format";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 import {
   addFreeParticipants,
   addFixedTeam,
@@ -36,6 +38,7 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
   ]);
 
   const participantList = participants ?? [];
+  const playerOptions = (players ?? []).map((p) => ({ value: p.id, label: p.name }));
   const roundList = rounds ?? [];
   const roundIds = roundList.map((r) => r.id);
   const { data: matches } = roundIds.length
@@ -71,10 +74,10 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
           <div className="text-sm text-snow/60">{FORMAT_LABEL[event.format]} · {event.status}</div>
         </div>
         {event.status !== "finished" && participantList.length > 0 && (
-          <form action={finalizeEvent}>
+          <ActionForm action={finalizeEvent} successText="Event diselesaikan">
             <input type="hidden" name="event_id" value={event.id} />
             <button className="btn btn-volt" type="submit">Selesaikan Event</button>
-          </form>
+          </ActionForm>
         )}
       </div>
 
@@ -89,27 +92,25 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
                 <div key={teamNo} className="flex items-center gap-3 flex-wrap bg-ink-2 rounded-lg px-3 py-2">
                   <div className="flex-1 min-w-35 text-sm font-semibold">Tim {teamNo}: {members.map((m) => m.display_name).join(" / ")}</div>
                   <div className="flex-none text-xs text-snow/50">{members[0]?.total_points ?? 0} + {members[1]?.total_points ?? 0} poin</div>
-                  <form action={removeTeam} className="flex-none">
+                  <ActionForm action={removeTeam} successText="Tim dihapus" className="flex-none">
                     <input type="hidden" name="event_id" value={event.id} />
                     <input type="hidden" name="team_no" value={teamNo} />
                     <button className="btn btn-danger px-2.5 py-1 text-xs" type="submit">Hapus</button>
-                  </form>
+                  </ActionForm>
                 </div>
               ))}
               {teams.size === 0 && <p className="text-sm text-snow/50">Belum ada tim.</p>}
             </div>
-            <form action={addFixedTeam} className="flex items-center gap-2 flex-wrap">
+            <ActionForm action={addFixedTeam} successText="Tim ditambahkan" className="flex items-center gap-2 flex-wrap">
               <input type="hidden" name="event_id" value={event.id} />
-              <select className="field flex-1 min-w-35 text-sm" name="player_a" required defaultValue="">
-                <option value="" disabled>Pemain 1</option>
-                {(players ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              <select className="field flex-1 min-w-35 text-sm" name="player_b" required defaultValue="">
-                <option value="" disabled>Pemain 2</option>
-                {(players ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+              <div className="flex-1 min-w-35">
+                <SearchSelect name="player_a" required aria-label="Pemain 1" placeholder="Pemain 1" options={playerOptions} className="field text-sm" />
+              </div>
+              <div className="flex-1 min-w-35">
+                <SearchSelect name="player_b" required aria-label="Pemain 2" placeholder="Pemain 2" options={playerOptions} className="field text-sm" />
+              </div>
               <button className="btn btn-coral text-sm flex-none" type="submit">+ Tambah Tim</button>
-            </form>
+            </ActionForm>
           </>
         ) : (
           <>
@@ -118,16 +119,16 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
                 <div key={p.id} className="flex items-center gap-3 flex-wrap bg-ink-2 rounded-lg px-3 py-2">
                   <div className="flex-1 min-w-35 text-sm font-semibold">{p.display_name}{!p.player_id && <span className="text-snow/40 font-normal"> (guest)</span>}</div>
                   <div className="flex-none text-xs text-snow/50">{p.total_points} poin</div>
-                  <form action={removeParticipant} className="flex-none">
+                  <ActionForm action={removeParticipant} successText="Peserta dihapus" className="flex-none">
                     <input type="hidden" name="event_id" value={event.id} />
                     <input type="hidden" name="id" value={p.id} />
                     <button className="btn btn-danger px-2.5 py-1 text-xs" type="submit">Hapus</button>
-                  </form>
+                  </ActionForm>
                 </div>
               ))}
               {soloParticipants.length === 0 && <p className="text-sm text-snow/50">Belum ada peserta.</p>}
             </div>
-            <form action={addFreeParticipants} className="flex flex-col gap-3">
+            <ActionForm action={addFreeParticipants} successText="Peserta ditambahkan" className="flex flex-col gap-3">
               <input type="hidden" name="event_id" value={event.id} />
               <div>
                 <div className="label">Pemain terdaftar</div>
@@ -146,7 +147,7 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
               <div className="flex justify-end">
                 <button className="btn btn-coral text-sm" type="submit">+ Tambah Peserta</button>
               </div>
-            </form>
+            </ActionForm>
           </>
         )}
       </div>
@@ -154,12 +155,12 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
       {/* rounds / generate */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="font-display font-bold text-lg">Ronde</div>
-        <form action={generateNextRound}>
+        <ActionForm action={generateNextRound} successText="Ronde baru dibuat">
           <input type="hidden" name="event_id" value={event.id} />
           <button className="btn btn-coral" type="submit" disabled={!canGenerate}>
             {roundList.length === 0 ? "Generate Ronde 1" : "Generate Ronde Berikutnya"}
           </button>
-        </form>
+        </ActionForm>
       </div>
       {!canGenerate && participantList.length < 4 && (
         <p className="text-sm text-snow/50 -mt-3">Minimal 4 peserta (atau 2 tim) buat mulai generate.</p>
@@ -176,9 +177,10 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
               <div className="font-display font-bold">Ronde {round.round_no}</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {roundMatches.map((m) => (
-                  <form
+                  <ActionForm
                     key={m.id}
                     action={saveMatchScore}
+                    successText="Skor tersimpan"
                     className="bg-ink-2 rounded-xl p-3.5 flex flex-col gap-2"
                   >
                     <input type="hidden" name="event_id" value={event.id} />
@@ -205,7 +207,7 @@ export default async function GenEventDetail({ params }: { params: Promise<{ id:
                       />
                     </div>
                     <button className="btn btn-volt text-xs self-end" type="submit">Simpan</button>
-                  </form>
+                  </ActionForm>
                 ))}
               </div>
             </div>

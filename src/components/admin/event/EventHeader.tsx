@@ -55,7 +55,7 @@ export function EventHeader({
           </Link>
         </div>
       </div>
-      {obsOpen && <ObsPopover slug={event.slug} onClose={() => setObsOpen(false)} />}
+      {obsOpen && <ObsPopover slug={event.slug} courts={courts.filter((c) => event.court_ids.includes(c.id))} onClose={() => setObsOpen(false)} />}
       {editOpen && <EditEventModal event={event} venues={venues} courts={courts} onClose={() => setEditOpen(false)} />}
     </div>
   );

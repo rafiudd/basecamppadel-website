@@ -100,7 +100,7 @@ function FinishBanner({ data }: { data: CompetitionData }) {
         <div className="font-display font-bold text-lg">Final sudah selesai</div>
         <p className="text-sm text-snow/80 m-0">Selesaikan event untuk mengunci tahap akhir tiap tim dan membagikan poin leaderboard.</p>
       </div>
-      <ActionForm action={finishCompetition} confirmLabel="Ya, selesaikan" confirmText="Selesaikan event ini? Poin leaderboard langsung ditambahkan ke semua pemain.">
+      <ActionForm action={finishCompetition} successText="Event selesai, poin dibagikan" confirmLabel="Ya, selesaikan" confirmText="Selesaikan event ini? Poin leaderboard langsung ditambahkan ke semua pemain.">
         <input type="hidden" name="event_id" value={data.event.id} />
         <button type="submit" className="btn btn-volt">Selesaikan event</button>
       </ActionForm>

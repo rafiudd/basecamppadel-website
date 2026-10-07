@@ -60,7 +60,7 @@ function RowActions({ r }: { r: EventRow }) {
   return (
     <div className="flex items-center gap-0.5 md:gap-1 justify-end flex-none">
       <Link href={`/admin/events/${r.id}`} className="btn min-h-10 px-4.5 py-2.5 tracking-button no-underline text-snow whitespace-nowrap">Buka</Link>
-      <ActionForm action={deleteCompetition} danger confirmText={`Hapus event "${r.title}"? Semua tim, match, dan poin event ini ikut terhapus.`}>
+      <ActionForm action={deleteCompetition} danger successText="Event dihapus" confirmText={`Hapus event "${r.title}"? Semua tim, match, dan poin event ini ikut terhapus.`}>
         <input type="hidden" name="event_id" value={r.id} />
         <button type="submit" aria-label={`Hapus ${r.title}`} className="w-10 h-10 rounded-lg bg-transparent border-none text-snow/70 hover:text-loss flex items-center justify-center p-0">
           <TrashIcon />

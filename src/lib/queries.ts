@@ -1,13 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Player } from "@/lib/database.types";
 
-/** The ON AIR match, optionally only within one event. */
-export async function getLiveMatch(eventId?: string) {
+/** The ON AIR match (the latest one if several), optionally only within one event / one court. */
+export async function getLiveMatch(eventId?: string, courtId?: string) {
   const supabase = await createClient();
   let q = supabase.from("matches").select("*").eq("is_live", true);
   if (eventId) q = q.eq("event_id", eventId);
+  if (courtId) q = q.eq("court_id", courtId);
   const { data } = await q.order("updated_at", { ascending: false }).limit(1).maybeSingle();
   return data;
+}
+
+/** Every ON AIR match, latest first (Home shows them as switchable cards). */
+export async function getLiveMatches(limit = 6) {
+  const supabase = await createClient();
+  const { data } = await supabase.from("matches").select("*").eq("is_live", true).order("updated_at", { ascending: false }).limit(limit);
+  return data ?? [];
 }
 
 /** OBS links address an event by slug. */

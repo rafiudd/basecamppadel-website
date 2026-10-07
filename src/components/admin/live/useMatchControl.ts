@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLiveMatch, useTick } from "@/lib/useLiveMatch";
 import { formatTimer, matchElapsedSeconds } from "@/lib/format";
-import { goLive } from "@/app/admin/events/match-actions";
+import { goLive, startMatch } from "@/app/admin/events/live-actions";
+import { toast } from "@/components/ui/Toast";
 
 /** How many score inputs "Batalkan input terakhir" can step back. */
 const UNDO_STEPS = 30;
@@ -22,7 +23,7 @@ const gamesKey = (side: Side) => (side === "A" ? "team_a_games" : "team_b_games"
  * Score control of one competition match (Live page + Skor Cepat): optimistic writes straight to
  * `matches`, kept in sync with other operators via Realtime. Set scores also keep the game totals
  * current (bracket and klasemen show the live score), every score change can be undone, and ON AIR
- * goes through goLive so only one match per event is on air.
+ * goes through goLive (one ON AIR match per court).
  */
 export function useMatchControl(initial: Match) {
   const router = useRouter();
@@ -49,8 +50,12 @@ export function useMatchControl(initial: Match) {
       setSaving(true);
       setError(null);
       const { error } = await supabase.current.from("matches").update(patch).eq("id", m.id);
-      if (error) setError(error.message);
+      if (error) {
+        setError(error.message);
+        toast.error(`Gagal menyimpan: ${error.message}`);
+      }
       setSaving(false);
+      return !error;
     },
     [m.id],
   );
@@ -58,8 +63,22 @@ export function useMatchControl(initial: Match) {
   // ---- score (undoable)
   const scored = (patch: Partial<Match>) => {
     const { team_a_sets, team_b_sets, team_a_game, team_b_game, serve, team_a_games, team_b_games } = m;
-    setHistory((h) => [...h.slice(-(UNDO_STEPS - 1)), { team_a_sets, team_b_sets, team_a_game, team_b_game, serve, team_a_games, team_b_games }]);
-    update(patch);
+    const snapshot = { team_a_sets, team_b_sets, team_a_game, team_b_game, serve, team_a_games, team_b_games };
+    if (m.status !== "scheduled") {
+      setHistory((h) => [...h.slice(-(UNDO_STEPS - 1)), snapshot]);
+      update(patch);
+      return;
+    }
+    // The first score of a match that wasn't started starts it (server checks no team plays twice).
+    if (pending) return;
+    const fd = new FormData();
+    fd.set("match_id", m.id);
+    start(async () => {
+      if (!toast.result(await startMatch(null, fd), "Match dimulai")) return;
+      setHistory((h) => [...h.slice(-(UNDO_STEPS - 1)), snapshot]);
+      await update({ ...patch, status: "live" });
+      router.refresh();
+    });
   };
   /** ± a game; a won game also sends both point scores back to 0. */
   const setSet = (side: Side, idx: 0 | 1, delta: number) => {
@@ -85,7 +104,7 @@ export function useMatchControl(initial: Match) {
   // ---- ON AIR
   const toggleOnAir = () => {
     if (m.is_live) {
-      update({ is_live: false });
+      update({ is_live: false }).then((ok) => ok && toast.success("Match tidak lagi ON AIR"));
       return;
     }
     const fd = new FormData();
@@ -93,8 +112,8 @@ export function useMatchControl(initial: Match) {
     fd.set("match_id", m.id);
     start(async () => {
       const res = await goLive(null, fd);
-      if (res?.error) setError(res.error);
-      else router.refresh();
+      setError(res?.error ?? null);
+      if (toast.result(res, "Match ON AIR")) router.refresh();
     });
   };
 

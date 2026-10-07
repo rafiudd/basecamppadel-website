@@ -1,3 +1,4 @@
+import { ActionForm } from "@/components/admin/ActionForm";
 import Image from "next/image";
 import type { Player } from "@/lib/database.types";
 import { upsertPlayer } from "@/app/admin/actions";
@@ -5,7 +6,7 @@ import { LEVELS } from "@/lib/config";
 
 export function PlayerForm({ player }: { player?: Player }) {
   return (
-    <form action={upsertPlayer} className="bg-ink-2 rounded-2xl p-5 md:p-6 grid grid-cols-1 md:grid-photo-form gap-6">
+    <ActionForm action={upsertPlayer} successText="Pemain tersimpan" className="bg-ink-2 rounded-2xl p-5 md:p-6 grid grid-cols-1 md:grid-photo-form gap-6">
       {player && <input type="hidden" name="id" value={player.id} />}
 
       <div className="flex flex-col gap-3">
@@ -68,6 +69,6 @@ export function PlayerForm({ player }: { player?: Player }) {
           <button className="btn btn-coral" type="submit">{player ? "Simpan" : "Tambah Pemain"}</button>
         </div>
       </div>
-    </form>
+    </ActionForm>
   );
 }

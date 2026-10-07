@@ -3,13 +3,15 @@
 import { ActionForm } from "@/components/admin/ActionForm";
 import { Badge } from "@/components/ui/Badge";
 import { CheckIcon } from "@/components/ui/icons";
-import { goLive } from "@/app/admin/events/match-actions";
-import { awaitingTeams, matchTeams } from "@/lib/compLabels";
-import type { CompetitionData } from "@/lib/compData";
+import { startMatch } from "@/app/admin/events/live-actions";
+import { OnAirSwitch } from "@/components/admin/event/OnAirSwitch";
+import { findStartConflict } from "@/lib/matchRules";
+import { awaitingTeams, matchName, matchTeams } from "@/lib/compLabels";
+import { courtNameOf, type CompetitionData } from "@/lib/compData";
 import type { Match } from "@/lib/database.types";
 import { SlotControls } from "./SlotControls";
 
-/** One match: both teams with score, court + time, and Edit skor / ON AIR / Menunggu / Live-kan. */
+/** One match: both teams with score, court + time, and Edit skor / ON AIR switch + Isi skor / Menunggu / Mulai. */
 export function MatchRow({ m, label, data, onEditScore }: { m: Match; label: string; data: CompetitionData; onEditScore: () => void }) {
   const done = m.status === "finished";
   const showScore = (done && !m.is_wo) || m.status === "live";
@@ -27,29 +29,44 @@ export function MatchRow({ m, label, data, onEditScore }: { m: Match; label: str
         <TeamScoreLine name={names.a} score={showScore ? m.team_a_games : null} winner={winA} loser={winB} pending={!m.team_a_id} />
         <TeamScoreLine name={names.b} score={showScore ? m.team_b_games : null} winner={winB} loser={winA} pending={!m.team_b_id} />
       </div>
-      <div className="flex items-center justify-between gap-2 md:contents">
+      <div className="flex items-center justify-between flex-wrap gap-2 md:contents">
         <SlotControls m={m} data={data} locked={done || m.status === "live"} label={label} />
-        <div className="flex-none md:w-26 flex justify-end">
-          <MatchAction m={m} eventId={data.event.id} onEditScore={onEditScore} />
+        <div className="flex-none md:min-w-26 flex justify-end">
+          <MatchAction m={m} data={data} label={label} onEditScore={onEditScore} />
         </div>
       </div>
     </div>
   );
 }
 
-function MatchAction({ m, eventId, onEditScore }: { m: Match; eventId: string; onEditScore: () => void }) {
+function MatchAction({ m, data, label, onEditScore }: { m: Match; data: CompetitionData; label: string; onEditScore: () => void }) {
+  const eventId = data.event.id;
   const ghost = "btn bg-transparent text-snow/85 min-h-10 px-2.5 py-2 text-caption tracking-button";
   if (m.status === "finished") return <button type="button" onClick={onEditScore} className={ghost}>Edit skor</button>;
-  if (m.is_live) return <Badge tone="coral">● ON AIR</Badge>;
-  if (m.status === "live") return <button type="button" onClick={onEditScore} className={ghost}>Isi skor</button>;
+  if (m.status === "live") {
+    return (
+      <div className="flex items-center gap-1.5">
+        <OnAirSwitch eventId={eventId} matchId={m.id} on={m.is_live} label={label} />
+        <button type="button" onClick={onEditScore} className={ghost}>Isi skor</button>
+      </div>
+    );
+  }
   if (awaitingTeams(m)) return <Badge tone="faint">Menunggu</Badge>;
   return (
-    <ActionForm action={goLive}>
+    <ActionForm action={startMatch} successText={`${label} dimulai`} confirmText={startWarning(m, data, label)} confirmLabel="Ya, mulai">
       <input type="hidden" name="event_id" value={eventId} />
       <input type="hidden" name="match_id" value={m.id} />
-      <button type="submit" className="btn min-h-10 px-3.5 py-2 text-caption tracking-button whitespace-nowrap">Live-kan</button>
+      <button type="submit" className="btn min-h-10 px-3.5 py-2 text-caption tracking-button whitespace-nowrap">Mulai</button>
     </ActionForm>
   );
+}
+
+/** Confirmation text before "Mulai" when the court is busy or every court is in use (see findStartConflict). */
+function startWarning(m: Match, data: CompetitionData, label: string): string | undefined {
+  const conflict = findStartConflict(m, data.matches, data.event.court_ids.length);
+  if (!conflict) return undefined;
+  if (conflict.kind === "court") return `${courtNameOf(data.courts, m.court_id)} masih dipakai ${matchName(conflict.with, data.matches)} yang sedang berjalan. Tetap mulai ${label}?`;
+  return `Sudah ${conflict.running} match berjalan, sedangkan event ini punya ${conflict.courts} court. Tetap mulai ${label}?`;
 }
 
 function TeamScoreLine({ name, score, winner, loser, pending }: { name: string; score: number | null; winner: boolean; loser: boolean; pending: boolean }) {
@@ -65,7 +82,7 @@ function TeamScoreLine({ name, score, winner, loser, pending }: { name: string; 
           </span>
         )}
       </span>
-      <span className={`flex-none w-7.5 h-6.5 rounded-md flex items-center justify-center font-display font-bold text-base ${winner ? "bg-win text-snow" : loser ? "text-snow/55" : "text-snow"}`}>
+      <span className={`flex-none min-w-7.5 px-1.5 box-border h-6.5 rounded-md flex items-center justify-center font-display font-bold text-base ${winner ? "bg-win text-snow" : loser ? "text-snow/55" : "text-snow"}`}>
         {score}
       </span>
     </div>

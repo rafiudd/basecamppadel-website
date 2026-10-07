@@ -11,8 +11,8 @@ type Progress = ReturnType<typeof mabarProgress>;
 export function RoundActions({ event, progress, checkedIn }: { event: CompEvent; progress: Progress; checkedIn: GenParticipant[] }) {
   const { last, lastDone, allPlanned, allDone, started } = progress;
   const americano = isAmericanoFormat(event.mabar_format);
-  const form = (action: Parameters<typeof ActionForm>[0]["action"], label: string, opts: { primary?: boolean; disabled?: boolean; confirm?: string } = {}) => (
-    <ActionForm action={action} confirmText={opts.confirm} confirmLabel={opts.confirm ? `Ya, ${label.toLowerCase()}` : undefined}>
+  const form = (action: Parameters<typeof ActionForm>[0]["action"], label: string, opts: { primary?: boolean; disabled?: boolean; confirm?: string; done?: string } = {}) => (
+    <ActionForm action={action} successText={opts.done} confirmText={opts.confirm} confirmLabel={opts.confirm ? `Ya, ${label.toLowerCase()}` : undefined}>
       <input type="hidden" name="event_id" value={event.id} />
       <button type="submit" disabled={opts.disabled} className={`btn min-h-10 whitespace-nowrap disabled:bg-snow/6 disabled:text-snow/45 disabled:opacity-100 ${opts.primary ? "btn-volt" : ""}`}>
         {label}
@@ -22,6 +22,7 @@ export function RoundActions({ event, progress, checkedIn }: { event: CompEvent;
   const finish = (primary: boolean) =>
     form(finishMabar, primary ? "Selesaikan event" : "Selesaikan", {
       primary,
+      done: "Mabar selesai, poin dibagikan",
       confirm: "Selesaikan mabar? Klasemen dikunci, juara dicatat, dan poin leaderboard dibagikan. Ronde yang belum dimulai dibuang.",
     });
 
@@ -32,7 +33,7 @@ export function RoundActions({ event, progress, checkedIn }: { event: CompEvent;
     message = "Event selesai. Juara dicatat dan poin leaderboard sudah dibagikan.";
   } else if (!last) {
     message = `${checkedIn.length} peserta sudah check-in. ${americano ? "Jadwal semua ronde dibuat sekaligus." : "Ronde 1 diacak, ronde berikutnya dari klasemen."}`;
-    actions = form(startMabar, americano ? "Buat jadwal" : "Buat ronde 1", { primary: true });
+    actions = form(startMabar, americano ? "Buat jadwal" : "Buat ronde 1", { primary: true, done: americano ? "Jadwal dibuat" : "Ronde 1 dibuat" });
     if (americano) hint = <AmericanoHint event={event} checkedIn={checkedIn} />;
   } else if (allDone) {
     message = `Semua ${event.rounds} ronde selesai. Selesaikan event untuk mencatat juara dan membagikan poin.`;
@@ -41,7 +42,7 @@ export function RoundActions({ event, progress, checkedIn }: { event: CompEvent;
     message = started ? "Jadwal terkunci. Isi skor tiap court sampai ronde terakhir." : "Jadwal sudah dibuat. Masih bisa diacak ulang sebelum ronde 1 dimulai.";
     actions = (
       <div className="flex items-center gap-2 flex-wrap">
-        {!started && form(regenerateMabarSchedule, "Acak ulang jadwal", { confirm: "Buat ulang seluruh jadwal dari peserta yang sudah check-in?" })}
+        {!started && form(regenerateMabarSchedule, "Acak ulang jadwal", { done: "Jadwal diacak ulang", confirm: "Buat ulang seluruh jadwal dari peserta yang sudah check-in?" })}
         {started && finish(false)}
       </div>
     );
@@ -50,7 +51,7 @@ export function RoundActions({ event, progress, checkedIn }: { event: CompEvent;
     actions = (
       <div className="flex items-center gap-2 flex-wrap">
         {lastDone && finish(false)}
-        {!allPlanned && form(nextMabarRound, `Buat ronde ${last.round_no + 1}`, { primary: true, disabled: !lastDone })}
+        {!allPlanned && form(nextMabarRound, `Buat ronde ${last.round_no + 1}`, { primary: true, disabled: !lastDone, done: `Ronde ${last.round_no + 1} dibuat` })}
       </div>
     );
   }

@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import type { PointCategoryItem, PointPreset } from "@/lib/database.types";
 import { createPointPreset, updatePointPreset, getPointPresetById } from "@/app/admin/point/actions";
+import { toast } from "@/components/ui/Toast";
 
 const DEFAULT_KOMPETISI_CATEGORIES: PointCategoryItem[] = [
   { id: "k-juara", name: "Juara", desc: "Menang final", points: 80, checked: true },
@@ -78,7 +80,6 @@ export function PointPresetForm({
   }, [editParam, initialPreset]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const activeItems = activeTab === "kompetisi" ? kompetisiItems : mabarItems;
   const setActiveItems = activeTab === "kompetisi" ? setKompetisiItems : setMabarItems;
@@ -129,12 +130,11 @@ export function PointPresetForm({
     e.preventDefault();
     const cleanName = presetName.trim();
     if (!cleanName) {
-      setErrorMessage("Nama preset wajib diisi");
+      toast.error("Nama preset wajib diisi");
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMessage(null);
 
     // Only save checked categories and sanitize empty points to 0
     const finalMabar = mabarItems
@@ -161,14 +161,14 @@ export function PointPresetForm({
           kompetisi: finalKompetisi,
         });
 
-    setIsSubmitting(false);
-
     if (res.success) {
+      toast.success(isEditMode ? "Preset diperbarui" : "Preset dibuat");
       const targetId = isEditMode ? targetPresetId : (res as { id?: string }).id;
       router.push(`/admin/point?preset=${targetId}`);
       router.refresh();
     } else {
-      setErrorMessage(res.error || "Gagal menyimpan preset");
+      setIsSubmitting(false);
+      toast.error(res.error || "Gagal menyimpan preset");
     }
   };
 
@@ -188,12 +188,6 @@ export function PointPresetForm({
           {isEditMode ? `Edit Preset: ${presetName || initialPreset?.name || ""}` : "Preset poin baru"}
         </h1>
       </div>
-
-      {errorMessage && (
-        <div className="bg-coral/20 border border-coral/40 rounded-xl p-3 text-sm text-snow">
-          {errorMessage}
-        </div>
-      )}
 
       {/* Preset Details Section */}
       <section className="bg-ink-2 rounded-2xl p-5 md:p-[22px_24px] flex flex-col gap-4">
@@ -397,13 +391,10 @@ export function PointPresetForm({
         <button
           type="submit"
           disabled={isSubmitting}
+          data-loading={isSubmitting || undefined}
           className="btn btn-coral text-ink font-bold hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
         >
-          {isSubmitting
-            ? "Menyimpan..."
-            : isEditMode
-            ? "Simpan perubahan"
-            : "Simpan preset"}
+          {isEditMode ? "Simpan perubahan" : "Simpan preset"}
         </button>
       </div>
     </form>

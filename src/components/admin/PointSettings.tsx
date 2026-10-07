@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import type { PointPreset, PointCategoryItem } from "@/lib/database.types";
 import { savePointPresetRules, deletePointPreset } from "@/app/admin/point/actions";
 import { DeletePresetModal } from "./DeletePresetModal";
+import { toast } from "@/components/ui/Toast";
 
 interface PresetStateItem {
   id: string;
@@ -99,8 +100,6 @@ export function PointSettings({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const currentPreset = presets.find((p) => p.id === activePresetId) ?? presets[0];
 
@@ -140,7 +139,6 @@ export function PointSettings({
   const handleSave = async () => {
     if (!currentPreset) return;
     setIsSaving(true);
-    setFeedback(null);
 
     const res = await savePointPresetRules(currentPreset.id, {
       mabar: currentPreset.mabar,
@@ -149,23 +147,20 @@ export function PointSettings({
 
     setIsSaving(false);
     if (res.success) {
-      setFeedback({ message: "✓ Perubahan tersimpan", type: "success" });
-      setTimeout(() => setFeedback(null), 3000);
+      toast.success("Perubahan poin tersimpan");
       router.refresh();
     } else {
-      setFeedback({ message: res.error || "Gagal menyimpan perubahan", type: "error" });
+      toast.error(res.error || "Gagal menyimpan perubahan");
     }
   };
 
   const handleOpenDeleteModal = () => {
-    setDeleteError(null);
     setIsDeleteModalOpen(true);
   };
 
   const handleConfirmDelete = async () => {
     if (!currentPreset) return;
     setIsDeleting(true);
-    setDeleteError(null);
 
     const res = await deletePointPreset(currentPreset.id);
     setIsDeleting(false);
@@ -175,10 +170,11 @@ export function PointSettings({
       setPresets(remaining);
       setActivePresetId(remaining[0]?.id ?? "");
       setIsDeleteModalOpen(false);
+      toast.success(`Preset "${currentPreset.name}" dihapus`);
       router.push("/admin/point");
       router.refresh();
     } else {
-      setDeleteError(res.error || "Gagal menghapus preset");
+      toast.error(res.error || "Gagal menghapus preset");
     }
   };
 
@@ -195,22 +191,14 @@ export function PointSettings({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {feedback && (
-            <span
-              className={`text-xs font-semibold animate-fade-in ${
-                feedback.type === "success" ? "text-volt" : "text-coral"
-              }`}
-            >
-              {feedback.message}
-            </span>
-          )}
           <button
             type="button"
             disabled={isSaving}
+            data-loading={isSaving || undefined}
             onClick={handleSave}
             className="btn btn-coral text-ink font-bold text-sm min-h-[40px] px-[18px] py-2.5 rounded-lg whitespace-nowrap flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
           >
-            {isSaving ? "Menyimpan..." : "Simpan perubahan"}
+            Simpan perubahan
           </button>
         </div>
       </div>
@@ -384,7 +372,6 @@ export function PointSettings({
         presetName={currentPreset?.name ?? ""}
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
-        errorMessage={deleteError}
       />
     </div>
   );

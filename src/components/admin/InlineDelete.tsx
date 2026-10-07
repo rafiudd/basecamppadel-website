@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { ActionForm } from "@/components/admin/ActionForm";
 import { TrashIcon } from "@/components/ui/icons";
+import type { ActionState } from "@/lib/actionState";
 
-/** Trash button that turns into "Hapus … ini? Batal / Ya, hapus" in place, then posts `id` to `action`. */
+/** Trash button that turns into "Hapus … ini? Batal / Ya, hapus" in place, then posts `id` to `action` (spinner + toast via ActionForm). */
 export function InlineDelete({
   action,
   id,
@@ -11,7 +13,7 @@ export function InlineDelete({
   noun,
   children,
 }: {
-  action: (fd: FormData) => Promise<void>;
+  action: (state: ActionState, fd: FormData) => Promise<ActionState>;
   id: string;
   name: string;
   noun: string;
@@ -30,11 +32,13 @@ export function InlineDelete({
   }
   return (
     // data-confirm-delete lets a parent card highlight itself while asking (has-[[data-confirm-delete]]:…)
-    <form action={action} data-confirm-delete className="flex items-center gap-2 justify-end flex-wrap">
-      <input type="hidden" name="id" value={id} />
-      <span className="text-caption text-snow/85">Hapus {noun} ini?</span>
-      <button type="button" onClick={() => setAsking(false)} className="btn bg-transparent text-snow/85 min-h-10 px-4.5 tracking-button">Batal</button>
-      <button type="submit" className="btn btn-danger min-h-10 px-4.5 tracking-button">Ya, hapus</button>
-    </form>
+    <div data-confirm-delete>
+      <ActionForm action={action} successText={`${noun[0].toUpperCase()}${noun.slice(1)} dihapus`} className="flex items-center gap-2 justify-end flex-wrap">
+        <input type="hidden" name="id" value={id} />
+        <span className="text-caption text-snow/85">Hapus {noun} ini?</span>
+        <button type="button" onClick={() => setAsking(false)} className="btn bg-transparent text-snow/85 min-h-10 px-4.5 tracking-button">Batal</button>
+        <button type="submit" className="btn btn-danger min-h-10 px-4.5 tracking-button">Ya, hapus</button>
+      </ActionForm>
+    </div>
   );
 }

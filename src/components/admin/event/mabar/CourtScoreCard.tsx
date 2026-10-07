@@ -4,8 +4,11 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { Badge } from "@/components/ui/Badge";
+import { toast } from "@/components/ui/Toast";
+import { Spinner } from "@/components/ui/Spinner";
 import { saveMabarScore } from "@/app/admin/events/mabar-actions";
-import { goLive } from "@/app/admin/events/match-actions";
+import { startMatch } from "@/app/admin/events/live-actions";
+import { OnAirSwitch } from "@/components/admin/event/OnAirSwitch";
 import { isScored } from "@/lib/mabar";
 import type { GenMatch, Match } from "@/lib/database.types";
 
@@ -32,48 +35,56 @@ export function CourtScoreCard({
 }) {
   const [a, setA] = useState(m.team_a_points?.toString() ?? "");
   const [b, setB] = useState(m.team_b_points?.toString() ?? "");
-  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const inPlay = !!live && !isScored(m) && (live.is_live || live.status === "live" || live.team_a_games + live.team_b_games > 0);
 
   const save = () => {
     if (a === "" || b === "") return;
     if (Number(a) === m.team_a_points && Number(b) === m.team_b_points) return;
-    start(async () => setError((await saveMabarScore(eventId, m.id, Number(a), Number(b)))?.error ?? null));
+    start(async () => {
+      toast.result(await saveMabarScore(eventId, m.id, Number(a), Number(b)), `Skor ${court} tersimpan`);
+    });
   };
 
   return (
     <div className={`bg-ink-2 rounded-card px-4.5 py-4 flex flex-col gap-2.5 ${live?.is_live ? "ring-2 ring-inset ring-coral" : ""} ${pending ? "opacity-80" : ""}`}>
       <div className="flex items-center justify-between gap-2 min-h-9">
-        <div className="text-xs font-bold tracking-caps text-snow/70">{court}</div>
-        <CourtStatus eventId={eventId} m={m} live={live} locked={locked} />
+        <div className="text-xs font-bold tracking-caps text-snow/70 flex items-center gap-2">
+          {court}
+          {pending && <Spinner />}
+        </div>
+        <CourtStatus eventId={eventId} m={m} live={live} court={court} locked={locked} />
       </div>
       <ScoreLine name={teamA} value={inPlay ? String(live!.team_a_games) : a} onChange={setA} onBlur={save} locked={locked || inPlay} />
       <ScoreLine name={teamB} value={inPlay ? String(live!.team_b_games) : b} onChange={setB} onBlur={save} locked={locked || inPlay} />
       {inPlay && <div className="text-xs text-snow/60">Sedang dimainkan, skor diisi lewat Skor Cepat.</div>}
-      {error && <div role="alert" className="text-xs text-coral-soft">{error}</div>}
     </div>
   );
 }
 
-function CourtStatus({ eventId, m, live, locked }: { eventId: string; m: GenMatch; live: Match | undefined; locked: boolean }) {
+function CourtStatus({ eventId, m, live, court, locked }: { eventId: string; m: GenMatch; live: Match | undefined; court: string; locked: boolean }) {
   if (isScored(m)) return <Badge tone="win">Selesai</Badge>;
   if (!live || locked) return null;
-  if (live.is_live) {
+  const quick = (
+    <Link href={`/admin/live/quick?match=${live.id}`} className="btn bg-transparent text-snow/85 no-underline min-h-9 px-2.5 py-1.5 text-caption">
+      Skor Cepat
+    </Link>
+  );
+  if (live.status === "live") {
     return (
-      <span className="flex items-center gap-2">
-        <Badge tone="coral">● ON AIR</Badge>
-        <Link href={`/admin/live/quick?match=${live.id}`} className="text-caption font-semibold text-volt no-underline">Skor Cepat</Link>
+      <span className="flex items-center gap-1">
+        {quick}
+        <OnAirSwitch eventId={eventId} matchId={live.id} on={live.is_live} label={court} />
       </span>
     );
   }
   return (
     <span className="flex items-center gap-1">
-      <Link href={`/admin/live/quick?match=${live.id}`} className="btn bg-transparent text-snow/85 no-underline min-h-9 px-2.5 py-1.5 text-caption">Skor Cepat</Link>
-      <ActionForm action={goLive}>
+      {quick}
+      <ActionForm action={startMatch} successText={`${court} dimulai`}>
         <input type="hidden" name="event_id" value={eventId} />
         <input type="hidden" name="match_id" value={live.id} />
-        <button type="submit" className="btn min-h-9 px-3.5 py-2 text-caption tracking-button">Live-kan</button>
+        <button type="submit" className="btn min-h-9 px-3.5 py-2 text-caption tracking-button">Mulai</button>
       </ActionForm>
     </span>
   );

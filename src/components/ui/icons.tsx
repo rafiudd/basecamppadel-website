@@ -103,6 +103,7 @@ export const UserIcon = make(
     <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
   </>,
 );
+export const ChevronDownIcon = make(<polyline points="6 9 12 15 18 9" />, { size: 14, strokeWidth: 2.5 });
 export const SearchIcon = make(
   <>
     <circle cx="11" cy="11" r="7" />

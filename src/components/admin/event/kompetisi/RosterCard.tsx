@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { CloseIcon } from "@/components/ui/icons";
+import { SearchSelect } from "@/components/ui/SearchSelect";
 import { addTeam, removeTeam, saveGroups, shuffleGroups } from "@/app/admin/events/actions";
 import { generateGroupSchedule } from "@/app/admin/events/match-actions";
 import { FINAL_STAGE_LABEL, groupLabel } from "@/lib/competition";
@@ -33,7 +34,7 @@ export function RosterCard({ data, players }: { data: CompetitionData; players: 
         </div>
         {editable && (
           <div className="flex items-center gap-2">
-            <ActionForm action={shuffleGroups}>
+            <ActionForm action={shuffleGroups} successText="Grup diacak">
               <input type="hidden" name="event_id" value={event.id} />
               <button type="submit" className="btn min-h-10 px-3.5 py-2 text-caption">Shuffle grup</button>
             </ActionForm>
@@ -68,7 +69,7 @@ export function RosterCard({ data, players }: { data: CompetitionData; players: 
       )}
 
       {editable && !moving && teams.length >= 3 && (
-        <ActionForm action={generateGroupSchedule} confirmLabel="Ya, buat jadwal" confirmText="Buat jadwal fase grup sekarang? Tim dijadwalkan otomatis ke court dan jam yang tersedia." className="flex justify-end pt-1">
+        <ActionForm action={generateGroupSchedule} successText="Jadwal fase grup dibuat" confirmLabel="Ya, buat jadwal" confirmText="Buat jadwal fase grup sekarang? Tim dijadwalkan otomatis ke court dan jam yang tersedia." className="flex justify-end pt-1">
           <input type="hidden" name="event_id" value={event.id} />
           <button type="submit" className="btn btn-coral text-ink">Buat jadwal fase grup</button>
         </ActionForm>
@@ -85,7 +86,7 @@ function TeamLine({ team, eventId, editable }: { team: TeamWithPlayers; eventId:
         {team.final_stage && <div className="text-2xs text-snow/60">{FINAL_STAGE_LABEL[team.final_stage]}</div>}
       </div>
       {editable && (
-        <ActionForm action={removeTeam} danger confirmText={`Hapus tim "${team.name}"?`}>
+        <ActionForm action={removeTeam} danger successText="Tim dihapus" confirmText={`Hapus tim "${team.name}"?`}>
           <input type="hidden" name="event_id" value={eventId} />
           <input type="hidden" name="team_id" value={team.id} />
           <button type="submit" aria-label={`Hapus ${team.name}`} className="w-9 h-9 bg-transparent border-none text-snow/55 hover:text-loss p-0 flex items-center justify-center">
@@ -101,17 +102,25 @@ function AddTeamForm({ eventId, players, teams }: { eventId: string; players: Pl
   const [p1, setP1] = useState("");
   const used = new Set(teams.flatMap((t) => t.players.map((p) => p.id)));
   return (
-    <ActionForm action={addTeam} className="flex flex-col md:flex-row md:items-end gap-2.5 bg-ink-2 rounded-xl p-3">
+    <ActionForm action={addTeam} successText="Tim ditambahkan" className="flex flex-col md:flex-row md:items-end gap-2.5 bg-ink-2 rounded-xl p-3">
       <input type="hidden" name="event_id" value={eventId} />
       {(["p1", "p2"] as const).map((k, i) => (
         <label key={k} className="flex-1 flex flex-col">
           <span className="label">Pemain {i + 1}</span>
-          <select name={k} required defaultValue="" onChange={k === "p1" ? (e) => setP1(e.target.value) : undefined} className="field text-sm">
-            <option value="">Pilih pemain</option>
-            {players.map((p) => (
-              <option key={p.id} value={p.id} disabled={used.has(p.id) || (k === "p2" && p.id === p1)}>{p.name}</option>
-            ))}
-          </select>
+          <SearchSelect
+            name={k}
+            required
+            aria-label={`Pemain ${i + 1}`}
+            placeholder="Cari pemain"
+            onChange={k === "p1" ? setP1 : undefined}
+            options={players.map((p) => ({
+              value: p.id,
+              label: p.name,
+              hint: [p.level, p.region].filter(Boolean).join(" · "),
+              disabled: used.has(p.id) || (k === "p2" && p.id === p1),
+            }))}
+            className="field text-sm"
+          />
         </label>
       ))}
       <button type="submit" className="btn btn-coral text-ink whitespace-nowrap">Simpan tim</button>
@@ -157,6 +166,7 @@ function MoveGroupsForm({ eventId, teams, groups, onDone }: { eventId: string; t
         if (!res?.error) onDone();
         return res;
       }}
+      successText="Grup tersimpan"
       className="flex flex-col gap-3"
     >
       <input type="hidden" name="event_id" value={eventId} />

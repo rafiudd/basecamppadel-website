@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import type { Match } from "@/lib/database.types";
 import { useMatchControl, type MatchControl } from "./useMatchControl";
 import { GameButtons, ServeButton, SetSteppers, StatusNotes } from "./ScoreInputs";

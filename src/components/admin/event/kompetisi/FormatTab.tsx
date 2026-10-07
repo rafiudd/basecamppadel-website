@@ -19,7 +19,7 @@ export function FormatTab({ data, players, presetName }: { data: CompetitionData
       <RosterCard data={data} players={players} />
       <PointsCard event={event} presetName={presetName} />
       {unplayed && (
-        <ActionForm action={clearGroupSchedule} danger confirmLabel="Ya, hapus jadwal" confirmText="Hapus semua jadwal dan kembalikan event ke draft? Tim dan grup tetap tersimpan." className="flex justify-end">
+        <ActionForm action={clearGroupSchedule} danger successText="Jadwal dihapus" confirmLabel="Ya, hapus jadwal" confirmText="Hapus semua jadwal dan kembalikan event ke draft? Tim dan grup tetap tersimpan." className="flex justify-end">
           <input type="hidden" name="event_id" value={event.id} />
           <button type="submit" className="btn btn-danger">Hapus jadwal (kembali ke draft)</button>
         </ActionForm>

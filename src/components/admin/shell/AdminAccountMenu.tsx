@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { UserIcon } from "@/components/ui/icons";
+import { SignOutForm } from "./SignOutForm";
 
 /** Mobile header account button: email, link to the public site, sign out. */
 export function AdminAccountMenu({ email }: { email: string }) {
@@ -35,11 +36,7 @@ export function AdminAccountMenu({ email }: { email: string }) {
           <Link href="/" onClick={() => setOpen(false)} className="px-3 py-2.5 rounded-lg text-sm text-snow/80 no-underline hover:bg-snow/8">
             Lihat situs ↗
           </Link>
-          <form action="/auth/signout" method="post">
-            <button className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold text-snow bg-transparent border-none hover:bg-snow/8">
-              Keluar
-            </button>
-          </form>
+          <SignOutForm className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold text-snow bg-transparent border-none hover:bg-snow/8" />
         </div>
       )}
     </div>

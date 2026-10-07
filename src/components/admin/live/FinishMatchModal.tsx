@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { toast } from "@/components/ui/Toast";
 import { WalkoverSelect } from "@/components/admin/event/kompetisi/ScoreModal";
 import { setCompResult } from "@/app/admin/events/match-actions";
 import { finishMabarMatch } from "@/app/admin/events/mabar-actions";
@@ -15,7 +16,6 @@ export function FinishMatchModal({ m, onClose, onDone }: { m: Match; onClose: ()
   const isMabar = !!m.gen_match_id;
   const [games, setGames] = useState({ A: String(m.team_a_games), B: String(m.team_b_games) });
   const [wo, setWo] = useState<"" | Serve>("");
-  const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const a = Number(games.A) || 0;
   const b = Number(games.B) || 0;
@@ -24,8 +24,7 @@ export function FinishMatchModal({ m, onClose, onDone }: { m: Match; onClose: ()
   const submit = () =>
     start(async () => {
       const res = isMabar ? await finishMabarMatch(m.id, a, b) : await setCompResult(m.id, a, b, wo || null);
-      if (res?.error) setError(res.error);
-      else onDone();
+      if (toast.result(res, "Hasil match tersimpan")) onDone();
     });
 
   return (
@@ -48,10 +47,9 @@ export function FinishMatchModal({ m, onClose, onDone }: { m: Match; onClose: ()
       </div>
       {!isMabar && <WalkoverSelect m={m} value={wo} onChange={setWo} />}
       {tie && <div className="text-caption text-coral-soft">Skor seri tidak bisa diselesaikan.</div>}
-      {error && <div role="alert" className="text-sm text-coral-soft bg-loss/15 rounded-lg px-3 py-2">{error}</div>}
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onClose} className="btn">Batal</button>
-        <button type="button" disabled={pending || tie} onClick={submit} className="btn btn-volt">{pending ? "Menyimpan…" : "Simpan hasil"}</button>
+        <button type="button" disabled={pending || tie} data-loading={pending || undefined} onClick={submit} className="btn btn-volt">Simpan hasil</button>
       </div>
     </Modal>
   );

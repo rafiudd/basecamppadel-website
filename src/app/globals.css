@@ -219,3 +219,57 @@ select.select-chip {
   background-position: right 10px center;
   background-size: 10px 10px;
 }
+
+/* Loading state: a button with [data-loading] (set by ActionForm on the button that submitted, or by
+   hand) shows a spinning ring before its label; an icon-only button swaps its icon for the ring. */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spinner,
+[data-loading]::before {
+  display: inline-block;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: -0.15em;
+}
+[data-loading] {
+  cursor: progress !important;
+  pointer-events: none;
+}
+[data-loading]::before {
+  content: "";
+  margin-inline-end: 0.5em;
+}
+[data-loading]:has(> svg)::before {
+  margin-inline-end: 0;
+}
+[data-loading] > svg {
+  display: none;
+}
+.btn[data-loading]:disabled {
+  opacity: 0.85;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  [data-loading]::before {
+    animation-duration: 2s;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
+.animate-toast-in {
+  animation: toast-in 0.18s ease-out;
+}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "@/components/ui/Toast";
 
 export function LoginForm({ next }: { next: string }) {
   const router = useRouter();
@@ -10,26 +11,30 @@ export function LoginForm({ next }: { next: string }) {
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"password" | "magic">("password");
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    setMsg(null);
     const supabase = createClient();
     if (mode === "password") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setMsg(error.message);
-      else {
+      if (error) {
+        toast.error(error.message);
+        setBusy(false);
+      } else {
+        // keep the spinner until the admin page takes over
+        toast.success("Berhasil masuk");
         router.replace(next);
         router.refresh();
       }
+      return;
     } else {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
       });
-      setMsg(error ? error.message : "Cek email kamu — link login sudah dikirim.");
+      if (error) toast.error(error.message);
+      else toast.success("Cek email kamu — link login sudah dikirim.");
     }
     setBusy(false);
   }
@@ -46,9 +51,8 @@ export function LoginForm({ next }: { next: string }) {
           <input className="field" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
         </div>
       )}
-      {msg && <div className="text-sm text-snow/80">{msg}</div>}
-      <button className="btn btn-coral py-3" disabled={busy} type="submit">
-        {busy ? "..." : mode === "password" ? "Masuk" : "Kirim Magic Link"}
+      <button className="btn btn-coral py-3" disabled={busy} data-loading={busy || undefined} type="submit">
+        {mode === "password" ? "Masuk" : "Kirim Magic Link"}
       </button>
       <button
         type="button"

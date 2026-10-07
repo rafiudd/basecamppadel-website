@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PhoneIcon } from "@/components/ui/icons";
 import { LiveControl } from "@/components/admin/live/LiveControl";
-import { LiveEventBar } from "@/components/admin/live/LiveEventBar";
+import { LiveEventBar, type EventLiveSummary } from "@/components/admin/live/LiveEventBar";
 import { MatchQueue, pickCurrentMatch } from "@/components/admin/live/MatchQueue";
 import { NoRunningEvent } from "@/components/admin/live/NoRunningEvent";
 import { FinishedNotice } from "@/components/admin/live/FinishedNotice";
@@ -17,11 +17,18 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
   const supabase = await createClient();
   const [{ data: events }, { data: liveRows }] = await Promise.all([
     supabase.from("events").select("*").neq("status", "finished").order("event_date", { nullsFirst: false }).order("created_at", { ascending: false }),
-    supabase.from("matches").select("event_id").eq("is_live", true),
+    supabase.from("matches").select("event_id, is_live, status").neq("status", "finished").eq("is_bye", false).not("event_id", "is", null),
   ]);
   const all = (events ?? []) as CompEvent[];
   const running = all.filter((e) => e.status === "active");
-  const onAir = new Set((liveRows ?? []).map((r) => r.event_id));
+  const onAir = new Set((liveRows ?? []).filter((r) => r.is_live).map((r) => r.event_id));
+  const summaries: Record<string, EventLiveSummary> = {};
+  for (const r of liveRows ?? []) {
+    const s = (summaries[r.event_id!] ??= { onAir: 0, playing: 0, left: 0 });
+    s.left++;
+    if (r.is_live) s.onAir++;
+    else if (r.status === "live") s.playing++;
+  }
   const event = all.find((e) => e.id === eventParam) ?? running.find((e) => onAir.has(e.id)) ?? running[0] ?? null;
 
   if (!event) {
@@ -51,14 +58,14 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
           )
         }
       />
-      <LiveEventBar event={event} running={running} />
+      <LiveEventBar event={event} running={running} summaries={summaries} courts={data.courts.filter((c) => event.court_ids.includes(c.id))} />
       {done && <FinishedNotice done={done} next={current} all={data.matches} dismissHref={`/admin/live?event=${event.id}${current ? `&match=${current.id}` : ""}`} />}
       <div className="grid grid-cols-1 lg:grid-main-aside gap-6 items-start">
         {current ? (
           <LiveControl
             key={current.id}
             initial={current}
-            label={["Sedang dimainkan", matchName(current, data.matches), current.court_id ? courtNameOf(data.courts, current.court_id) : null].filter(Boolean).join(" · ")}
+            label={[current.is_live ? "ON AIR" : current.status === "live" ? "Sedang dimainkan" : "Belum dimulai", matchName(current, data.matches), current.court_id ? courtNameOf(data.courts, current.court_id) : null].filter(Boolean).join(" · ")}
           />
         ) : (
           <EmptyState>Belum ada match yang siap. {data.matches.length ? "Tunggu babak sebelumnya selesai." : "Buat jadwal dulu di halaman event."}</EmptyState>
