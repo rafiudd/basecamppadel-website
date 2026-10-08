@@ -38,22 +38,29 @@ export function KlasemenTab({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
+            <table className="w-full table-fixed border-collapse text-sm">
+              <colgroup>
+                <col className="w-6" />
+                <col />
+                <col className="w-12" />
+                <col className="w-12" />
+                <col className="w-14 hidden sm:table-column" />
+              </colgroup>
               <thead>
                 <tr>
-                  <th className="p-0 pr-2 pb-2 text-[11px] font-bold text-ink/55 uppercase tracking-[0.04em] text-left">
+                  <th className="p-0 pr-1 pb-2 text-[11px] font-bold text-ink/55 uppercase tracking-[0.04em] text-left whitespace-nowrap">
                     #
                   </th>
-                  <th className="p-0 pr-2 pb-2 text-[11px] font-bold text-ink/55 uppercase tracking-[0.04em] text-left">
+                  <th className="p-0 pr-2 pb-2 text-[11px] font-bold text-ink/55 uppercase tracking-[0.04em] text-left whitespace-nowrap">
                     {event.type === "kompetisi" ? "Tim" : "Pemain"}
                   </th>
-                  <th className="p-0 pr-2 pb-2 text-[11px] font-bold text-ink/55 uppercase tracking-[0.04em] text-center">
+                  <th className="p-0 pr-1 pb-2 text-[11px] font-bold text-ink/55 uppercase tracking-[0.04em] text-center whitespace-nowrap">
                     Poin
                   </th>
-                  <th className="p-0 pr-2 pb-2 text-[11px] font-bold text-ink/55 uppercase tracking-[0.04em] text-center">
+                  <th className="p-0 pr-1 pb-2 text-[11px] font-bold text-ink/55 uppercase tracking-[0.04em] text-center whitespace-nowrap">
                     W–L
                   </th>
-                  <th className="p-0 pb-2 text-[11px] font-bold text-ink/55 uppercase tracking-[0.04em] text-center">
+                  <th className="p-0 pb-2 text-[11px] font-bold text-ink/55 uppercase tracking-[0.04em] text-center whitespace-nowrap hidden sm:table-cell">
                     Selisih
                   </th>
                 </tr>
@@ -61,36 +68,36 @@ export function KlasemenTab({
               <tbody>
                 {grp.rows.map((row, rIdx) => (
                   <tr key={rIdx} className="border-t border-ink/7">
-                    <td className="py-2.5 pr-2 font-display font-bold text-ink/55 w-[18px]">
+                    <td className="py-2.5 pr-1 font-display font-bold text-ink/55">
                       {row.rank}
                     </td>
-                    <td className="py-2.5 pr-2">
-                      <span className="flex items-center gap-2 flex-wrap">
+                    <td className="py-2.5 pr-2 min-w-0">
+                      <span className="flex items-center gap-1.5 min-w-0">
                         {row.key && matches?.unitSchedules?.[row.key] ? (
                           <button
                             type="button"
                             onClick={() => setOpenKey(row.key!)}
-                            className="font-bold text-sm text-ink hover:underline underline-offset-2"
+                            className="font-bold text-sm text-ink hover:underline underline-offset-2 truncate min-w-0"
                           >
                             {row.team}
                           </button>
                         ) : (
-                          <span className="font-bold text-sm text-ink">{row.team}</span>
+                          <span className="font-bold text-sm text-ink truncate min-w-0">{row.team}</span>
                         )}
                         {row.qualified && (
-                          <span className="rounded-full px-2 py-0.5 text-[11px] font-bold bg-[#2f9e5c]/14 text-[#23794A]">
+                          <span className="flex-none rounded-full px-2 py-0.5 text-[11px] font-bold bg-[#2f9e5c]/14 text-[#23794A] whitespace-nowrap">
                             {row.qualified}
                           </span>
                         )}
                       </span>
                     </td>
-                    <td className="py-2.5 pr-2 text-center font-display font-bold text-ink">
+                    <td className="py-2.5 pr-1 text-center font-display font-bold text-ink whitespace-nowrap">
                       {row.points}
                     </td>
-                    <td className="py-2.5 pr-2 text-center text-ink/70">
+                    <td className="py-2.5 pr-1 text-center text-ink/70 whitespace-nowrap">
                       {row.wl}
                     </td>
-                    <td className="py-2.5 text-center text-ink/70">
+                    <td className="py-2.5 text-center text-ink/70 whitespace-nowrap hidden sm:table-cell">
                       {row.diff}
                     </td>
                   </tr>
