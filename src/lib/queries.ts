@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Player } from "@/lib/database.types";
+import { parseDateParts } from "@/lib/format";
+import { WHATSAPP_URL } from "@/lib/config";
 
 /** The ON AIR match (the latest one if several), optionally only within one event / one court. */
 export async function getLiveMatch(eventId?: string, courtId?: string) {
@@ -77,4 +79,150 @@ export async function getPlayerWithHistory(playerId: string) {
   const group = player.gender === "F" ? women : men;
   const rank = group.find((p) => p.id === player.id)?.rank ?? group.length + 1;
   return { player, history: history ?? [], rank };
+}
+
+export type NextSessionCardData = {
+  day: string;
+  date: string;
+  month: string;
+  year: string;
+  type: "mabar" | "kompetisi";
+  title: string;
+  subtitle: string;
+  venue: string;
+  time: string;
+  price: string;
+  slots: string;
+  whatsappUrl: string;
+  href: string;
+  isLive?: boolean;
+};
+
+export async function getNextUpcomingEvent(): Promise<NextSessionCardData | null> {
+  const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  // 1. Check published events that are not finished
+  const { data: events } = await supabase
+    .from("events")
+    .select("*, venues(name)")
+    .eq("published", true)
+    .neq("status", "finished")
+    .order("event_date", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
+
+  if (events && events.length > 0) {
+    const futureOrToday = events.filter((e) => !e.event_date || e.event_date >= today);
+    const ev = futureOrToday.length > 0 ? futureOrToday[0] : events[0];
+
+    const { data: liveM } = await supabase
+      .from("matches")
+      .select("id")
+      .eq("event_id", ev.id)
+      .eq("is_live", true)
+      .limit(1)
+      .maybeSingle();
+
+    let currentCount = 0;
+    let totalCount = 0;
+    if (ev.type === "kompetisi") {
+      const { count } = await supabase
+        .from("comp_teams")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", ev.id);
+      currentCount = count ?? 0;
+      totalCount = ev.num_teams || 8;
+    } else if (ev.gen_event_id) {
+      const { count } = await supabase
+        .from("gen_participants")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", ev.gen_event_id)
+        .eq("active", true);
+      currentCount = count ?? 0;
+      totalCount = ev.quota || (ev.court_ids?.length ? ev.court_ids.length * 4 : 8);
+    }
+
+    const dateParts = ev.event_date
+      ? parseDateParts(ev.event_date)
+      : parseDateParts(ev.created_at.slice(0, 10));
+
+    const subtitle = ev.type === "kompetisi"
+      ? `Fase grup + ${ev.ko_start ? ev.ko_start.toLowerCase() : "knockout"} · ${totalCount} tim`
+      : `${ev.mabar_format ? ev.mabar_format.replace("_", " ") : "Americano"} · semua level`;
+
+    const startTime = ev.start_time ? ev.start_time.slice(0, 5) : "18:00";
+    const endHour = (Number(startTime.split(":")[0]) + (ev.type === "kompetisi" ? 3 : 2)) % 24;
+    const timeRange = `${startTime}–${String(endHour).padStart(2, "0")}:${startTime.split(":")[1] || "00"}`;
+
+    const slotsText = ev.type === "kompetisi"
+      ? `${currentCount}/${totalCount} tim`
+      : `${currentCount}/${totalCount} pemain`;
+
+    const venueObj = ev.venues as unknown as { name?: string } | null;
+
+    return {
+      day: dateParts.day,
+      date: dateParts.date,
+      month: dateParts.month,
+      year: dateParts.year,
+      type: ev.type,
+      title: ev.title,
+      subtitle,
+      venue: venueObj?.name || "East Padel House",
+      time: timeRange,
+      price: ev.price || (ev.type === "kompetisi" ? "Rp 85.000 / tim" : "Rp 50.000"),
+      slots: slotsText,
+      whatsappUrl: ev.whatsapp_url || WHATSAPP_URL,
+      href: `/jadwal/${ev.slug || ev.id}`,
+      isLive: !!liveM,
+    };
+  }
+
+  // 2. Fallback to sessions table
+  const { data: sessions } = await supabase
+    .from("sessions")
+    .select("*")
+    .eq("published", true)
+    .gte("session_date", today)
+    .order("session_date", { ascending: true })
+    .limit(1);
+
+  if (sessions && sessions.length > 0) {
+    const s = sessions[0];
+    const dateParts = parseDateParts(s.session_date);
+    return {
+      day: dateParts.day,
+      date: dateParts.date,
+      month: dateParts.month,
+      year: dateParts.year,
+      type: "mabar",
+      title: s.title,
+      subtitle: s.tag || "Mabar · semua level",
+      venue: s.venue || "East Padel House",
+      time: s.time_range,
+      price: s.price,
+      slots: s.slots ? `${s.slots} slot` : "Terbuka",
+      whatsappUrl: s.whatsapp_url || WHATSAPP_URL,
+      href: "/jadwal",
+      isLive: false,
+    };
+  }
+
+  // 3. Fallback default
+  return {
+    day: "MIN",
+    date: "1",
+    month: "NOV",
+    year: "2026",
+    type: "mabar",
+    title: "Mabar Rutin Minggu",
+    subtitle: "Americano · semua level",
+    venue: "East Padel House",
+    time: "07:00–09:00",
+    price: "Rp 50.000",
+    slots: "6/8 pemain",
+    whatsappUrl: WHATSAPP_URL,
+    href: "/jadwal/mabar-minggu",
+    isLive: false,
+  };
 }

@@ -1,8 +1,104 @@
-import type { EventItem } from "@/lib/events";
+import type { EventItem, EventMatchesData, KnockoutMatch } from "@/lib/events";
 
-export function PlayoffBracket({ event }: { event: EventItem }) {
+export function PlayoffBracket({
+  event,
+  matches,
+}: {
+  event: EventItem;
+  matches?: EventMatchesData | null;
+}) {
   const isOpen = event.status === "open";
   const isFinished = event.status === "finished";
+
+  // Dynamic Bracket for real events (non-mock)
+  if (event.slug !== "battle-september" && event.slug !== "battle-oktober") {
+    const allKo: KnockoutMatch[] = [
+      ...(matches?.quarterfinals ?? []),
+      ...(matches?.knockout ?? []),
+    ];
+
+    if (allKo.length === 0) {
+      return (
+        <section className="border-2 border-dashed border-ink/20 rounded-2xl p-9 md:p-12 text-center text-ink flex flex-col gap-2 items-center bg-white/40">
+          <div className="font-display font-bold text-[19px]">Bracket belum terbentuk</div>
+          <p className="text-[15px] leading-relaxed text-ink/70 max-w-lg m-0">
+            Bracket playoff terisi otomatis setelah match fase grup selesai dan bagan diundi.
+          </p>
+        </section>
+      );
+    }
+
+    const stages: { label: string; matches: KnockoutMatch[] }[] = [];
+    const r16s = allKo.filter((m) => m.round.toLowerCase().includes("16 besar") || m.round.toLowerCase().includes("r16"));
+    const qfs = allKo.filter((m) => m.round.toLowerCase().includes("8 besar") || m.round.toLowerCase().includes("qf"));
+    const sfs = allKo.filter((m) => m.round.toLowerCase().includes("semifinal") || m.round.toLowerCase().includes("sf"));
+    const finals = allKo.filter((m) => m.round.toLowerCase().startsWith("final") || m.round.toLowerCase() === "final");
+
+    if (r16s.length) stages.push({ label: "16 besar", matches: r16s });
+    if (qfs.length) stages.push({ label: "8 besar", matches: qfs });
+    if (sfs.length) stages.push({ label: "Semifinal", matches: sfs });
+    if (finals.length) stages.push({ label: "Final", matches: finals });
+
+    if (stages.length === 0) {
+      stages.push({ label: "Knockout", matches: allKo });
+    }
+
+    return (
+      <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-4 text-ink shadow-xs">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="font-display font-bold text-[19px] m-0">Bracket playoff</h2>
+          <span className="text-xs text-ink/60 md:hidden">
+            Geser untuk melihat bagan →
+          </span>
+        </div>
+
+        <div className="overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0 pb-3">
+          <div className="flex items-start gap-12 min-w-max">
+            {stages.map((stg, sIdx) => (
+              <div key={sIdx} className="flex flex-col gap-4 w-[280px] sm:w-[300px]">
+                <div className="font-display font-bold text-base text-ink pb-1 border-b border-ink/8">
+                  {stg.label}
+                </div>
+                <div className="flex flex-col gap-4">
+                  {stg.matches.map((m, mIdx) => (
+                    <div key={mIdx} className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between text-[11px] font-bold tracking-[0.06em] text-ink/60 uppercase">
+                        <span>{m.round} · {m.court}</span>
+                        {m.status === "live" && (
+                          <span className="inline-flex items-center gap-1 text-coral">
+                            <span className="w-1.5 h-1.5 rounded-full bg-coral animate-livepulse" />
+                            Live
+                          </span>
+                        )}
+                      </div>
+                      <div className={`bg-white border ${m.status === "live" ? "ring-2 ring-coral border-coral" : "border-ink/10"} rounded-[10px] overflow-hidden shadow-2xs`}>
+                        <div className={`h-10 px-3 flex items-center justify-between ${m.team1.winner ? "bg-[#2f9e5c]/14" : ""}`}>
+                          <span className={`text-sm truncate ${m.team1.winner ? "font-bold text-ink" : "font-semibold text-ink/75"}`}>
+                            {m.team1.name || "—"}
+                          </span>
+                          <span className={`font-display font-bold text-base ${m.team1.winner ? "text-[#23794A]" : "text-ink"}`}>
+                            {m.team1.score}
+                          </span>
+                        </div>
+                        <div className={`h-10 px-3 flex items-center justify-between border-t border-ink/8 ${m.team2.winner ? "bg-[#2f9e5c]/14" : ""}`}>
+                          <span className={`text-sm truncate ${m.team2.winner ? "font-bold text-ink" : "font-semibold text-ink/75"}`}>
+                            {m.team2.name || "—"}
+                          </span>
+                          <span className={`font-display font-bold text-base ${m.team2.winner ? "text-[#23794A]" : "text-ink"}`}>
+                            {m.team2.score}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   if (isOpen) {
     return (

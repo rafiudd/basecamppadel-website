@@ -7,9 +7,9 @@ export function KlasemenTab({
   event: EventItem;
   matches: EventMatchesData | null;
 }) {
-  const isOpen = event.status === "open";
+  const groups = matches?.groups || [];
 
-  if (isOpen) {
+  if (groups.length === 0) {
     return (
       <section className="border-2 border-dashed border-ink/20 rounded-2xl p-9 md:p-12 text-center text-ink flex flex-col gap-2 items-center bg-white/40">
         <div className="font-display font-bold text-[19px]">Grup belum diundi</div>
@@ -19,8 +19,6 @@ export function KlasemenTab({
       </section>
     );
   }
-
-  const groups = matches?.groups || [];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

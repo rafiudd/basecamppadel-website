@@ -8,9 +8,13 @@ export function MatchTab({
   event: EventItem;
   matches: EventMatchesData | null;
 }) {
-  const isOpen = event.status === "open";
+  const hasMatches =
+    (matches?.rounds && matches.rounds.length > 0) ||
+    (matches?.knockout && matches.knockout.length > 0) ||
+    (matches?.quarterfinals && matches.quarterfinals.length > 0) ||
+    (matches?.groupMatches && matches.groupMatches.length > 0);
 
-  if (isOpen) {
+  if (!hasMatches) {
     return (
       <section className="border-2 border-dashed border-ink/20 rounded-2xl p-9 md:p-12 text-center text-ink flex flex-col gap-2 items-center bg-white/40">
         <div className="font-display font-bold text-[19px]">Jadwal match belum keluar</div>
