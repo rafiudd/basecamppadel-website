@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Match } from "@/lib/database.types";
 import { useLiveMatch, useTick } from "@/lib/useLiveMatch";
 import { formatStartLine, formatTimer, matchElapsedSeconds } from "@/lib/format";
-import { MEDIA_PARTNER_LOGOS } from "@/lib/config";
+import { MEDIA_PARTNER_LOGOS, SPONSOR_LOGOS } from "@/lib/config";
 import { CountdownBadge } from "./CountdownBadge";
 import { MountainMark } from "./Logo";
 import { SponsorStrip } from "./SponsorStrip";
@@ -39,77 +39,108 @@ function TeamRow({ name, sets, game, serving }: { name: string; sets: number[]; 
   );
 }
 
+type TickerStep = { ms: number; node: React.ReactNode };
+
 /**
- * The card's lower section while off air: crossfades every few seconds between the matchup
- * ("Team A vs Team B") and the sponsor/media-partner credit, looping. Cycling instead of stacking
- * both statically means each one gets the full width to itself, so the sponsor logos can run much
- * bigger than if they had to permanently share the card with the matchup row.
+ * One sponsor logo full-size on its own, not sharing the row with anything else. Circle+cover only
+ * suits a square/badge-shaped logo (the main sponsors); a wordmark like a media-partner logo would
+ * get cropped into illegibility by that treatment, so it gets a plain contain box instead.
  */
-function MatchupSponsorSlide({ match }: { match: Match | null }) {
-  const [slide, setSlide] = useState(0);
+function LogoStep({ src, height, shape = "circle" }: { src: string; height: number; shape?: "circle" | "contain" }) {
+  if (shape === "contain") {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt="" style={{ height, width: "auto", maxWidth: height * 5 }} className="object-contain" />;
+  }
+  return (
+    <div className="rounded-full overflow-hidden flex-none bg-snow/10" style={{ height, width: height }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" className="w-full h-full object-cover" />
+    </div>
+  );
+}
+
+/**
+ * Full-screen while off air: a quick-cut loop, not everything shown at once — the event name and
+ * venue/date for a beat, then every sponsor and media-partner logo gets its own beat at full size,
+ * before looping back to the event info. Each one getting the whole screen to itself (instead of
+ * sharing a small card) is what lets it run this big.
+ */
+function OffAirTicker({ match }: { match: Match | null }) {
+  const dateLine = match?.starts_at ? formatStartLine(match.starts_at, match.ends_at) : null;
+
+  const steps = useMemo((): TickerStep[] => {
+    const list: TickerStep[] = [
+      {
+        ms: 2000,
+        node: (
+          <div className="flex flex-col items-center gap-5">
+            <div className="font-display font-bold text-[96px] text-snow tracking-[0.02em] uppercase leading-none text-center">
+              {match?.session_label || "BASECAMP BATTLE"}
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="font-display font-bold text-[32px] text-snow uppercase">{match?.venue ?? ""}</div>
+              {dateLine && (
+                <>
+                  <div className="w-1.5 h-1.5 rounded-full bg-snow/40" />
+                  <div className="font-sans font-semibold text-[22px] tracking-[0.04em] text-volt uppercase">{dateLine}</div>
+                </>
+              )}
+            </div>
+          </div>
+        ),
+      },
+    ];
+    for (const src of SPONSOR_LOGOS) list.push({ ms: 2000, node: <LogoStep src={src} height={260} /> });
+    for (const src of MEDIA_PARTNER_LOGOS) {
+      list.push({
+        ms: 2000,
+        node: (
+          <div className="flex flex-col items-center gap-4">
+            <div className="font-sans font-semibold text-[16px] uppercase tracking-[0.1em] text-snow/40">Media Partner</div>
+            <LogoStep src={src} height={130} shape="contain" />
+          </div>
+        ),
+      });
+    }
+    return list;
+  }, [match, dateLine]);
+
+  const [index, setIndex] = useState(0);
+  useEffect(() => setIndex(0), [steps.length]); // a match loading in/out shouldn't land on an out-of-range step
   useEffect(() => {
-    const id = setInterval(() => setSlide((s) => (s + 1) % 2), 5000);
-    return () => clearInterval(id);
-  }, []);
+    const id = setTimeout(() => setIndex((i) => (i + 1) % steps.length), steps[index]?.ms ?? 2000);
+    return () => clearTimeout(id);
+  }, [index, steps]);
 
   return (
-    <div className="relative w-full flex items-center justify-center" style={{ height: 168 }}>
-      {match && (
+    <div className="relative w-full h-full flex items-center justify-center">
+      {steps.map((step, i) => (
         <div
-          className={`absolute flex items-center gap-6 w-full justify-center transition-all duration-700 ease-out ${
-            slide === 0 ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-3"
+          key={i}
+          className={`absolute w-full flex items-center justify-center transition-all duration-500 ease-out ${
+            i === index ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
           }`}
         >
-          <div className="font-display font-bold text-[32px] text-snow uppercase text-right flex-1 min-w-0 truncate">{match.team_a_name}</div>
-          <div className="font-display font-bold text-[18px] text-ink bg-volt rounded-full w-14 h-14 flex items-center justify-center flex-none">VS</div>
-          <div className="font-display font-bold text-[32px] text-snow uppercase text-left flex-1 min-w-0 truncate">{match.team_b_name}</div>
+          {step.node}
         </div>
-      )}
-      <div
-        className={`absolute flex flex-col items-center gap-4 transition-all duration-700 ease-out ${
-          slide === 1 || !match ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
-        }`}
-      >
-        <SponsorStrip height={140} shape="circle" />
-        <SponsorStrip logos={MEDIA_PARTNER_LOGOS} height={48} label="Media Partner" />
-      </div>
+      ))}
     </div>
   );
 }
 
 function StartingSoonCard({ match }: { match: Match | null }) {
-  const dateLine = match?.starts_at ? formatStartLine(match.starts_at, match.ends_at) : null;
-
   return (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <div
-        className="w-[1280px] px-[72px] py-16 rounded-[20px] border border-snow/25 flex flex-col items-center gap-7"
-        style={{ background: "rgba(17,15,26,0.88)", backdropFilter: "blur(14px)", boxShadow: "0 30px 80px rgba(0,0,0,0.6)" }}
-      >
+    <div className="absolute inset-0 flex flex-col items-center">
+      <div className="pt-12 flex flex-col items-center gap-4">
         <CountdownBadge startsAt={match?.starts_at ?? null} />
-
-        <MountainMark size={64} />
-
-        <div className="flex items-center gap-6 w-full">
-          <div className="flex-1 h-px bg-snow/30" />
-          <div className="font-display font-bold text-[26px] tracking-[0.18em] text-snow">BASECAMP PADEL</div>
-          <div className="flex-1 h-px bg-snow/30" />
+        <div className="flex items-center gap-3">
+          <MountainMark size={32} />
+          <div className="font-display font-bold text-[18px] tracking-[0.16em] text-snow">BASECAMP PADEL</div>
         </div>
+      </div>
 
-        <div className="w-full bg-coral rounded-xl py-[22px] text-center">
-          <div className="font-display font-bold text-[76px] text-snow tracking-[0.02em] uppercase leading-none">
-            {match?.session_label || "BASECAMP BATTLE"}
-          </div>
-        </div>
-
-        <div className="font-display font-bold text-[34px] text-snow uppercase">{match?.venue ?? ""}</div>
-        {dateLine && (
-          <div className="font-sans font-semibold text-[20px] tracking-[0.04em] text-volt uppercase">{dateLine}</div>
-        )}
-
-        <div className="w-full pt-5 mt-1 border-t border-snow/15">
-          <MatchupSponsorSlide match={match} />
-        </div>
+      <div className="flex-1 w-full px-20">
+        <OffAirTicker match={match} />
       </div>
     </div>
   );
