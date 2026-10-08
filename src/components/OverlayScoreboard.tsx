@@ -39,6 +39,36 @@ function TeamRow({ name, sets, game, serving }: { name: string; sets: number[]; 
   );
 }
 
+/**
+ * The card's lower section while off air: crossfades every few seconds between the matchup
+ * ("Team A vs Team B") and the sponsor/media-partner credit, looping. Cycling instead of stacking
+ * both statically means each one gets the full width to itself, so the sponsor logos can run much
+ * bigger than if they had to permanently share the card with the matchup row.
+ */
+function MatchupSponsorSlide({ match }: { match: Match | null }) {
+  const [slide, setSlide] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setSlide((s) => (s + 1) % 2), 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="relative w-full flex items-center justify-center" style={{ height: 168 }}>
+      {match && (
+        <div className={`absolute flex items-center gap-6 w-full justify-center transition-opacity duration-700 ${slide === 0 ? "opacity-100" : "opacity-0"}`}>
+          <div className="font-display font-bold text-[32px] text-snow uppercase text-right flex-1 min-w-0 truncate">{match.team_a_name}</div>
+          <div className="font-display font-bold text-[18px] text-ink bg-volt rounded-full w-14 h-14 flex items-center justify-center flex-none">VS</div>
+          <div className="font-display font-bold text-[32px] text-snow uppercase text-left flex-1 min-w-0 truncate">{match.team_b_name}</div>
+        </div>
+      )}
+      <div className={`absolute flex flex-col items-center gap-4 transition-opacity duration-700 ${slide === 1 || !match ? "opacity-100" : "opacity-0"}`}>
+        <SponsorStrip height={140} shape="circle" />
+        <SponsorStrip logos={MEDIA_PARTNER_LOGOS} height={48} label="Media Partner" />
+      </div>
+    </div>
+  );
+}
+
 function StartingSoonCard({ match }: { match: Match | null }) {
   const dateLine = match?.starts_at ? formatStartLine(match.starts_at, match.ends_at) : null;
 
@@ -64,59 +94,14 @@ function StartingSoonCard({ match }: { match: Match | null }) {
           </div>
         </div>
 
-        {match && (
-          <div className="flex items-center gap-6 w-full justify-center">
-            <div className="font-display font-bold text-[32px] text-snow uppercase text-right flex-1 min-w-0 truncate">
-              {match.team_a_name}
-            </div>
-            <div className="font-display font-bold text-[18px] text-ink bg-volt rounded-full w-14 h-14 flex items-center justify-center flex-none">
-              VS
-            </div>
-            <div className="font-display font-bold text-[32px] text-snow uppercase text-left flex-1 min-w-0 truncate">
-              {match.team_b_name}
-            </div>
-          </div>
-        )}
-
         <div className="font-display font-bold text-[34px] text-snow uppercase">{match?.venue ?? ""}</div>
         {dateLine && (
           <div className="font-sans font-semibold text-[20px] tracking-[0.04em] text-volt uppercase">{dateLine}</div>
         )}
 
-        <div className="w-full pt-5 mt-1 border-t border-snow/15 flex flex-col items-center gap-3">
-          <SponsorStrip height={92} shape="circle" />
-          <SponsorStrip logos={MEDIA_PARTNER_LOGOS} height={32} label="Media Partner" />
+        <div className="w-full pt-5 mt-1 border-t border-snow/15">
+          <MatchupSponsorSlide match={match} />
         </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Top-center badge while live: crossfades between "Team A vs Team B" and the sponsor/media-partner
- * credit every few seconds, on a loop. The pill is too small to show both at once without feeling
- * cramped, and viewers who just tuned in still get the matchup even while sponsors are showing.
- */
-function TopTicker({ teamA, teamB }: { teamA: string; teamB: string }) {
-  const [slide, setSlide] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setSlide((s) => (s + 1) % 2), 5000);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <div
-      className="absolute top-10 left-1/2 -translate-x-1/2 bg-ink/55 rounded-[28px] backdrop-blur-[6px] px-10 flex items-center justify-center overflow-hidden"
-      style={{ height: 96, minWidth: 560 }}
-    >
-      <div className={`absolute flex items-center gap-5 transition-opacity duration-700 ${slide === 0 ? "opacity-100" : "opacity-0"}`}>
-        <span className="font-display font-bold text-[26px] uppercase text-snow whitespace-nowrap">{teamA}</span>
-        <span className="font-display font-bold text-[14px] text-ink bg-volt rounded-full w-10 h-10 flex items-center justify-center flex-none">VS</span>
-        <span className="font-display font-bold text-[26px] uppercase text-snow whitespace-nowrap">{teamB}</span>
-      </div>
-      <div className={`absolute flex flex-col items-center gap-2 transition-opacity duration-700 ${slide === 1 ? "opacity-100" : "opacity-0"}`}>
-        <SponsorStrip height={44} shape="circle" />
-        <SponsorStrip logos={MEDIA_PARTNER_LOGOS} height={22} label="Media Partner" />
       </div>
     </div>
   );
@@ -174,8 +159,10 @@ export function OverlayScoreboard({
         <span className="font-display font-bold text-[24px] text-volt tracking-[0.02em] tabular-nums">{timer}</span>
       </div>
 
-      {/* matchup / sponsor ticker */}
-      <TopTicker teamA={match?.team_a_name ?? "Team A"} teamB={match?.team_b_name ?? "Team B"} />
+      {/* sponsor bar */}
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-ink/55 px-8 py-3 rounded-full backdrop-blur-[6px]">
+        <SponsorStrip height={68} shape="circle" />
+      </div>
 
       {/* lower third */}
       <div className="absolute left-0 right-0 bottom-0 h-[190px] bg-indigo border-t-4 border-volt flex items-stretch">
