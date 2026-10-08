@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PublicShell } from "@/components/PublicShell";
 import { LiveCard } from "@/components/LiveCard";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { getActivePlayers, getLiveMatches, rankByGender } from "@/lib/queries";
+import { getActivePlayers, getLiveMatches, getNextUpcomingEvent, rankByGender } from "@/lib/queries";
 import { WHATSAPP_URL } from "@/lib/config";
 
 export const revalidate = 0;
@@ -27,9 +27,10 @@ const WHY = [
 ];
 
 export default async function HomePage() {
-  const [live, players] = await Promise.all([
+  const [live, players, nextEvent] = await Promise.all([
     getLiveMatches(),
     getActivePlayers(),
+    getNextUpcomingEvent(),
   ]);
   const { men } = rankByGender(players);
   const topMen = men.slice(0, 3);
@@ -100,65 +101,88 @@ export default async function HomePage() {
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             {/* Left: Next Session Card */}
-            <article className="bg-indigo border border-indigo rounded-2xl p-6 flex flex-col gap-4 text-snow h-full">
-              <div className="flex gap-3.5 items-center">
-                <div className="flex-none w-16 rounded-xl bg-snow/10 py-2 flex flex-col items-center gap-0.5">
-                  <span className="text-[11px] font-bold tracking-[0.08em] text-volt">MIN</span>
-                  <span className="font-display font-bold text-[26px] leading-none text-snow">1</span>
-                  <span className="text-[11px] font-bold tracking-[0.08em] text-snow/70">NOV</span>
-                </div>
-                <div className="flex flex-col gap-1.5 min-w-0">
-                  <div className="flex gap-1.5 flex-wrap">
-                    <span className="rounded-full px-2.5 py-0.5 text-xs font-bold bg-volt/16 text-volt">
-                      Mabar
-                    </span>
+            {nextEvent ? (
+              <article className="bg-indigo border border-indigo rounded-2xl p-6 flex flex-col gap-4 text-snow h-full">
+                <div className="flex gap-3.5 items-center">
+                  <div className="flex-none w-16 rounded-xl bg-snow/10 py-2 flex flex-col items-center gap-0.5">
+                    <span className="text-[11px] font-bold tracking-[0.08em] text-volt">{nextEvent.day}</span>
+                    <span className="font-display font-bold text-[26px] leading-none text-snow">{nextEvent.date}</span>
+                    <span className="text-[11px] font-bold tracking-[0.08em] text-snow/70">{nextEvent.month}</span>
                   </div>
-                  <Link href="/jadwal/mabar-minggu" className="no-underline text-snow">
-                    <h3 className="font-display font-bold text-[19px] m-0 leading-tight hover:text-volt transition-colors">
-                      Mabar Rutin Minggu
-                    </h3>
+                  <div className="flex flex-col gap-1.5 min-w-0">
+                    <div className="flex gap-1.5 flex-wrap items-center">
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                        nextEvent.type === "kompetisi" ? "bg-coral/20 text-[#ff8a73]" : "bg-volt/16 text-volt"
+                      }`}>
+                        {nextEvent.type === "kompetisi" ? "Kompetisi" : "Mabar"}
+                      </span>
+                      {nextEvent.isLive && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold bg-coral/20 text-[#ff8a73]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-coral animate-livepulse" />
+                          Live
+                        </span>
+                      )}
+                    </div>
+                    <Link href={nextEvent.href} className="no-underline text-snow">
+                      <h3 className="font-display font-bold text-[19px] m-0 leading-tight hover:text-volt transition-colors">
+                        {nextEvent.title}
+                      </h3>
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="text-sm text-snow/70">{nextEvent.subtitle}</div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <div className="text-snow/70 text-xs uppercase tracking-[0.06em]">Venue</div>
+                    <div className="font-semibold mt-1 text-snow">{nextEvent.venue}</div>
+                  </div>
+                  <div>
+                    <div className="text-snow/70 text-xs uppercase tracking-[0.06em]">Jam</div>
+                    <div className="font-semibold mt-1 text-snow">{nextEvent.time}</div>
+                  </div>
+                  <div>
+                    <div className="text-snow/70 text-xs uppercase tracking-[0.06em]">Harga</div>
+                    <div className="font-semibold mt-1 text-snow">{nextEvent.price}</div>
+                  </div>
+                  <div>
+                    <div className="text-snow/70 text-xs uppercase tracking-[0.06em]">Peserta</div>
+                    <div className="font-semibold mt-1 text-snow">{nextEvent.slots}</div>
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-2 flex flex-col gap-2">
+                  <a
+                    href={nextEvent.whatsappUrl}
+                    target="_blank"
+                    rel="noopener"
+                    className="no-underline bg-coral text-ink font-bold text-sm py-3 px-5 rounded-full text-center transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    Daftar via WhatsApp
+                  </a>
+                  <Link
+                    href={nextEvent.href}
+                    className="no-underline text-center text-sm font-bold text-volt py-1 hover:underline"
+                  >
+                    Lihat detail →
                   </Link>
                 </div>
-              </div>
-
-              <div className="text-sm text-snow/70">Americano · semua level</div>
-
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <div className="text-snow/70 text-xs uppercase tracking-[0.06em]">Venue</div>
-                  <div className="font-semibold mt-1 text-snow">East Padel House</div>
-                </div>
-                <div>
-                  <div className="text-snow/70 text-xs uppercase tracking-[0.06em]">Jam</div>
-                  <div className="font-semibold mt-1 text-snow">07:00–09:00</div>
-                </div>
-                <div>
-                  <div className="text-snow/70 text-xs uppercase tracking-[0.06em]">Harga</div>
-                  <div className="font-semibold mt-1 text-snow">Rp 50.000</div>
-                </div>
-                <div>
-                  <div className="text-snow/70 text-xs uppercase tracking-[0.06em]">Peserta</div>
-                  <div className="font-semibold mt-1 text-snow">6/8 pemain</div>
-                </div>
-              </div>
-
-              <div className="mt-auto pt-2 flex flex-col gap-2">
-                <a
-                  href={WHATSAPP_URL}
-                  target="_blank"
-                  rel="noopener"
-                  className="no-underline bg-coral text-ink font-bold text-sm py-3 px-5 rounded-full text-center transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Daftar via WhatsApp
-                </a>
+              </article>
+            ) : (
+              <article className="bg-indigo border border-indigo rounded-2xl p-6 flex flex-col justify-center items-center text-center gap-3 text-snow h-full">
+                <div className="font-display font-bold text-lg">Belum Ada Sesi Baru</div>
+                <p className="text-sm text-snow/70 m-0 max-w-sm">
+                  Pantau terus halaman jadwal atau hubungi kami lewat WhatsApp untuk info sesi mabar berikutnya.
+                </p>
                 <Link
-                  href="/jadwal/mabar-minggu"
-                  className="no-underline text-center text-sm font-bold text-volt py-1 hover:underline"
+                  href="/jadwal"
+                  className="mt-2 no-underline bg-coral text-ink font-bold text-sm py-2.5 px-6 rounded-full transition-transform hover:scale-105"
                 >
-                  Lihat detail →
+                  Lihat Semua Jadwal
                 </Link>
-              </div>
-            </article>
+              </article>
+            )}
 
             {/* Right: Top Leaderboard Preview */}
             <div className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2 text-ink shadow-xs">

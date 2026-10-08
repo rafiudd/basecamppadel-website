@@ -1,11 +1,27 @@
 const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+const DAY_SHORT = ["MIN", "SEN", "SEL", "RAB", "KAM", "JUM", "SAB"];
+const MONTH_SHORT = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOV", "DES"];
 
 /** "2026-09-10" -> "Kamis, 10 Sep" */
 export function formatSessionDay(isoDate: string): string {
   const [y, m, d] = isoDate.split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
   return `${DAYS[date.getUTCDay()]}, ${d} ${MONTHS[m - 1]}`;
+}
+
+export function parseDateParts(isoDate: string) {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const dayIdx = date.getUTCDay();
+  const monthIdx = m - 1;
+  return {
+    day: DAY_SHORT[dayIdx] || "MIN",
+    date: String(d),
+    month: MONTH_SHORT[monthIdx] || "OKT",
+    year: String(y),
+    dateFormatted: `${DAYS[dayIdx] || "Minggu"}, ${d} ${MONTHS[monthIdx] || "Okt"} ${y}`,
+  };
 }
 
 export function formatPointsDelta(n: number): string {
