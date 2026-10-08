@@ -84,8 +84,8 @@ test("team americano: 9 tim 2 court, rehat merata (nggak ada yang main/rehat num
       maxPlayStreak = Math.max(maxPlayStreak, streak);
       maxRestStreak = Math.max(maxRestStreak, restRun);
     }
-    assert.ok(maxPlayStreak <= 3, `${t} main ${maxPlayStreak}x beruntun, kebanyakan`);
-    assert.ok(maxRestStreak <= 3, `${t} rehat ${maxRestStreak}x beruntun, kebanyakan`);
+    assert.ok(maxPlayStreak <= 2, `${t} main ${maxPlayStreak}x beruntun, kebanyakan`);
+    assert.ok(maxRestStreak <= 2, `${t} rehat ${maxRestStreak}x beruntun, kebanyakan`);
   }
 });
 

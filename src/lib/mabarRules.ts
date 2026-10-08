@@ -126,8 +126,13 @@ export function teamRoundRobin(teamKeys: string[], courts: number, seed = 0): Pl
 
 type Game<T> = { game: Court<T>; units: string[] };
 
-/** A unit shouldn't play or rest more than this many real rounds in a row. */
-const MAX_REST_STREAK = 3;
+/**
+ * Target: nobody should play or rest more than this many real rounds in a row. Hit in practice for
+ * realistic court-to-unit ratios (2+ courts for ~8-15 units); when courts are very scarce relative to
+ * the number of units (e.g. 1 court for 9 teams, ~22% court occupancy per round), it's mathematically
+ * impossible to keep every rest gap this short, and the local search below just gets as close as it can.
+ */
+const MAX_REST_STREAK = 2;
 
 /**
  * Pack games into rounds one at a time: each round, rank the still-unscheduled games by how far
@@ -213,7 +218,7 @@ function balanceStreaks<T>(rounds: Game<T>[][], allUnits: string[], cap: number,
   const rand = rng(seed + 1);
   let cost = streakCost(next, allUnits, cap);
 
-  for (let iter = 0; cost > 0 && iter < 4000; iter++) {
+  for (let iter = 0; cost > 0 && iter < 20000; iter++) {
     const r1 = Math.floor(rand() * next.length);
     const r2 = Math.floor(rand() * next.length);
     if (r1 === r2 || !next[r1].length || !next[r2].length) continue;
