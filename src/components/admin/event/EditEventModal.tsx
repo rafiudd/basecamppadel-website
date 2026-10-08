@@ -57,6 +57,21 @@ export function EditEventModal({ event, venues, courts, onClose }: { event: Comp
             </div>
           </div>
         )}
+        {venueCourts.length > 0 && (
+          <div className="flex flex-col gap-2.5">
+            <div className="label">Link YouTube per court</div>
+            {venueCourts.map((c) => (
+              <Field key={c.id} label={courtLabel(c.name)}>
+                <input
+                  name={`stream_url:${c.id}`}
+                  defaultValue={event.court_stream_urls?.[c.id] ?? ""}
+                  placeholder="https://youtube.com/watch?v=..."
+                  className="field"
+                />
+              </Field>
+            ))}
+          </div>
+        )}
         <CheckboxField name="published" defaultChecked={event.published}>Tampilkan di halaman Jadwal publik</CheckboxField>
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="btn">Batal</button>

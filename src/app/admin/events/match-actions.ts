@@ -12,7 +12,7 @@ import {
   planFormat,
   type KoStage,
 } from "@/lib/competition";
-import { matchLabel, wibToIso, type CompetitionData } from "@/lib/compData";
+import { matchLabel, streamUrlFor, wibToIso, type CompetitionData } from "@/lib/compData";
 import type { Match, Serve } from "@/lib/database.types";
 import type { ActionState } from "@/lib/actionState";
 import { assertEditableRoster, guard, int, load, revalidateEvent, str, type Supa } from "./_shared";
@@ -67,6 +67,7 @@ export async function generateGroupSchedule(_: ActionState, fd: FormData): Promi
       ...side("a", team(f.a)),
       ...side("b", team(f.b)),
       ...slots[i],
+      stream_url: streamUrlFor(data.event, slots[i].court_id),
     }));
     const { error } = await supabase.from("matches").insert(rows);
     if (error) throw new Error(error.message);
@@ -209,6 +210,7 @@ async function writeBracket(supabase: Supa, data: CompetitionData, first: (strin
 
   const rows = plans.map((p, i) => {
     const winner = p.bye ? (p.a ?? p.b) : null;
+    const slot = p.bye ? null : slots[order.get(i)!];
     return {
       id: ids[i],
       ...baseRow(data),
@@ -222,7 +224,8 @@ async function writeBracket(supabase: Supa, data: CompetitionData, first: (strin
       status: p.bye ? ("finished" as const) : ("scheduled" as const),
       next_match_id: p.next !== null ? ids[p.next] : null,
       next_slot: p.nextSlot,
-      ...(p.bye ? {} : slots[order.get(i)!]),
+      ...slot,
+      stream_url: streamUrlFor(data.event, slot?.court_id ?? null),
     };
   });
 

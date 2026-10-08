@@ -171,6 +171,8 @@ export type CompEvent = {
   start_time: string | null; // HH:MM:SS
   venue_id: string | null;
   court_ids: string[];
+  /** YouTube live link per court id, set from the edit-event modal (not at creation). */
+  court_stream_urls: Record<string, string>;
   price: string;
   whatsapp_url: string | null;
   num_teams: number;

@@ -188,6 +188,15 @@ async function insertTeams(supabase: Supa, eventId: string, teams: { p1: string;
   }
 }
 
+/** `stream_url:<courtId>` inputs (edit-event modal only) -> { [courtId]: url }, empty ones included. */
+function readCourtStreamUrls(fd: FormData) {
+  const map = new Map<string, string>();
+  for (const key of fd.keys()) {
+    if (key.startsWith("stream_url:")) map.set(key.slice("stream_url:".length), str(fd, key));
+  }
+  return map;
+}
+
 export async function updateCompetition(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     await requireAdmin();
@@ -203,8 +212,17 @@ export async function updateCompetition(_: ActionState, fd: FormData): Promise<A
       if (plan.errors.length) throw new Error(plan.errors.join(" "));
       Object.assign(patch, { num_teams: numTeams, num_groups: numGroups, advance_per_group: advance, ko_start: plan.koStart ?? "final" });
     }
+    const courtStreamUrls = readCourtStreamUrls(fd);
+    if (courtStreamUrls.size) {
+      patch.court_stream_urls = Object.fromEntries([...courtStreamUrls].filter(([, url]) => url));
+    }
     const { error } = await supabase.from("events").update(patch).eq("id", id);
     if (error) throw new Error(error.message);
+    // Already-generated matches on these courts (past rounds, existing bracket) pick up the new
+    // link too, not just future ones — a link change should apply retroactively, same event.
+    for (const [courtId, url] of courtStreamUrls) {
+      await supabase.from("matches").update({ stream_url: url || null }).eq("event_id", id).eq("court_id", courtId);
+    }
     revalidateEvent(id);
   });
 }

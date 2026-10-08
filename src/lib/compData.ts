@@ -38,6 +38,10 @@ export type CompetitionData = {
 
 // plain helpers instead of closures on CompetitionData, so the data can be passed to client components
 export const teamNameOf = (teams: { id: string; name: string }[], id: string | null) => teams.find((t) => t.id === id)?.name ?? "—";
+/** The YouTube link set for this court (edit-event modal), for a match row being created on it. */
+export const streamUrlFor = (event: Pick<CompEvent, "court_stream_urls">, courtId: string | null): string | null =>
+  (courtId && event.court_stream_urls?.[courtId]) || null;
+
 export const courtNameOf = (courts: { id: string; name: string }[], id: string | null) => {
   const c = courts.find((x) => x.id === id);
   return c ? courtLabel(c.name) : "—";

@@ -8,6 +8,7 @@ import { isAmericanoFormat, isFixedFormat } from "@/lib/events";
 import { generateRound, pairKey, type Pool } from "@/lib/generator";
 import { americanoSchedule, teamRoundRobin } from "@/lib/mabarRules";
 import { isScored, loadMabarRounds, mabarProgress, mabarTable, unitKey } from "@/lib/mabar";
+import { streamUrlFor } from "@/lib/compData";
 import type { GenParticipant } from "@/lib/database.types";
 import { guard, revalidateEvent, str, type Supa } from "./_shared";
 
@@ -70,6 +71,7 @@ async function insertRound(supabase: Supa, ctx: Ctx, roundNo: number, courts: Co
       set_label: `Ronde ${roundNo}`,
       venue: ctx.venueName,
       court_id: g.court_id,
+      stream_url: streamUrlFor(ctx.event, g.court_id),
       team_a_name: names(g.team_a_participant_ids),
       team_b_name: names(g.team_b_participant_ids),
       team_a_player_ids: playerIds(g.team_a_participant_ids),
