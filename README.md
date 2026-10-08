@@ -10,8 +10,7 @@ Next.js 16 (App Router) + Supabase. Public site, admin CMS, and OBS overlay untu
 | `/jadwal` | Grid sesi dari tabel `sessions` (published, urut tanggal) |
 | `/leaderboard` | Kolom MEN (indigo) & WOMEN (coral), ranking per gender by poin, top-3 tinted |
 | `/leaderboard/[playerId]` | Hero pemain + stat tiles + **Riwayat Match** (tiap baris link ke `stream_url`) |
-| `/overlay` | OBS browser source 1920×1080 — lower-third scoreboard (transparan, `?bg=1` untuk preview) |
-| `/overlay/opening` | OBS scene 1 — title card "Starting Soon" |
+| `/overlay` | OBS browser source 1920×1080, satu link untuk sepanjang event — scoreboard kalau ada match ON AIR, kartu "Starting Soon" otomatis kalau nggak (transparan, `?bg=1` untuk preview) |
 | `/admin` | CMS (Supabase Auth, hanya user di tabel `admin_users`) |
 | `/admin/live` | Score Control → tulis langsung ke `matches` + tombol **Selesaikan Match** |
 | `/admin/sessions` | CRUD jadwal |

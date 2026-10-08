@@ -55,13 +55,21 @@ function MatchupSponsorSlide({ match }: { match: Match | null }) {
   return (
     <div className="relative w-full flex items-center justify-center" style={{ height: 168 }}>
       {match && (
-        <div className={`absolute flex items-center gap-6 w-full justify-center transition-opacity duration-700 ${slide === 0 ? "opacity-100" : "opacity-0"}`}>
+        <div
+          className={`absolute flex items-center gap-6 w-full justify-center transition-all duration-700 ease-out ${
+            slide === 0 ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-3"
+          }`}
+        >
           <div className="font-display font-bold text-[32px] text-snow uppercase text-right flex-1 min-w-0 truncate">{match.team_a_name}</div>
           <div className="font-display font-bold text-[18px] text-ink bg-volt rounded-full w-14 h-14 flex items-center justify-center flex-none">VS</div>
           <div className="font-display font-bold text-[32px] text-snow uppercase text-left flex-1 min-w-0 truncate">{match.team_b_name}</div>
         </div>
       )}
-      <div className={`absolute flex flex-col items-center gap-4 transition-opacity duration-700 ${slide === 1 || !match ? "opacity-100" : "opacity-0"}`}>
+      <div
+        className={`absolute flex flex-col items-center gap-4 transition-all duration-700 ease-out ${
+          slide === 1 || !match ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+        }`}
+      >
         <SponsorStrip height={140} shape="circle" />
         <SponsorStrip logos={MEDIA_PARTNER_LOGOS} height={48} label="Media Partner" />
       </div>

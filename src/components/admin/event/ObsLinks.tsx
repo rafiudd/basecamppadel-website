@@ -22,17 +22,15 @@ export function ObsLinks({ slug, courts = [], onClose }: { slug: string; courts?
         {onClose && <CloseButton onClick={onClose} />}
       </div>
       <p className="text-xs leading-normal text-snow/70 mt-0.5 mb-1.5">
-        Tetap sama sepanjang event, overlay ikut match yang ON AIR.
+        Satu link dipakai sepanjang event — otomatis ganti sendiri antara kartu "Starting Soon" dan scoreboard begitu match ON AIR.
         {courts.length > 1 && " Kalau lebih dari 1 match ON AIR, pakai link per court supaya tiap kamera menampilkan match di court-nya."}
       </p>
-      <CopyRow label={courts.length > 1 ? "Scoreboard · ON AIR terbaru" : "Scoreboard lower-third"} path={`/overlay?event=${slug}`} />
-      <CopyRow label="Opening card" path={`/overlay/opening?event=${slug}`} />
+      <CopyRow label={courts.length > 1 ? "Overlay · ON AIR terbaru" : "Overlay"} path={`/overlay?event=${slug}`} />
       {courts.length > 1 &&
         courts.map((c) => (
           <div key={c.id}>
             <div className="pt-3 pb-0.5 border-t border-snow/8 text-2xs font-bold tracking-caps text-snow/60 uppercase">{courtLabel(c.name)}</div>
-            <CopyRow label="Scoreboard" path={`/overlay?event=${slug}&court=${c.id}`} />
-            <CopyRow label="Opening card" path={`/overlay/opening?event=${slug}&court=${c.id}`} />
+            <CopyRow label="Overlay" path={`/overlay?event=${slug}&court=${c.id}`} />
           </div>
         ))}
     </>
