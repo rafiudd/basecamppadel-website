@@ -99,6 +99,15 @@ test("klasemen americano: contoh task (P1 12, P4 10, P2 8, P3 6)", () => {
   assert.deepEqual(t.map((r) => r.rank), [1, 2, 3, 4]);
 });
 
+test("klasemen: wins menentukan urutan duluan, baru poin — 2 win poin dikit ungguli 1 win poin banyak", () => {
+  const t = mabarStandings(["A", "B"], [
+    { a: ["A"], b: ["Z"], ga: 1, gb: 0 }, // A: win #1, 1 poin
+    { a: ["A"], b: ["Z"], ga: 1, gb: 0 }, // A: win #2, total 2 win, 2 poin
+    { a: ["B"], b: ["Z"], ga: 20, gb: 0 }, // B: 1 win, tapi 20 poin
+  ]);
+  assert.deepEqual(t.map((r) => [r.key, r.wins, r.games]), [["A", 2, 2], ["B", 1, 20]]);
+});
+
 test("klasemen fixed partner: contoh task (A 9, B 5, C 4), seri boleh", () => {
   const t = mabarStandings(["A", "B", "C"], [
     { a: ["A"], b: ["B"], ga: 4, gb: 2 },
@@ -142,13 +151,13 @@ test("klasemen: 2 pemain seri penuh, head-to-head menentukan", () => {
   assert.deepEqual(h.map((r) => r.key), ["X", "Y"]);
 });
 
-test("klasemen: jumlah main tidak sama → rata-rata game per match", () => {
+test("klasemen: wins sama, jumlah main tidak sama → rata-rata game per match", () => {
   const t = mabarStandings(["A", "B"], [
     { a: ["A"], b: ["Z"], ga: 4, gb: 0 },
-    { a: ["A"], b: ["Z"], ga: 4, gb: 0 },
+    { a: ["A"], b: ["Z"], ga: 0, gb: 4 },
     { a: ["B"], b: ["Z"], ga: 5, gb: 0 },
   ]);
-  assert.deepEqual(t.map((r) => [r.key, r.avg]), [["B", 5], ["A", 4]]);
+  assert.deepEqual(t.map((r) => [r.key, r.wins, r.avg]), [["B", 1, 5], ["A", 1, 2]]);
 });
 
 test("americano coverage: 8 pemain 2 court = 7 ronde (28 partnership, 14 match, 2 court)", () => {

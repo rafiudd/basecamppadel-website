@@ -288,8 +288,8 @@ function lottery(seed: number, k: string) {
 }
 
 /**
- * Mabar table. Points = games won by your side. Order: total games (or games per match when the
- * number of matches differs) → wins → game difference → head-to-head (only when exactly 2 tie) →
+ * Mabar table. Points = games won by your side. Order: wins → total games (or games per match when
+ * the number of matches differs) → game difference → head-to-head (only when exactly 2 tie) →
  * lottery. Ranks are 1..n without gaps.
  */
 export function mabarStandings(keys: string[], results: MabarResult[], seed = 0): MabarStanding[] {
@@ -321,11 +321,11 @@ export function mabarStandings(keys: string[], results: MabarResult[], seed = 0)
       return s;
     }, 0);
 
-  const sorted = list.sort((x, y) => score(y) - score(x) || y.wins - x.wins || y.diff - x.diff);
+  const sorted = list.sort((x, y) => y.wins - x.wins || score(y) - score(x) || y.diff - x.diff);
   const out: MabarStanding[] = [];
   for (let i = 0; i < sorted.length; ) {
     let j = i;
-    const same = (r: MabarStanding) => score(r) === score(sorted[i]) && r.wins === sorted[i].wins && r.diff === sorted[i].diff;
+    const same = (r: MabarStanding) => r.wins === sorted[i].wins && score(r) === score(sorted[i]) && r.diff === sorted[i].diff;
     while (j < sorted.length && same(sorted[j])) j++;
     const block = sorted.slice(i, j);
     const h2h = block.length === 2 ? headToHead(block[0].key, block[1].key) : 0; // > 0: block[0] won it
