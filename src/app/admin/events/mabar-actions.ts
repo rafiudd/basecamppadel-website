@@ -85,20 +85,32 @@ async function insertRound(supabase: Supa, ctx: Ctx, roundNo: number, courts: Co
   }
 }
 
-/** Americano / fixed Americano: the whole schedule from the people who checked in. */
+/**
+ * Americano / fixed Americano: the whole schedule from the people who checked in. Neither the round
+ * count nor the pairing is something the admin configures — a full cycle (everyone meets everyone
+ * exactly once) is fully determined by who checked in and how many courts there are, so the generator
+ * is the single source of truth: however many real rounds it took to fit every pairing is written
+ * back onto the event, rather than trusting `ctx.event.rounds` (a leftover wizard-time guess).
+ */
 async function planWholeSchedule(supabase: Supa, ctx: Ctx, seed: number) {
   const { players, teams } = schedulable(ctx);
   const courts = ctx.event.court_ids.length || 1;
-  if (isFixedFormat(ctx.event.mabar_format)) {
-    if (teams.length < 2) throw new Error("Minimal 2 pasangan yang sudah check-in.");
+  const fixed = isFixedFormat(ctx.event.mabar_format);
+  if (fixed ? teams.length < 2 : players.length < 4) {
+    throw new Error(fixed ? "Minimal 2 pasangan yang sudah check-in." : "Minimal 4 pemain yang sudah check-in.");
+  }
+  if (fixed) {
     const members = new Map(teams.map((t) => [unitKey(t[0], ctx.event.mabar_format), t.map((p) => p.id)]));
-    const plan = teamRoundRobin([...members.keys()], courts, ctx.event.rounds, seed);
+    const plan = teamRoundRobin([...members.keys()], courts, seed);
+    const { error } = await supabase.from("events").update({ rounds: plan.length }).eq("id", ctx.event.id);
+    if (error) throw new Error(error.message);
     for (const [i, r] of plan.entries()) {
       await insertRound(supabase, ctx, i + 1, r.courts.map((c) => ({ a: members.get(c.a)!, b: members.get(c.b)! })), r.resting.flatMap((k) => members.get(k)!));
     }
   } else {
-    if (players.length < 4) throw new Error("Minimal 4 pemain yang sudah check-in.");
-    const plan = americanoSchedule(players.map((p) => p.id), courts, ctx.event.rounds, seed);
+    const plan = americanoSchedule(players.map((p) => p.id), courts, seed);
+    const { error } = await supabase.from("events").update({ rounds: plan.length }).eq("id", ctx.event.id);
+    if (error) throw new Error(error.message);
     for (const [i, r] of plan.entries()) await insertRound(supabase, ctx, i + 1, r.courts.map((c) => ({ a: c.a, b: c.b })), r.resting);
   }
 }

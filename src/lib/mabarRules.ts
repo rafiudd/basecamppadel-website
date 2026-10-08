@@ -39,64 +39,107 @@ const key = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 const bump = (m: Map<string, number>, k: string) => m.set(k, (m.get(k) ?? 0) + 1);
 
 /**
- * Americano, whole schedule up front. Partners rotate with the circle method, so within one full
- * cycle (players−1 rounds) nobody partners the same player twice. Pairs that don't fit on the courts
- * rest (those with the most rests so far play first), and the playing pairs are matched to spread
- * opponents evenly.
+ * Round-robin one virtual round at a time from several queues (one per circle-method virtual round),
+ * so the real schedule doesn't run through queue 1 before touching queue 2 — every matchup still
+ * appears exactly once, just spread across the real rounds instead of clustered by where it came from.
  */
-export function americanoSchedule(playerIds: string[], courts: number, rounds: number, seed = 0): PlannedRound<[string, string]>[] {
-  if (playerIds.length < 4) return [];
-  const base = circleRounds(seededShuffle(playerIds, seed));
-  const rests = new Map(playerIds.map((p) => [p, 0]));
-  const opponents = new Map<string, number>();
-  const out: PlannedRound<[string, string]>[] = [];
-
-  for (let r = 0; r < rounds; r++) {
-    const pairs = base[r % base.length].filter((p): p is [string, string] => p[0] !== null && p[1] !== null);
-    const resting = base[r % base.length].flat().filter((p): p is string => p !== null && !pairs.some((q) => q.includes(p)));
-    const fit = Math.min(Math.max(1, courts) * 2, Math.floor(pairs.length / 2) * 2);
-    const byNeed = [...pairs].sort((x, y) => rests.get(y[0])! + rests.get(y[1])! - (rests.get(x[0])! + rests.get(x[1])!));
-    const playing = byNeed.slice(0, fit);
-    resting.push(...byNeed.slice(fit).flat());
-
-    const matchups: Court<[string, string]>[] = [];
-    const left = [...playing];
-    while (left.length >= 2) {
-      const a = left.shift()!;
-      const seen = (b: [string, string]) => a.reduce((s, x) => s + b.reduce((t, y) => t + (opponents.get(key(x, y)) ?? 0), 0), 0);
-      let best = 0;
-      for (let i = 1; i < left.length; i++) if (seen(left[i]) < seen(left[best])) best = i;
-      const b = left.splice(best, 1)[0];
-      for (const x of a) for (const y of b) bump(opponents, key(x, y));
-      matchups.push({ a, b });
+function interleave<T>(queues: T[][]): T[] {
+  const out: T[] = [];
+  const left = queues.map((q) => [...q]);
+  let remaining = left.reduce((s, q) => s + q.length, 0);
+  for (let i = 0; remaining > 0; i++) {
+    const q = left[i % left.length];
+    if (q.length) {
+      out.push(q.shift()!);
+      remaining--;
     }
-    for (const p of resting) rests.set(p, rests.get(p)! + 1);
-    out.push({ courts: matchups, resting });
   }
   return out;
 }
 
 /**
- * Team Americano (fixed partner): round robin between teams, every pair of teams once per cycle.
- * An odd team count gives one bye per round; extra matches beyond the courts wait, teams that
- * rested most play first.
+ * Americano, whole schedule up front. The circle method already guarantees every player partners
+ * every other exactly once across its virtual rounds; those partnerships are flattened (interleaved,
+ * not just concatenated, so no single stretch of real rounds is dominated by one virtual round) and
+ * then matched up two-at-a-time (minimizing repeat opponents) into courts-sized real rounds. However
+ * many real rounds that takes is exactly how many get returned — courts never cause a partnership to
+ * be dropped, only to take more rounds to get through.
  */
-export function teamRoundRobin(teamKeys: string[], courts: number, rounds: number, seed = 0): PlannedRound<string>[] {
-  if (teamKeys.length < 2) return [];
-  const base = circleRounds(seededShuffle(teamKeys, seed));
-  const rests = new Map(teamKeys.map((t) => [t, 0]));
-  const out: PlannedRound<string>[] = [];
-  for (let r = 0; r < rounds; r++) {
-    const all = base[r % base.length];
-    const games = all.filter((p): p is [string, string] => p[0] !== null && p[1] !== null);
-    const resting = all.flat().filter((t): t is string => t !== null && !games.some((g) => g.includes(t)));
-    const byNeed = [...games].sort((x, y) => rests.get(y[0])! + rests.get(y[1])! - (rests.get(x[0])! + rests.get(x[1])!));
-    const playing = byNeed.slice(0, Math.max(1, courts));
-    resting.push(...byNeed.slice(playing.length).flat());
-    for (const t of resting) rests.set(t, rests.get(t)! + 1);
-    out.push({ courts: playing.map(([a, b]) => ({ a, b })), resting });
+export function americanoSchedule(playerIds: string[], courts: number, seed = 0): PlannedRound<[string, string]>[] {
+  if (playerIds.length < 4) return [];
+  const queues = circleRounds(seededShuffle(playerIds, seed)).map((round) => round.filter((p): p is [string, string] => p[0] !== null && p[1] !== null));
+  const partnerPairs = interleave(queues);
+
+  // Two partnerships can only share a court if they don't share a player (otherwise someone would be
+  // facing their own partner, or playing both sides at once). A pair with no valid opponent left
+  // right now goes to the back of the queue and gets retried once others have been matched off.
+  const opponents = new Map<string, number>();
+  const matchups: Court<[string, string]>[] = [];
+  const left = [...partnerPairs];
+  let stalled = 0;
+  while (left.length >= 2 && stalled < left.length) {
+    const a = left.shift()!;
+    const seen = (b: [string, string]) => a.reduce((s, x) => s + b.reduce((t, y) => t + (opponents.get(key(x, y)) ?? 0), 0), 0);
+    let best = -1;
+    for (let i = 0; i < left.length; i++) {
+      if (left[i].some((p) => a.includes(p))) continue;
+      if (best === -1 || seen(left[i]) < seen(left[best])) best = i;
+    }
+    if (best === -1) {
+      left.push(a);
+      stalled++;
+      continue;
+    }
+    const b = left.splice(best, 1)[0];
+    stalled = 0;
+    for (const x of a) for (const y of b) bump(opponents, key(x, y));
+    matchups.push({ a, b });
   }
-  return out;
+
+  return packRounds(
+    matchups.map((m) => ({ game: m, units: [...m.a, ...m.b] })),
+    Math.max(1, courts),
+    playerIds,
+  );
+}
+
+/**
+ * Team Americano (fixed partner): every pair of teams meets exactly once, period — the circle method
+ * already produces that as virtual rounds; they're interleaved (so matchups spread across the whole
+ * schedule instead of clustering) and then sliced into courts-sized real rounds. With fewer courts
+ * than team-pairs-per-virtual-round, this just takes more real rounds — nothing is ever dropped, so
+ * every team still plays every other exactly once by the end.
+ */
+export function teamRoundRobin(teamKeys: string[], courts: number, seed = 0): PlannedRound<string>[] {
+  if (teamKeys.length < 2) return [];
+  const queues = circleRounds(seededShuffle(teamKeys, seed)).map((round) => round.filter((p): p is [string, string] => p[0] !== null && p[1] !== null));
+  const games = interleave(queues);
+
+  return packRounds(
+    games.map(([a, b]) => ({ game: { a, b }, units: [a, b] })),
+    Math.max(1, courts),
+    teamKeys,
+  );
+}
+
+/**
+ * Greedy first-fit: drop each game into the earliest round that still has a free court and doesn't
+ * already contain any of that game's units (so nobody is scheduled on two courts in the same round —
+ * the thing naive fixed-size slicing of an interleaved list can't guarantee).
+ */
+function packRounds<T>(games: { game: Court<T>; units: string[] }[], perRound: number, allUnits: string[]): PlannedRound<T>[] {
+  const rounds: { games: Court<T>[]; used: Set<string> }[] = [];
+  for (const { game, units } of games) {
+    const target = rounds.find((r) => r.games.length < perRound && units.every((u) => !r.used.has(u)));
+    if (target) {
+      target.games.push(game);
+      for (const u of units) target.used.add(u);
+    } else {
+      const used = new Set(units);
+      rounds.push({ games: [game], used });
+    }
+  }
+  return rounds.map((r) => ({ courts: r.games, resting: allUnits.filter((u) => !r.used.has(u)) }));
 }
 
 // ---------------------------------------------------------------------------
@@ -181,13 +224,14 @@ export function mabarStandings(keys: string[], results: MabarResult[], seed = 0)
 }
 
 /**
- * What an Americano schedule covers with `units` players (or pairs when `fixed`) on `courts` courts:
- * rounds for one full cycle, and how many partnerships (or team matchups) a cycle can't fit because
- * there are fewer courts than games per round.
+ * How many real rounds a full Americano cycle takes with `units` players (or pairs when `fixed`) on
+ * `courts` courts: every one of the `units*(units-1)/2` pairings happens exactly once — nothing is
+ * ever dropped for lack of courts, it just takes more rounds. Free Americano pairs up two partnerships
+ * per match, so its match count (and therefore rounds) is roughly half the pairing count.
  */
 export function americanoCoverage(units: number, courts: number, fixed: boolean) {
-  const cycle = units % 2 ? units : units - 1;
-  const perRound = Math.floor(units / 2); // partner pairs (free) or team matchups (fixed) per round
-  const playable = fixed ? Math.min(Math.max(1, courts), perRound) : Math.min(Math.max(1, courts) * 2, Math.floor(perRound / 2) * 2);
-  return { cycle: Math.max(0, cycle), total: (units * (units - 1)) / 2, missedPerCycle: Math.max(0, (perRound - playable) * cycle) };
+  if (units < (fixed ? 2 : 4)) return { cycle: 0, total: 0 };
+  const total = (units * (units - 1)) / 2;
+  const matches = fixed ? total : Math.ceil(total / 2);
+  return { cycle: Math.max(1, Math.ceil(matches / Math.max(1, courts))), total };
 }

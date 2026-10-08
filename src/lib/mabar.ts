@@ -88,6 +88,45 @@ export function mabarResults(matches: GenMatch[], participants: GenParticipant[]
 
 export type MabarRow = MabarStanding & { name: string; unit: MabarUnit };
 
+/** One row of a unit's (player's, or fixed pair's) match history for the "lihat lawan" detail view. */
+export type UnitMatchRow = {
+  roundNo: number;
+  opponent: string;
+  courtId: string | null;
+  mine: number | null;
+  theirs: number | null;
+  result: "W" | "L" | "D" | null;
+};
+
+/** Every match a unit has played or is scheduled to play, in round order — for its detail popup. */
+export function unitSchedule(unitK: string, participants: GenParticipant[], rounds: GenRound[], matches: GenMatch[], format: GenFormat | null): UnitMatchRow[] {
+  const byId = new Map(participants.map((p) => [p.id, p]));
+  const roundNoOf = new Map(rounds.map((r) => [r.id, r.round_no]));
+  const name = (ids: string[]) => ids.map((id) => byId.get(id)?.display_name ?? "?").join(" & ");
+  const isMine = (ids: string[]) => ids.some((id) => {
+    const p = byId.get(id);
+    return p && unitKey(p, format) === unitK;
+  });
+  const rows: UnitMatchRow[] = [];
+  for (const m of matches) {
+    const aMine = isMine(m.team_a_participant_ids);
+    const bMine = isMine(m.team_b_participant_ids);
+    if (!aMine && !bMine) continue;
+    const mine = aMine ? m.team_a_points : m.team_b_points;
+    const theirs = aMine ? m.team_b_points : m.team_a_points;
+    const scored = mine != null && theirs != null;
+    rows.push({
+      roundNo: roundNoOf.get(m.round_id) ?? 0,
+      opponent: name(aMine ? m.team_b_participant_ids : m.team_a_participant_ids),
+      courtId: m.court_id,
+      mine: mine ?? null,
+      theirs: theirs ?? null,
+      result: scored ? (mine! > theirs! ? "W" : mine! < theirs! ? "L" : "D") : null,
+    });
+  }
+  return rows.sort((a, b) => a.roundNo - b.roundNo);
+}
+
 export function mabarTable(participants: GenParticipant[], matches: GenMatch[], format: GenFormat | null, seed: number): MabarRow[] {
   const units = mabarUnits(participants, format);
   const byKey = new Map(units.map((u) => [u.key, u]));

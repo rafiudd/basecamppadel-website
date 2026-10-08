@@ -68,8 +68,10 @@ export function RoundActions({ event, progress, checkedIn }: { event: CompEvent;
 }
 
 /**
- * Before an Americano schedule is made: how many rounds one full cycle takes with the people who
- * checked in, and a warning when the courts can't fit every partnership (or team matchup).
+ * Before an Americano schedule is made: how many rounds the auto-generated full cycle will take with
+ * the people who checked in, and a warning when the courts can't fit every partnership/team matchup.
+ * The round count is no longer something the admin configures — `startMabar` computes and stores the
+ * same number this previews, so there's nothing here to compare it against.
  */
 function AmericanoHint({ event, checkedIn }: { event: CompEvent; checkedIn: GenParticipant[] }) {
   const fixed = isFixedFormat(event.mabar_format);
@@ -78,12 +80,8 @@ function AmericanoHint({ event, checkedIn }: { event: CompEvent; checkedIn: GenP
     : checkedIn.length;
   if (units < (fixed ? 2 : 4)) return null;
   const courts = event.court_ids.length || 1;
-  const { cycle, total, missedPerCycle } = americanoCoverage(units, courts, fixed);
+  const { cycle, total } = americanoCoverage(units, courts, fixed);
   const what = fixed ? "pertemuan antar tim" : "pasangan partner";
-  const notes: string[] = [`${units} ${fixed ? "pasangan" : "pemain"}: 1 putaran penuh = ${cycle} ronde (${total} ${what}).`];
-  if (event.rounds < cycle) notes.push(`Event diset ${event.rounds} ronde, jadi ${fixed ? "ada tim yang belum saling bertemu" : "ada pemain yang belum sempat berpasangan"}.`);
-  if (event.rounds > cycle) notes.push(`Event diset ${event.rounds} ronde, putaran kedua mengulang ${fixed ? "pertemuan" : "partner"} yang sama.`);
-  if (missedPerCycle) notes.push(`Dengan ${courts} court, ${missedPerCycle} dari ${total} ${what} tidak kebagian main di putaran ini (yang istirahat dibagi rata).`);
-  const warn = event.rounds !== cycle || missedPerCycle > 0;
-  return <div className={`text-xs leading-relaxed ${warn ? "text-coral-pale" : "text-snow/60"}`}>{notes.join(" ")}</div>;
+  const note = `${units} ${fixed ? "pasangan" : "pemain"}: jadwal otomatis ${cycle} ronde (${total} ${what}, semua ketemu tepat sekali). Dengan ${courts} court, tiap ronde cuma sebagian yang main — sisanya istirahat gantian.`;
+  return <div className="text-xs leading-relaxed text-snow/60">{note}</div>;
 }

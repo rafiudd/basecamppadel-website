@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { groupLabel, planFormat, splitIntoGroups } from "@/lib/competition";
 import type { CompEvent, GenFormat } from "@/lib/database.types";
 import type { ActionState } from "@/lib/actionState";
-import { isFixedFormat, presetPoints } from "@/lib/events";
+import { isAmericanoFormat, isFixedFormat, presetPoints } from "@/lib/events";
 import { assertEditableRoster, friendly, guard, int, load, revalidateEvent, str, type Supa } from "./_shared";
 
 /** Event lifecycle: create (wizard), edit, delete, and the team roster before the schedule exists. */
@@ -146,7 +146,11 @@ async function createMabar(supabase: Supa, fd: FormData) {
       slug: slugify(details.title),
       type: "mabar",
       mabar_format: format,
-      rounds: Math.max(1, int(fd, "rounds", 7)),
+      // Americano/fixed-americano: a real round count only makes sense once people check in — the
+      // schedule generator (planWholeSchedule) computes and overwrites this for real. Mexicano/fixed
+      // mexicano has no natural "complete" round count (pairing is standings-based), so there the
+      // admin's number is the actual cap used.
+      rounds: isAmericanoFormat(format) ? 1 : Math.max(1, int(fd, "rounds", 7)),
       gen_event_id: gen.id,
       quota: quota || null,
     })

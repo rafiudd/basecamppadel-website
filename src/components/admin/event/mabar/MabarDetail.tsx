@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { courtNameOf } from "@/lib/compData";
-import { mabarProgress, mabarTable, type MabarData } from "@/lib/mabar";
+import { mabarProgress, mabarTable, unitSchedule, type MabarData } from "@/lib/mabar";
 import { CourtScoreCard } from "./CourtScoreCard";
 import { MabarStandings } from "./MabarStandings";
 import { ParticipantsPanel } from "./ParticipantsPanel";
 import { RoundActions } from "./RoundActions";
 import { RoundPicker } from "./RoundPicker";
+import { UnitScheduleModal } from "./UnitScheduleModal";
 
 /** Mabar event page body: attendance, rounds with a card per court, next-step actions, and the table. */
 export function MabarDetail({ data }: { data: MabarData }) {
@@ -16,6 +17,7 @@ export function MabarDetail({ data }: { data: MabarData }) {
   // open on the first round that still has an unfinished court
   const current = rounds.find((r) => matches.some((m) => m.round_id === r.id && (m.team_a_points == null || m.team_b_points == null))) ?? rounds.at(-1);
   const [selected, setSelected] = useState(current?.round_no ?? 1);
+  const [detailKey, setDetailKey] = useState<string | null>(null);
 
   const nameById = new Map(participants.map((p) => [p.id, p.display_name]));
   const pairName = (ids: string[]) => ids.map((id) => nameById.get(id) ?? "?").join(" & ");
@@ -23,6 +25,9 @@ export function MabarDetail({ data }: { data: MabarData }) {
   const roundMatches = round ? matches.filter((m) => m.round_id === round.id) : [];
   const playing = new Set(roundMatches.flatMap((m) => [...m.team_a_participant_ids, ...m.team_b_participant_ids]));
   const resting = round ? participants.filter((p) => p.active && p.checked_in && !playing.has(p.id)) : [];
+
+  const table = mabarTable(participants, matches, event.mabar_format, event.draw_seed);
+  const detailRow = detailKey ? table.find((r) => r.key === detailKey) : null;
 
   return (
     <div className="grid grid-cols-1 lg:grid-main-aside gap-6 items-start">
@@ -56,12 +61,16 @@ export function MabarDetail({ data }: { data: MabarData }) {
         <RoundActions event={event} progress={progress} checkedIn={participants.filter((p) => p.active && p.checked_in)} />
       </div>
 
-      <MabarStandings
-        rows={mabarTable(participants, matches, event.mabar_format, event.draw_seed)}
-        doneRounds={progress.doneRounds}
-        rankCount={event.mabar_points.ranks.length}
-        presetName={presetName}
-      />
+      <MabarStandings rows={table} doneRounds={progress.doneRounds} rankCount={event.mabar_points.ranks.length} presetName={presetName} onSelect={setDetailKey} />
+
+      {detailRow && (
+        <UnitScheduleModal
+          name={detailRow.name}
+          rows={unitSchedule(detailRow.key, participants, rounds, matches, event.mabar_format)}
+          courts={courts}
+          onClose={() => setDetailKey(null)}
+        />
+      )}
     </div>
   );
 }

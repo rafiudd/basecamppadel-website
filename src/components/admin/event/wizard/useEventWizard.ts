@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { groupLabel, planFormat, shuffle, splitIntoGroups, STAGE_LABEL } from "@/lib/competition";
-import { isFixedFormat } from "@/lib/events";
+import { isAmericanoFormat, isFixedFormat } from "@/lib/events";
 import { previewRoundOne } from "@/lib/mabar";
 import { courtLabel } from "@/lib/format";
 import type { Court, EventType, GenFormat } from "@/lib/database.types";
@@ -141,7 +141,7 @@ export function useEventWizard({ players, courts }: { players: PlayerSummary[]; 
     if (n === 1) add(!type, "Pilih tipe event dulu.", "type");
     if (n === 2 && isMabar) {
       add(!mabarFormat, "Pilih format mabar.", "mabarFormat");
-      add(Number(rounds) < 1, "Isi jumlah ronde (minimal 1).", "rounds");
+      add(!isAmericanoFormat(mabarFormat) && Number(rounds) < 1, "Isi jumlah ronde (minimal 1).", "rounds");
       add(quota && Number(quota) < 4, "Kuota minimal 4 pemain.", "quota");
     }
     if (n === 2 && !isMabar) {

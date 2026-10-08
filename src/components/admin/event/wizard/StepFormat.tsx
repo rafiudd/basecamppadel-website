@@ -32,16 +32,22 @@ function MabarFormat({ w }: { w: EventWizard }) {
         ))}
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <div>
+        {isAmericanoFormat(mabar.format) ? (
+          <div>
+            <div className={labelClass}>Jumlah ronde</div>
+            <div className="min-h-13 box-border flex items-center gap-2 bg-snow/6 rounded-tile px-3.5">
+              <span className="font-display font-bold text-lg">1 putaran penuh</span>
+              <span className="text-xs text-volt">otomatis</span>
+            </div>
+            <div className="text-xs text-snow/60 mt-1.5">
+              Dihitung pas jadwal dibuat, dari {mabar.format === "americano" ? "pemain" : "pasangan"} yang sudah check-in — semua {mabar.format === "americano" ? "pemain" : "pasangan"} ketemu tepat sekali, nggak perlu diisi manual.
+            </div>
+          </div>
+        ) : (
           <Field label="Jumlah ronde">
             <input inputMode="numeric" value={mabar.rounds} onChange={(e) => mabar.setRounds(digits(e.target.value))} aria-invalid={w.invalid("rounds")} className={`${inputClass} ${invalidIf(w.invalid("rounds"))}`} />
           </Field>
-          {isAmericanoFormat(mabar.format) && (
-            <div className="text-xs text-snow/60 mt-1.5">
-              1 putaran penuh = jumlah {mabar.format === "americano" ? "pemain" : "pasangan"} − 1 ronde (kalau ganjil: sama dengan jumlahnya). Contoh: 8 pemain → 7 ronde.
-            </div>
-          )}
-        </div>
+        )}
         <Field label="Kuota pemain">
           <input inputMode="numeric" value={mabar.quota} placeholder="Tanpa batas" onChange={(e) => mabar.setQuota(digits(e.target.value))} aria-invalid={w.invalid("quota")} className={`${inputClass} ${invalidIf(w.invalid("quota"))}`} />
         </Field>
