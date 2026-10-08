@@ -100,6 +100,7 @@ export function americanoSchedule(playerIds: string[], courts: number, seed = 0)
     matchups.map((m) => ({ game: m, units: [...m.a, ...m.b] })),
     Math.max(1, courts),
     playerIds,
+    seed,
   );
 }
 
@@ -119,27 +120,136 @@ export function teamRoundRobin(teamKeys: string[], courts: number, seed = 0): Pl
     games.map(([a, b]) => ({ game: { a, b }, units: [a, b] })),
     Math.max(1, courts),
     teamKeys,
+    seed,
   );
 }
 
+type Game<T> = { game: Court<T>; units: string[] };
+
+/** A unit shouldn't play or rest more than this many real rounds in a row. */
+const MAX_REST_STREAK = 3;
+
 /**
- * Greedy first-fit: drop each game into the earliest round that still has a free court and doesn't
- * already contain any of that game's units (so nobody is scheduled on two courts in the same round —
- * the thing naive fixed-size slicing of an interleaved list can't guarantee).
+ * Pack games into rounds one at a time: each round, rank the still-unscheduled games by how far
+ * behind pace their units are (the fraction of a unit's total games it *should* have played by now,
+ * assuming the whole thing takes `idealRounds` — the courts-bound lower limit) and fill courts from
+ * that ranking, skipping only what would double-book a unit this round. This is a reasonable starting
+ * point — nothing is ever dropped, and it already leans away from clustering — but greedy local
+ * ranking alone can't see far enough ahead to guarantee no one ends up playing or resting too many
+ * rounds in a row; `balanceStreaks` below fixes that with a second pass over the whole schedule.
  */
-function packRounds<T>(games: { game: Court<T>; units: string[] }[], perRound: number, allUnits: string[]): PlannedRound<T>[] {
-  const rounds: { games: Court<T>[]; used: Set<string> }[] = [];
-  for (const { game, units } of games) {
-    const target = rounds.find((r) => r.games.length < perRound && units.every((u) => !r.used.has(u)));
-    if (target) {
-      target.games.push(game);
-      for (const u of units) target.used.add(u);
+function buildInitialRounds<T>(games: Game<T>[], perRound: number, allUnits: string[]): Game<T>[][] {
+  let remaining = games;
+  const rounds: Game<T>[][] = [];
+
+  const gamesCount = new Map(allUnits.map((u) => [u, 0]));
+  for (const g of games) for (const u of g.units) gamesCount.set(u, (gamesCount.get(u) ?? 0) + 1);
+  const idealRounds = Math.max(1, Math.ceil(games.length / perRound));
+  const played = new Map(allUnits.map((u) => [u, 0]));
+
+  let roundNo = 0;
+  while (remaining.length) {
+    const pace = (u: string) => ((roundNo + 1) / idealRounds) * (gamesCount.get(u) ?? 0) - (played.get(u) ?? 0);
+    const ranked = remaining
+      .map((g, i) => ({ g, i, need: Math.max(...g.units.map(pace)) }))
+      .sort((x, y) => y.need - x.need || x.i - y.i);
+
+    const used = new Set<string>();
+    const round: Game<T>[] = [];
+    const takenIdx = new Set<number>();
+    for (const { g, i } of ranked) {
+      if (round.length >= perRound) break;
+      if (g.units.some((u) => used.has(u))) continue;
+      round.push(g);
+      for (const u of g.units) used.add(u);
+      takenIdx.add(i);
+    }
+    remaining = remaining.filter((_, i) => !takenIdx.has(i));
+    for (const u of allUnits) if (used.has(u)) played.set(u, (played.get(u) ?? 0) + 1);
+    rounds.push(round);
+    roundNo++;
+  }
+  return rounds;
+}
+
+/** Longest run of consecutive `true`s in a boolean sequence. */
+function longestRun(xs: boolean[]): number {
+  let best = 0;
+  let run = 0;
+  for (const x of xs) {
+    run = x ? run + 1 : 0;
+    best = Math.max(best, run);
+  }
+  return best;
+}
+
+/**
+ * How unbalanced a schedule is: for every unit, how far its longest play streak and longest rest
+ * streak exceed a comfortable cap, squared so one bad streak of 6 is penalized far more than two of 3
+ * — pushes the search to spread the pain out rather than just move it to a different unit.
+ */
+function streakCost<T>(rounds: Game<T>[][], allUnits: string[], cap: number): number {
+  let cost = 0;
+  for (const u of allUnits) {
+    const played = rounds.map((r) => r.some((g) => g.units.includes(u)));
+    const playStreak = longestRun(played);
+    const restStreak = longestRun(played.map((p) => !p));
+    cost += Math.max(0, playStreak - cap) ** 2 + Math.max(0, restStreak - cap) ** 2;
+  }
+  return cost;
+}
+
+/**
+ * Local search: starting from the pace-greedy schedule, repeatedly try swapping two games that
+ * landed in different rounds (so a unit stuck with a long streak gets a chance to trade into a round
+ * further away from its other games) and keep the swap only when it doesn't double-book a unit in
+ * either round and doesn't make the overall streak cost worse. Greedy round-by-round packing can't
+ * see the whole schedule at once, so it can still leave a unit's games front-loaded (finishing all of
+ * them well before the schedule ends, then resting out the entire tail) — reshuffling after the fact
+ * is what actually catches that, instead of trying to out-think it with an even fancier per-round rule.
+ */
+function balanceStreaks<T>(rounds: Game<T>[][], allUnits: string[], cap: number, seed: number): Game<T>[][] {
+  const next = rounds.map((r) => [...r]);
+  const rand = rng(seed + 1);
+  let cost = streakCost(next, allUnits, cap);
+
+  for (let iter = 0; cost > 0 && iter < 4000; iter++) {
+    const r1 = Math.floor(rand() * next.length);
+    const r2 = Math.floor(rand() * next.length);
+    if (r1 === r2 || !next[r1].length || !next[r2].length) continue;
+    const i1 = Math.floor(rand() * next[r1].length);
+    const i2 = Math.floor(rand() * next[r2].length);
+    const g1 = next[r1][i1];
+    const g2 = next[r2][i2];
+
+    const clashes = (round: Game<T>[], at: number, incoming: Game<T>) =>
+      round.some((g, idx) => idx !== at && g.units.some((u) => incoming.units.includes(u)));
+    if (clashes(next[r1], i1, g2) || clashes(next[r2], i2, g1)) continue;
+
+    next[r1][i1] = g2;
+    next[r2][i2] = g1;
+    const newCost = streakCost(next, allUnits, cap);
+    if (newCost <= cost) {
+      cost = newCost;
     } else {
-      const used = new Set(units);
-      rounds.push({ games: [game], used });
+      next[r1][i1] = g1;
+      next[r2][i2] = g2;
     }
   }
-  return rounds.map((r) => ({ courts: r.games, resting: allUnits.filter((u) => !r.used.has(u)) }));
+  return next;
+}
+
+/**
+ * Build one real round at a time (not "drop each game wherever it fits" — that packs whoever's games
+ * happen to come first in the list into early rounds and leaves them resting a long stretch once
+ * their games run out, and nothing enforces an even spread either): a pace-aware greedy pass gets a
+ * decent first cut, then a local-search pass swaps games between rounds to flatten out any remaining
+ * streaks it couldn't see coming.
+ */
+function packRounds<T>(games: Game<T>[], perRound: number, allUnits: string[], seed = 0): PlannedRound<T>[] {
+  const initial = buildInitialRounds(games, perRound, allUnits);
+  const balanced = balanceStreaks(initial, allUnits, MAX_REST_STREAK, seed);
+  return balanced.map((round) => ({ courts: round.map((g) => g.game), resting: allUnits.filter((u) => !round.some((g) => g.units.includes(u))) }));
 }
 
 // ---------------------------------------------------------------------------

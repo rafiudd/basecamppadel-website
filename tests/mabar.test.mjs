@@ -64,6 +64,31 @@ test("team americano: 9 tim 2 court, semua 36 pertemuan kejadwalin tanpa konflik
   }
 });
 
+test("team americano: 9 tim 2 court, rehat merata (nggak ada yang main/rehat numpuk)", () => {
+  const teams = Array.from({ length: 9 }, (_, i) => `T${i + 1}`);
+  const s = teamRoundRobin(teams, 2, 7);
+  for (const t of teams) {
+    let streak = 0;
+    let maxPlayStreak = 0;
+    let maxRestStreak = 0;
+    let restRun = 0;
+    for (const r of s) {
+      const playing = r.courts.some((c) => c.a === t || c.b === t);
+      if (playing) {
+        streak++;
+        restRun = 0;
+      } else {
+        restRun++;
+        streak = 0;
+      }
+      maxPlayStreak = Math.max(maxPlayStreak, streak);
+      maxRestStreak = Math.max(maxRestStreak, restRun);
+    }
+    assert.ok(maxPlayStreak <= 3, `${t} main ${maxPlayStreak}x beruntun, kebanyakan`);
+    assert.ok(maxRestStreak <= 3, `${t} rehat ${maxRestStreak}x beruntun, kebanyakan`);
+  }
+});
+
 test("klasemen americano: contoh task (P1 12, P4 10, P2 8, P3 6)", () => {
   const t = mabarStandings(["P1", "P2", "P3", "P4"], [
     { a: ["P1", "P2"], b: ["P3", "P4"], ga: 4, gb: 2 },
