@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { inter, spaceGrotesk } from "./fonts";
 import "./globals.css";
 import { TopLoader } from "@/components/TopLoader";
@@ -27,6 +27,17 @@ export const metadata: Metadata = {
     description,
   },
   robots: { index: true, follow: true },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Basecamp Padel",
+  },
+};
+
+/** Installed/"Add to Home Screen": fills the notch area and colors the status bar to match the app. */
+export const viewport: Viewport = {
+  themeColor: "#17151F",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
