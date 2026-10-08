@@ -60,6 +60,64 @@ export function wibToIso(date: string, time: string): string {
   return new Date(Date.UTC(y, mo - 1, d, hh - 7, mm || 0)).toISOString();
 }
 
+/** "18:00" + 2 -> "20:00" (wraps past midnight). */
+export const addHours = (time: string, hours: number) => {
+  const [h, m] = time.split(":").map(Number);
+  return `${String((h + hours) % 24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+/**
+ * A minimal fake `Match` row carrying just a name/venue/date (an event's own, when there's no real
+ * match row to show) — the off-air overlay card only ever reads session_label/venue/starts_at/
+ * ends_at off it, so the rest of the shape is inert filler. Shared by the overlay page's server-side
+ * fallback and useLiveMatch's client-side one, so both agree on what an "off-air" row looks like.
+ */
+export function blankMatch(overrides: Pick<Match, "session_label" | "venue" | "starts_at" | "ends_at">): Match {
+  return {
+    id: "", session_id: null, set_label: "", team_a_name: "", team_b_name: "",
+    team_a_player_ids: [], team_b_player_ids: [], team_a_sets: [0, 0], team_b_sets: [0, 0],
+    team_a_game: "0", team_b_game: "0", serve: "A", is_live: false, stream_url: null, court_id: null,
+    timer_running: false, timer_start: null, timer_base_seconds: 0, status: "scheduled", winner: null,
+    event_id: null, stage: null, group_label: null, round_no: null, bracket_pos: null,
+    team_a_id: null, team_b_id: null, team_a_games: 0, team_b_games: 0, winner_team_id: null,
+    is_wo: false, is_bye: false, next_match_id: null, next_slot: null, gen_match_id: null,
+    created_at: "", updated_at: "",
+    ...overrides,
+  };
+}
+
+/** Minimal client shape this needs — works with both the server (`supabase/server`) and browser clients. */
+type AnySupa = { from: (table: string) => any };
+
+/**
+ * Nothing's ON AIR for this event(/court): the next scheduled match, else a `blankMatch` of the
+ * event's own name/venue/date. Used both on first render (overlay page, server-side) and whenever
+ * the client-side realtime hook needs to re-derive the same "waiting" state after a match ends.
+ */
+export async function offAirFallback(supabase: AnySupa, eventId: string, courtId?: string): Promise<Match | null> {
+  const { data: scheduled } = await supabase
+    .from("matches")
+    .select("*")
+    .eq("event_id", eventId)
+    .match(courtId ? { court_id: courtId } : {})
+    .eq("status", "scheduled")
+    .order("starts_at", { nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  if (scheduled) return scheduled;
+
+  const { data: ev } = await supabase.from("events").select("title, venue_id, event_date, start_time").eq("id", eventId).maybeSingle();
+  if (!ev) return null;
+  const venueName = ev.venue_id ? ((await supabase.from("venues").select("name").eq("id", ev.venue_id).maybeSingle()).data?.name ?? "") : "";
+  const startTime: string | undefined = ev.start_time?.slice(0, 5);
+  return blankMatch({
+    session_label: ev.title,
+    venue: venueName,
+    starts_at: ev.event_date && startTime ? wibToIso(ev.event_date, startTime) : null,
+    ends_at: ev.event_date && startTime ? wibToIso(ev.event_date, addHours(startTime, 2)) : null,
+  });
+}
+
 /** UTC ISO -> "HH:MM" WIB, for <input type="time">. */
 export function isoToWibTime(iso: string | null): string {
   if (!iso) return "";

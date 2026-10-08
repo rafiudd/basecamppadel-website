@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getEventIdBySlug, getLiveMatch } from "@/lib/queries";
+import { offAirFallback } from "@/lib/compData";
 import { OverlayScoreboard } from "@/components/OverlayScoreboard";
 
 export const dynamic = "force-dynamic";
@@ -26,20 +27,10 @@ export default async function OverlayPage({ searchParams }: Props) {
     initial = data;
   } else {
     initial = await getLiveMatch(eventId, court);
-    // Nothing ON AIR: fall back to the next scheduled match so the "Starting Soon" card still
-    // shows who's playing next, instead of a bare placeholder.
-    if (!initial && eventId) {
-      const { data } = await supabase
-        .from("matches")
-        .select("*")
-        .eq("event_id", eventId)
-        .match(court ? { court_id: court } : {})
-        .eq("status", "scheduled")
-        .order("starts_at", { nullsFirst: false })
-        .limit(1)
-        .maybeSingle();
-      initial = data;
-    }
+    // Nothing ON AIR: next scheduled match, else the event's own name/venue/date — same fallback
+    // chain useLiveMatch re-runs on the client once it takes over (see its comment for why that
+    // duplication matters).
+    if (!initial && eventId) initial = await offAirFallback(supabase, eventId, court);
   }
   return <OverlayScoreboard initial={initial} matchId={matchId} eventId={eventId} courtId={matchId ? undefined : court} showBackdrop={bg === "1"} />;
 }

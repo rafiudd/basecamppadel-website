@@ -71,7 +71,7 @@ function OffAirTicker({ match }: { match: Match | null }) {
   const steps = useMemo((): TickerStep[] => {
     const list: TickerStep[] = [
       {
-        ms: 2000,
+        ms: 4000,
         node: (
           <div className="flex flex-col items-center gap-5">
             <div className="font-display font-bold text-[96px] text-snow tracking-[0.02em] uppercase leading-none text-center">

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { offAirFallback } from "@/lib/compData";
 import type { Match } from "@/lib/database.types";
 
 /**
@@ -11,15 +12,23 @@ import type { Match } from "@/lib/database.types";
  * - Without either: follows an ON AIR row (used by Home).
  * Several rows can be ON AIR, so a followed row is kept while it stays ON AIR (and in the court);
  * only when it goes off air does it switch to the latest other ON AIR row.
+ *
+ * When `eventId` is given and nothing is ON AIR, this re-derives the exact same off-air fallback
+ * (next scheduled match, else the event's own name/venue/date) the overlay page computes for first
+ * render — without it, the unconditional refetch on mount would immediately stomp that richer
+ * server-rendered fallback back down to a bare `null` the moment the client takes over, since a
+ * plain `is_live = true` query has no way to know about it.
  */
 export function useLiveMatch(initial: Match | null, matchId?: string, eventId?: string, courtId?: string) {
   const [match, setMatch] = useState<Match | null>(initial);
-  const followed = useRef<string | null>(initial?.id ?? null);
+  // Only tracks a row we're following because it's genuinely ON AIR — null while showing an
+  // off-air fallback, so a real match going live is never mistaken for "already followed".
+  const followedLive = useRef<string | null>(initial?.is_live ? initial.id : null);
 
   useEffect(() => {
     const supabase = createClient();
     const follow = (row: Match | null) => {
-      followed.current = row?.id ?? null;
+      followedLive.current = row?.is_live ? row.id : null;
       setMatch(row);
     };
 
@@ -32,7 +41,12 @@ export function useLiveMatch(initial: Match | null, matchId?: string, eventId?: 
         q = q.eq("is_live", true).order("updated_at", { ascending: false });
       }
       const { data, error } = await q.limit(1).maybeSingle();
-      if (!error) follow(data ?? null); // on network error keep what we have
+      if (error) return; // network error: keep what we have
+      if (data || matchId || !eventId) {
+        follow(data ?? null);
+        return;
+      }
+      follow(await offAirFallback(supabase, eventId, courtId));
     };
 
     const channel = supabase
@@ -56,18 +70,17 @@ export function useLiveMatch(initial: Match | null, matchId?: string, eventId?: 
             return;
           }
           const fits = row.is_live && (!courtId || row.court_id === courtId);
-          if (row.id === followed.current) {
+          if (row.id === followedLive.current) {
             // The row we follow: keep it while it fits, else look for another ON AIR one.
             if (fits) follow(row);
             else refetch();
-          } else if (fits && !followed.current) {
+          } else if (fits && !followedLive.current) {
             follow(row);
           }
         },
       )
       .subscribe();
 
-    refetch();
     return () => {
       supabase.removeChannel(channel);
     };
