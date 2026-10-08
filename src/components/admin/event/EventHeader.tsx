@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ActionForm } from "@/components/admin/ActionForm";
 import { BackLink } from "@/components/ui/PageHeader";
 import { EventTypeBadge } from "@/components/ui/Badge";
-import { EditIcon, LinkIcon, PlayIcon } from "@/components/ui/icons";
+import { EditIcon, LinkIcon, PlayIcon, ResetIcon } from "@/components/ui/icons";
+import { resetEvent } from "@/app/admin/events/actions";
 import type { CompEvent, Court, Venue } from "@/lib/database.types";
 import { ObsPopover } from "./ObsLinks";
 import { EditEventModal } from "./EditEventModal";
@@ -53,6 +55,18 @@ export function EventHeader({
           <Link href={`/admin/live?event=${event.id}`} aria-label="Buka Live" title="Buka Live" className={`${squareBtn} bg-coral text-ink`}>
             <PlayIcon strokeWidth={2} />
           </Link>
+          <ActionForm
+            action={resetEvent}
+            successText="Event direset"
+            confirmText="Reset event? Jadwal, check-in, dan semua skor dihapus balik ke awal — daftar peserta/tim tetap. Kalau event ini sudah selesai, poin leaderboard yang sudah dibagikan juga ditarik balik. Nggak bisa dibatalkan."
+            confirmLabel="Ya, reset event"
+            danger
+          >
+            <input type="hidden" name="event_id" value={event.id} />
+            <button type="submit" aria-label="Reset event" title="Reset event" className={`${squareBtn} bg-loss/15 text-loss`}>
+              <ResetIcon />
+            </button>
+          </ActionForm>
         </div>
       </div>
       {obsOpen && <ObsPopover slug={event.slug} courts={courts.filter((c) => event.court_ids.includes(c.id))} onClose={() => setObsOpen(false)} />}

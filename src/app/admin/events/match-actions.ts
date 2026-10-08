@@ -307,3 +307,25 @@ export async function finishCompetition(_: ActionState, fd: FormData): Promise<A
     revalidatePath("/leaderboard/[playerId]", "page");
   });
 }
+
+/**
+ * Full reset: wipe every match (group + bracket) and un-award any leaderboard points already given
+ * out, but keep the team roster. Deliberately has none of clearGroupSchedule's "nothing played yet"
+ * guard: this is the explicit escape hatch for redoing an event that was run wrong, so it has to work
+ * whether the event is mid-tournament or already finished.
+ */
+export async function resetCompetition(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    await requireAdmin();
+    const supabase = await createClient();
+    const id = str(fd, "event_id");
+    // player_awards delete fires a trigger that recomputes players.points — no manual point math needed.
+    await supabase.from("player_awards").delete().eq("event_id", id);
+    await supabase.from("matches").delete().eq("event_id", id);
+    await supabase.from("comp_teams").update({ final_stage: null }).eq("event_id", id);
+    await supabase.from("events").update({ status: "draft", bracket_generated: false, bracket_stale: false }).eq("id", id);
+    revalidateEvent(id);
+    revalidatePath("/leaderboard");
+    revalidatePath("/leaderboard/[playerId]", "page");
+  });
+}

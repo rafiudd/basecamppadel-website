@@ -8,6 +8,8 @@ import type { CompEvent, GenFormat, ScoreMode } from "@/lib/database.types";
 import type { ActionState } from "@/lib/actionState";
 import { isAmericanoFormat, isFixedFormat, presetPoints } from "@/lib/events";
 import { assertEditableRoster, friendly, guard, int, load, revalidateEvent, str, type Supa } from "./_shared";
+import { resetMabarEvent } from "./mabar-actions";
+import { resetCompetition } from "./match-actions";
 
 /** Event lifecycle: create (wizard), edit, delete, and the team roster before the schedule exists. */
 
@@ -243,6 +245,21 @@ export async function deleteCompetition(_: ActionState, fd: FormData): Promise<A
     revalidateEvent(id);
     redirect("/admin/events");
   });
+}
+
+/** One button for both event types: dispatches to the mabar or kompetisi reset by the event's own type. */
+export async function resetEvent(state: ActionState, fd: FormData): Promise<ActionState> {
+  let type: string | null = null;
+  const err = await guard(async () => {
+    await requireAdmin();
+    const supabase = await createClient();
+    const id = str(fd, "event_id");
+    const { data: event } = await supabase.from("events").select("type").eq("id", id).maybeSingle();
+    if (!event) throw new Error("Event tidak ditemukan");
+    type = event.type;
+  });
+  if (err) return err;
+  return type === "mabar" ? resetMabarEvent(state, fd) : resetCompetition(state, fd);
 }
 
 // ---------------------------------------------------------------- teams & groups

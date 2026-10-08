@@ -36,6 +36,13 @@ export const TrashIcon = make(
   </>,
   { size: 18 },
 );
+export const ResetIcon = make(
+  <>
+    <path d="M3 12a9 9 0 1 0 3-6.7" />
+    <polyline points="3 4 3 9 8 9" />
+  </>,
+  { size: 18 },
+);
 export const CloseIcon = make(
   <>
     <line x1="6" y1="6" x2="18" y2="18" />

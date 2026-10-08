@@ -389,3 +389,27 @@ export async function finishMabar(_: ActionState, fd: FormData): Promise<ActionS
     revalidatePath("/leaderboard/[playerId]", "page");
   });
 }
+
+/**
+ * Full reset: wipe the schedule, every court's scores, and check-ins, and un-award any leaderboard
+ * points already given out — but keep the roster (who's signed up stays, they just show as not
+ * checked in again). Deliberately skips assertOpen and the "round 1 started" lock the other schedule
+ * actions use: this is the explicit escape hatch for redoing an event that was run wrong, so it has
+ * to work whether the event is mid-round or already finished.
+ */
+export async function resetMabarEvent(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    await requireAdmin();
+    const supabase = await createClient();
+    const ctx = await loadMabar(supabase, str(fd, "event_id"));
+    // player_awards delete fires a trigger that recomputes players.points — no manual point math needed.
+    await supabase.from("player_awards").delete().eq("event_id", ctx.event.id);
+    await supabase.from("gen_rounds").delete().eq("event_id", ctx.genId); // cascades gen_matches -> matches
+    await supabase.from("gen_participants").update({ checked_in: false, sits_out_count: 0 }).eq("event_id", ctx.genId);
+    await supabase.from("gen_events").update({ status: "draft" }).eq("id", ctx.genId);
+    await supabase.from("events").update({ status: "draft" }).eq("id", ctx.event.id);
+    revalidateEvent(ctx.event.id);
+    revalidatePath("/leaderboard");
+    revalidatePath("/leaderboard/[playerId]", "page");
+  });
+}
