@@ -5,7 +5,7 @@ import { groupLabel, planFormat, shuffle, splitIntoGroups, STAGE_LABEL } from "@
 import { isAmericanoFormat, isFixedFormat } from "@/lib/events";
 import { previewRoundOne } from "@/lib/mabar";
 import { courtLabel } from "@/lib/format";
-import type { Court, EventType, GenFormat } from "@/lib/database.types";
+import type { Court, EventType, GenFormat, ScoreMode } from "@/lib/database.types";
 import type { PlayerSummary } from "@/components/admin/event/types";
 
 export type Step = 1 | 2 | 3 | 4;
@@ -49,6 +49,14 @@ export function useEventWizard({ players, courts }: { players: PlayerSummary[]; 
   const [mabarFormat, setMabarFormat] = useState<GenFormat | null>(null);
   const [rounds, setRounds] = useState("");
   const [quota, setQuota] = useState("");
+  const [scoreMode, setScoreMode] = useState<ScoreMode>("points");
+  const [scoreTarget, setScoreTarget] = useState("24");
+  /** Default target for each mode, used when switching modes so the field isn't left stale. */
+  const SCORE_MODE_DEFAULT: Record<ScoreMode, string> = { best_of: "3", race_to: "4", points: "24" };
+  const changeScoreMode = (m: ScoreMode) => {
+    setScoreMode(m);
+    setScoreTarget(SCORE_MODE_DEFAULT[m]);
+  };
   /** Mabar quota in players (null = no limit); fixed partner fills it with pairs. */
   const maxPlayers = isMabar && Number(quota) >= 4 ? Number(quota) : null;
   const fixed = isMabar && isFixedFormat(mabarFormat);
@@ -143,6 +151,7 @@ export function useEventWizard({ players, courts }: { players: PlayerSummary[]; 
       add(!mabarFormat, "Pilih format mabar.", "mabarFormat");
       add(!isAmericanoFormat(mabarFormat) && Number(rounds) < 1, "Isi jumlah ronde (minimal 1).", "rounds");
       add(quota && Number(quota) < 4, "Kuota minimal 4 pemain.", "quota");
+      add(Number(scoreTarget) < 1, "Isi target skor.", "scoreTarget");
     }
     if (n === 2 && !isMabar) {
       add(!numTeams, "Isi jumlah tim.", "numTeams");
@@ -220,7 +229,24 @@ export function useEventWizard({ players, courts }: { players: PlayerSummary[]; 
     fixed,
     usesPairs,
     kompetisi: { numTeams, numGroups, advance, plan, flow, flowSummary, groupCount, setTeamCount, setGroupCount, setAdvance: (n: number) => setAdvance(clamp(n, 1, 8)) },
-    mabar: { format: mabarFormat, setFormat: setMabarFormat, rounds, setRounds, quota, setQuota, picked, setPicked, maxPlayers, maxPairs, round1, reshuffle: () => setPairSeed((s) => s + 1) },
+    mabar: {
+      format: mabarFormat,
+      setFormat: setMabarFormat,
+      rounds,
+      setRounds,
+      quota,
+      setQuota,
+      scoreMode,
+      setScoreMode: changeScoreMode,
+      scoreTarget,
+      setScoreTarget,
+      picked,
+      setPicked,
+      maxPlayers,
+      maxPairs,
+      round1,
+      reshuffle: () => setPairSeed((s) => s + 1),
+    },
     teams: { list: teams, chosen, filled: filledTeams, ...teamActions },
     details: { title, setTitle, eventDate, setEventDate, startTime, setStartTime, venueId, setVenueId, venueCourts: courtsOf(venueId), courtIds, toggleCourt, presetId, setPresetId, published, setPublished },
     nameOf,

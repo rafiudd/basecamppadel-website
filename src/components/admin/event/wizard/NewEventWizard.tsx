@@ -113,6 +113,8 @@ function EarlierStepsFields({ w }: { w: EventWizard }) {
           ? <input type="hidden" name="teams" value={JSON.stringify(w.teams.filled)} />
           : w.mabar.picked.map((id) => <input key={id} type="hidden" name="player_ids" value={id} />)}
         <input type="hidden" name="quota" value={w.mabar.quota} />
+        <input type="hidden" name="score_mode" value={w.mabar.scoreMode} />
+        <input type="hidden" name="points_target" value={w.mabar.scoreTarget} />
       </>
     );
   }

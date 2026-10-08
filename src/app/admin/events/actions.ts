@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { groupLabel, planFormat, splitIntoGroups } from "@/lib/competition";
-import type { CompEvent, GenFormat } from "@/lib/database.types";
+import type { CompEvent, GenFormat, ScoreMode } from "@/lib/database.types";
 import type { ActionState } from "@/lib/actionState";
 import { isAmericanoFormat, isFixedFormat, presetPoints } from "@/lib/events";
 import { assertEditableRoster, friendly, guard, int, load, revalidateEvent, str, type Supa } from "./_shared";
@@ -105,6 +105,7 @@ function readPairs(fd: FormData) {
 }
 
 const MABAR_FORMATS: GenFormat[] = ["americano", "mexicano", "fixed_americano", "fixed_mexicano"];
+const SCORE_MODES: ScoreMode[] = ["best_of", "race_to", "points"];
 
 /** Mabar rounds run on the generator tables; the event links to its gen_event. Rounds are made on the event page after check-in. */
 async function createMabar(supabase: Supa, fd: FormData) {
@@ -153,6 +154,8 @@ async function createMabar(supabase: Supa, fd: FormData) {
       rounds: isAmericanoFormat(format) ? 1 : Math.max(1, int(fd, "rounds", 7)),
       gen_event_id: gen.id,
       quota: quota || null,
+      score_mode: SCORE_MODES.includes(str(fd, "score_mode") as ScoreMode) ? (str(fd, "score_mode") as ScoreMode) : "points",
+      points_target: Math.max(1, int(fd, "points_target", 24)),
     })
     .select("id")
     .single();

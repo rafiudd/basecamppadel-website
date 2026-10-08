@@ -110,6 +110,8 @@ export type Court = {
 };
 
 export type GenFormat = "americano" | "mexicano" | "fixed_americano" | "fixed_mexicano";
+/** How "winning a game" is framed for display; score entry is always one number per side regardless. */
+export type ScoreMode = "best_of" | "race_to" | "points";
 export type GenEventStatus = "draft" | "active" | "finished";
 
 export type GenEvent = {
@@ -185,6 +187,7 @@ export type CompEvent = {
   // mabar (0006)
   mabar_format: GenFormat | null;
   points_target: number;
+  score_mode: ScoreMode;
   rounds: number;
   gen_event_id: string | null;
   point_preset_id: string | null;

@@ -1,7 +1,7 @@
 import { Field, inputClass, invalidIf, labelClass } from "@/components/ui/Field";
 import { STAGE_LABEL } from "@/lib/competition";
 import { MABAR_FORMAT_LABEL, isAmericanoFormat } from "@/lib/events";
-import type { GenFormat } from "@/lib/database.types";
+import type { GenFormat, ScoreMode } from "@/lib/database.types";
 import type { EventWizard } from "./useEventWizard";
 import { Counter, RadioCard, StepSection } from "./parts";
 
@@ -11,6 +11,16 @@ const MABAR_FORMATS: { key: GenFormat; desc: string }[] = [
   { key: "fixed_americano", desc: "Partner tetap, lawan gantian acak." },
   { key: "fixed_mexicano", desc: "Partner tetap, lawan di-seed dari ranking." },
 ];
+
+const SCORE_MODES: { key: ScoreMode; label: string; desc: string }[] = [
+  { key: "best_of", label: "Best of", desc: "Menang N set (ganjil)." },
+  { key: "race_to", label: "Race to", desc: "Siapa duluan sampai N poin/game." },
+  { key: "points", label: "Poin (0–x)", desc: "Skor akumulasi biasa, bukan tenis." },
+];
+const SCORE_MODE_TARGETS: Record<Extract<ScoreMode, "best_of" | "race_to">, number[]> = {
+  best_of: [3, 5, 7],
+  race_to: [3, 4, 5, 6],
+};
 
 const digits = (v: string) => v.replace(/\D/g, "");
 
@@ -51,6 +61,44 @@ function MabarFormat({ w }: { w: EventWizard }) {
         <Field label="Kuota pemain">
           <input inputMode="numeric" value={mabar.quota} placeholder="Tanpa batas" onChange={(e) => mabar.setQuota(digits(e.target.value))} aria-invalid={w.invalid("quota")} className={`${inputClass} ${invalidIf(w.invalid("quota"))}`} />
         </Field>
+      </div>
+
+      <div>
+        <div className={labelClass}>Cara menang</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+          {SCORE_MODES.map((m) => (
+            <RadioCard key={m.key} on={mabar.scoreMode === m.key} onClick={() => mabar.setScoreMode(m.key)} title={m.label} desc={m.desc} />
+          ))}
+        </div>
+        <div className="mt-2.5">
+          {mabar.scoreMode === "points" ? (
+            <Field label="Poin per game">
+              <input
+                inputMode="numeric"
+                value={mabar.scoreTarget}
+                onChange={(e) => mabar.setScoreTarget(digits(e.target.value))}
+                aria-invalid={w.invalid("scoreTarget")}
+                className={`${inputClass} ${invalidIf(w.invalid("scoreTarget"))} max-w-32`}
+              />
+            </Field>
+          ) : (
+            <div className={`flex gap-2 ${invalidIf(w.invalid("scoreTarget"))}`}>
+              {SCORE_MODE_TARGETS[mabar.scoreMode].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => mabar.setScoreTarget(String(n))}
+                  aria-pressed={Number(mabar.scoreTarget) === n}
+                  className={`min-w-13 h-11 px-3 border-none rounded-lg font-display font-bold text-lg ${
+                    Number(mabar.scoreTarget) === n ? "bg-volt text-indigo" : "bg-snow/8 text-snow"
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

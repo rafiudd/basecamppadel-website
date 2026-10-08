@@ -16,6 +16,7 @@ import type {
   Match,
   PointCategoryItem,
   PointPresetRules,
+  ScoreMode,
   Venue,
 } from "@/lib/database.types";
 import { loadCompetition, teamNameOf, courtNameOf, matchLabel, isoToWibTime, type CompetitionData } from "@/lib/compData";
@@ -238,7 +239,7 @@ export async function getEvents(): Promise<EventItem[]> {
                 { val: String(totalSlots), label: "Pemain" },
                 { val: e.mabar_format ? MABAR_FORMAT_LABEL[e.mabar_format] : "Americano", label: "Format" },
                 { val: String(e.rounds || 7), label: "Ronde main" },
-                { val: String(e.points_target || 24), label: "Poin per game" },
+                scoreModeBox(e.score_mode || "points", e.points_target || 24),
               ],
           availableTabs: e.type === "kompetisi"
             ? ["info", "match", "klasemen", "playoff"]
@@ -482,7 +483,7 @@ async function mapMabarToEventItem(supabase: any, event: CompEvent): Promise<Eve
       { val: String(totalSlots), label: "Pemain" },
       { val: event.mabar_format ? MABAR_FORMAT_LABEL[event.mabar_format] : "Americano", label: "Format mabar" },
       { val: String(event.rounds || 7), label: "Ronde main" },
-      { val: String(event.points_target || 24), label: "Poin per game" },
+      scoreModeBox(event.score_mode || "points", event.points_target || 24),
     ],
     availableTabs: ["info", "match", "klasemen"],
     defaultTab: isLive ? "match" : isFinished ? "klasemen" : "info",
@@ -722,6 +723,13 @@ export const MABAR_FORMAT_LABEL: Record<GenFormat, string> = {
   fixed_americano: "Fixed partner Americano",
   fixed_mexicano: "Fixed partner Mexicano",
 };
+
+/** The "Format" box on the public Info tab, mode-specific: a target count means something different each way. */
+export function scoreModeBox(mode: ScoreMode, target: number): { val: string; label: string } {
+  if (mode === "best_of") return { val: `Best of ${target}`, label: "Cara menang" };
+  if (mode === "race_to") return { val: `Race to ${target}`, label: "Cara menang" };
+  return { val: String(target), label: "Poin per game" };
+}
 
 export const isFixedFormat = (f: GenFormat | null | undefined) => f === "fixed_americano" || f === "fixed_mexicano";
 /** Americano formats plan every round up front; Mexicano builds each round from the table. */
