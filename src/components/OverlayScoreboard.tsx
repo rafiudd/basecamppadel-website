@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { Match } from "@/lib/database.types";
 import { useLiveMatch, useTick } from "@/lib/useLiveMatch";
 import { formatStartLine, formatTimer, matchElapsedSeconds } from "@/lib/format";
@@ -91,6 +92,36 @@ function StartingSoonCard({ match }: { match: Match | null }) {
   );
 }
 
+/**
+ * Top-center badge while live: crossfades between "Team A vs Team B" and the sponsor/media-partner
+ * credit every few seconds, on a loop. The pill is too small to show both at once without feeling
+ * cramped, and viewers who just tuned in still get the matchup even while sponsors are showing.
+ */
+function TopTicker({ teamA, teamB }: { teamA: string; teamB: string }) {
+  const [slide, setSlide] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setSlide((s) => (s + 1) % 2), 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div
+      className="absolute top-10 left-1/2 -translate-x-1/2 bg-ink/55 rounded-[28px] backdrop-blur-[6px] px-10 flex items-center justify-center overflow-hidden"
+      style={{ height: 96, minWidth: 560 }}
+    >
+      <div className={`absolute flex items-center gap-5 transition-opacity duration-700 ${slide === 0 ? "opacity-100" : "opacity-0"}`}>
+        <span className="font-display font-bold text-[26px] uppercase text-snow whitespace-nowrap">{teamA}</span>
+        <span className="font-display font-bold text-[14px] text-ink bg-volt rounded-full w-10 h-10 flex items-center justify-center flex-none">VS</span>
+        <span className="font-display font-bold text-[26px] uppercase text-snow whitespace-nowrap">{teamB}</span>
+      </div>
+      <div className={`absolute flex flex-col items-center gap-2 transition-opacity duration-700 ${slide === 1 ? "opacity-100" : "opacity-0"}`}>
+        <SponsorStrip height={44} shape="circle" />
+        <SponsorStrip logos={MEDIA_PARTNER_LOGOS} height={22} label="Media Partner" />
+      </div>
+    </div>
+  );
+}
+
 export function OverlayScoreboard({
   initial,
   matchId,
@@ -143,10 +174,8 @@ export function OverlayScoreboard({
         <span className="font-display font-bold text-[24px] text-volt tracking-[0.02em] tabular-nums">{timer}</span>
       </div>
 
-      {/* sponsor bar */}
-      <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-ink/55 px-8 py-3 rounded-full backdrop-blur-[6px]">
-        <SponsorStrip height={68} shape="circle" />
-      </div>
+      {/* matchup / sponsor ticker */}
+      <TopTicker teamA={match?.team_a_name ?? "Team A"} teamB={match?.team_b_name ?? "Team B"} />
 
       {/* lower third */}
       <div className="absolute left-0 right-0 bottom-0 h-[190px] bg-indigo border-t-4 border-volt flex items-stretch">
