@@ -36,7 +36,7 @@ export function MabarStandings({
           <Avatar name={r.name} size={30} />
           <div className="flex-1 min-w-0">
             <div className="font-display font-bold text-sm truncate">{r.name}</div>
-            {r.played > 0 && <div className="text-2xs text-snow/60">{r.played} main · {r.wins}M {r.draws}S {r.losses}K · {r.diff > 0 ? "+" : ""}{r.diff}</div>}
+            {r.played > 0 && <div className="text-2xs text-snow/60">{r.played} main · {r.wins}W {r.draws}D {r.losses}L · {r.diff > 0 ? "+" : ""}{r.diff}</div>}
           </div>
           <div className="text-right">
             <div className="font-bold text-sm">{r.games}</div>
