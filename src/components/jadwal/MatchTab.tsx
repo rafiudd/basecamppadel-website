@@ -107,12 +107,13 @@ export function MatchTab({
                     const aWin = finished && r.s1 > r.s2;
                     const bWin = finished && r.s2 > r.s1;
                     // When a pair is picked, color the whole card by their result instead of the
-                    // generic winner-row highlight: green win, red loss, gray draw, white if not played.
+                    // generic winner-row highlight: blue win (green is already the winner-row color
+                    // inside every card), red loss, gray draw, white if not played.
                     const mySide = filterKey ? (r.p1Key === filterKey ? "a" : r.p2Key === filterKey ? "b" : null) : null;
                     const myResult = !finished || !mySide ? null : mySide === "a" ? (aWin ? "W" : bWin ? "L" : "D") : bWin ? "W" : aWin ? "L" : "D";
                     const cardClass = mySide
                       ? myResult === "W"
-                        ? "border-win/40 bg-win/10"
+                        ? "border-blue-400/50 bg-blue-500/8"
                         : myResult === "L"
                         ? "border-loss/40 bg-loss/8"
                         : myResult === "D"
