@@ -1,5 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import { YOUTUBE_URL } from "@/lib/config";
 import type { EventItem, EventMatchesData } from "@/lib/events";
+import { UnitScheduleModal } from "@/components/jadwal/UnitScheduleModal";
 
 export function MatchTab({
   event,
@@ -8,6 +12,8 @@ export function MatchTab({
   event: EventItem;
   matches: EventMatchesData | null;
 }) {
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const openUnit = openKey ? matches?.unitSchedules?.[openKey] : null;
   const hasMatches =
     (matches?.rounds && matches.rounds.length > 0) ||
     (matches?.knockout && matches.knockout.length > 0) ||
@@ -32,31 +38,51 @@ export function MatchTab({
         <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-xs">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="font-display font-bold text-[19px] m-0">Hasil match Americano</h2>
-            <span className="text-[13px] text-ink/60">7 ronde selesai</span>
+            <span className="text-[13px] text-ink/60">
+              {matches.roundsTotal != null ? `${matches.roundsDone ?? 0} dari ${matches.roundsTotal} ronde selesai` : null}
+            </span>
           </div>
 
-          {matches.rounds.map((r, i) => (
-            <div key={i} className="flex items-center gap-4 py-3 border-t border-ink/7">
-              <div className="flex-none w-28 text-xs font-bold text-ink/60 leading-tight">
-                {r.round}<br />
-                <span className="font-normal">{r.time}</span>
-              </div>
-              <div className="flex-grow min-w-0 flex flex-col gap-0.5">
-                <div className="flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md bg-[#2f9e5c]/12">
-                  <span className="text-sm font-bold text-ink truncate">{r.p1}</span>
-                  <span className="font-display font-bold text-base text-[#23794A]">{r.s1}</span>
+          {matches.rounds.map((r, i) => {
+            const finished = r.status === "finished";
+            const aWin = finished && r.s1 > r.s2;
+            const bWin = finished && r.s2 > r.s1;
+            const name = (label: string, key: string | undefined) =>
+              key && matches.unitSchedules?.[key] ? (
+                <button type="button" onClick={() => setOpenKey(key)} className="truncate text-left hover:underline underline-offset-2">
+                  {label}
+                </button>
+              ) : (
+                <span className="truncate">{label}</span>
+              );
+            return (
+              <div key={i} className="flex items-center gap-4 py-3 border-t border-ink/7">
+                <div className="flex-none w-28 text-xs font-bold text-ink/60 leading-tight">
+                  {r.round}<br />
+                  <span className="font-normal">{r.time}</span>
                 </div>
-                <div className="flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md">
-                  <span className="text-sm font-semibold text-ink/50 truncate">{r.p2}</span>
-                  <span className="font-display font-bold text-base text-ink/50">{r.s2}</span>
+                <div className="flex-grow min-w-0 flex flex-col gap-0.5">
+                  <div className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${aWin ? "bg-[#2f9e5c]/12" : ""}`}>
+                    <span className={`text-sm truncate ${aWin ? "font-bold text-ink" : bWin ? "font-semibold text-ink/50" : "font-semibold text-ink"}`}>
+                      {name(r.p1, r.p1Key)}
+                    </span>
+                    <span className={`font-display font-bold text-base ${aWin ? "text-[#23794A]" : "text-ink"}`}>{finished ? r.s1 : "—"}</span>
+                  </div>
+                  <div className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${bWin ? "bg-[#2f9e5c]/12" : ""}`}>
+                    <span className={`text-sm truncate ${bWin ? "font-bold text-ink" : aWin ? "font-semibold text-ink/50" : "font-semibold text-ink"}`}>
+                      {name(r.p2, r.p2Key)}
+                    </span>
+                    <span className={`font-display font-bold text-base ${bWin ? "text-[#23794A]" : "text-ink"}`}>{finished ? r.s2 : "—"}</span>
+                  </div>
+                </div>
+                <div className="flex-none w-20 flex justify-end">
+                  <span className={`text-xs font-bold ${finished ? "text-ink/55" : "text-ink/40"}`}>{finished ? "Selesai" : "Belum main"}</span>
                 </div>
               </div>
-              <div className="flex-none w-20 flex justify-end">
-                <span className="text-xs font-bold text-ink/55">Selesai</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </section>
+        {openUnit && <UnitScheduleModal name={openUnit.name} rows={openUnit.rows} onClose={() => setOpenKey(null)} />}
       </div>
     );
   }

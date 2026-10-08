@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import type { EventItem, EventMatchesData } from "@/lib/events";
+import { UnitScheduleModal } from "@/components/jadwal/UnitScheduleModal";
 
 export function KlasemenTab({
   event,
@@ -7,6 +11,8 @@ export function KlasemenTab({
   event: EventItem;
   matches: EventMatchesData | null;
 }) {
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const openUnit = openKey ? matches?.unitSchedules?.[openKey] : null;
   const groups = matches?.groups || [];
 
   if (groups.length === 0) {
@@ -60,7 +66,17 @@ export function KlasemenTab({
                     </td>
                     <td className="py-2.5 pr-2">
                       <span className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-sm text-ink">{row.team}</span>
+                        {row.key && matches?.unitSchedules?.[row.key] ? (
+                          <button
+                            type="button"
+                            onClick={() => setOpenKey(row.key!)}
+                            className="font-bold text-sm text-ink hover:underline underline-offset-2"
+                          >
+                            {row.team}
+                          </button>
+                        ) : (
+                          <span className="font-bold text-sm text-ink">{row.team}</span>
+                        )}
                         {row.qualified && (
                           <span className="rounded-full px-2 py-0.5 text-[11px] font-bold bg-[#2f9e5c]/14 text-[#23794A]">
                             {row.qualified}
@@ -84,6 +100,7 @@ export function KlasemenTab({
           </div>
         </section>
       ))}
+      {openUnit && <UnitScheduleModal name={openUnit.name} rows={openUnit.rows} onClose={() => setOpenKey(null)} />}
     </div>
   );
 }

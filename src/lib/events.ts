@@ -19,7 +19,7 @@ import type {
   Venue,
 } from "@/lib/database.types";
 import { loadCompetition, teamNameOf, courtNameOf, matchLabel, isoToWibTime, type CompetitionData } from "@/lib/compData";
-import { loadMabarRounds, mabarTable } from "@/lib/mabar";
+import { loadMabarRounds, mabarTable, unitKey, unitSchedule, type UnitMatchRow } from "@/lib/mabar";
 
 export interface EventItem {
   id: string;
@@ -83,6 +83,8 @@ export interface GroupRow {
   wl: string;
   diff: string;
   qualified?: string;
+  /** Mabar only: unit key into `EventMatchesData.unitSchedules`, for "lihat jadwal lawan". */
+  key?: string;
 }
 
 export interface GroupData {
@@ -103,7 +105,11 @@ export interface EventMatchesData {
   quarterfinals?: KnockoutMatch[];
   groupMatches?: GroupMatch[];
   groups?: GroupData[];
-  rounds?: Array<{ round: string; time: string; status: string; p1: string; p2: string; s1: number; s2: number }>;
+  rounds?: Array<{ round: string; time: string; status: string; p1: string; p2: string; s1: number; s2: number; p1Key?: string; p2Key?: string }>;
+  roundsDone?: number;
+  roundsTotal?: number;
+  /** Mabar only: every pair/player's full match history, keyed the same as `GroupRow.key` — for a "lihat jadwal lawan" popup. */
+  unitSchedules?: Record<string, { name: string; rows: UnitMatchRow[] }>;
 }
 
 /** Get Supabase client suitable for current runtime. */
@@ -632,28 +638,48 @@ function mapMabarToMatchesData(event: CompEvent, roundsData: any): EventMatchesD
         wl: `${r.wins}–${r.losses}`,
         diff: r.diff > 0 ? `+${r.diff}` : r.diff < 0 ? `−${Math.abs(r.diff)}` : "0",
         qualified: idx === 0 ? "Juara" : idx === 1 ? "Runner-up" : idx === 2 ? "3rd" : undefined,
+        key: r.key,
       })),
     },
   ];
 
-  const roundList: Array<{ round: string; time: string; status: string; p1: string; p2: string; s1: number; s2: number }> = [];
+  const unitSchedules: Record<string, { name: string; rows: UnitMatchRow[] }> = {};
+  for (const r of table) {
+    unitSchedules[r.key] = { name: r.name, rows: unitSchedule(r.key, participants, rounds ?? [], matches ?? [], event.mabar_format) };
+  }
+  const byParticipantId = new Map<string, GenParticipant>((participants ?? []).map((p: GenParticipant) => [p.id, p]));
+  const unitKeyOfIds = (ids: string[]) => {
+    const p = byParticipantId.get(ids[0]);
+    return p ? unitKey(p, event.mabar_format) : undefined;
+  };
+
+  const roundList: Array<{ round: string; time: string; status: string; p1: string; p2: string; s1: number; s2: number; p1Key?: string; p2Key?: string }> = [];
   for (const r of rounds ?? []) {
     const rMatches = (matches ?? []).filter((m: any) => m.round_id === r.id);
     for (let i = 0; i < rMatches.length; i++) {
       const m = rMatches[i];
       const p1 = (m.team_a_participant_ids ?? []).map((id: string) => pMap.get(id) || "?").join(" / ");
       const p2 = (m.team_b_participant_ids ?? []).map((id: string) => pMap.get(id) || "?").join(" / ");
+      const finished = m.team_a_points != null && m.team_b_points != null;
       roundList.push({
         round: `Ronde ${r.round_no}`,
         time: rMatches.length > 1 ? `Court ${i + 1}` : "—",
-        status: m.team_a_points != null ? "finished" : "waiting",
+        status: finished ? "finished" : "waiting",
         p1: p1 || "Tim A",
         p2: p2 || "Tim B",
         s1: m.team_a_points ?? 0,
         s2: m.team_b_points ?? 0,
+        p1Key: unitKeyOfIds(m.team_a_participant_ids ?? []),
+        p2Key: unitKeyOfIds(m.team_b_participant_ids ?? []),
       });
     }
   }
+
+  const roundsTotal = (rounds ?? []).length;
+  const roundsDone = (rounds ?? []).filter((r: any) => {
+    const rMatches = (matches ?? []).filter((m: any) => m.round_id === r.id);
+    return rMatches.length > 0 && rMatches.every((m: any) => m.team_a_points != null && m.team_b_points != null);
+  }).length;
 
   let liveMatch: EventMatchesData["liveMatch"] | undefined;
   const liveM = Object.values(live ?? {}).find((m: any) => m.is_live) as Match | undefined;
@@ -681,6 +707,9 @@ function mapMabarToMatchesData(event: CompEvent, roundsData: any): EventMatchesD
   return {
     groups,
     rounds: roundList,
+    roundsDone,
+    roundsTotal,
+    unitSchedules,
     liveMatch,
   };
 }
