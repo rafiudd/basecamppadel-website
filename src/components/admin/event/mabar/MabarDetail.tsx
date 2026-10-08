@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { courtNameOf } from "@/lib/compData";
-import { mabarProgress, mabarTable, unitSchedule, type MabarData } from "@/lib/mabar";
+import { isScored, mabarProgress, mabarTable, unitSchedule, type MabarData } from "@/lib/mabar";
 import { CourtScoreCard } from "./CourtScoreCard";
 import { MabarStandings } from "./MabarStandings";
 import { ParticipantsPanel } from "./ParticipantsPanel";
@@ -26,6 +26,10 @@ export function MabarDetail({ data }: { data: MabarData }) {
   const playing = new Set(roundMatches.flatMap((m) => [...m.team_a_participant_ids, ...m.team_b_participant_ids]));
   const resting = round ? participants.filter((p) => p.active && p.checked_in && !playing.has(p.id)) : [];
 
+  const doneRoundNos = new Set(
+    rounds.filter((r) => matches.some((m) => m.round_id === r.id) && matches.filter((m) => m.round_id === r.id).every(isScored)).map((r) => r.round_no),
+  );
+
   const table = mabarTable(participants, matches, event.mabar_format, event.draw_seed);
   const detailRow = detailKey ? table.find((r) => r.key === detailKey) : null;
 
@@ -39,7 +43,7 @@ export function MabarDetail({ data }: { data: MabarData }) {
             <div className="font-display font-bold text-xl">
               Ronde {selected} <span className="font-sans font-medium text-sm text-snow/70">dari {event.rounds}</span>
             </div>
-            <RoundPicker total={event.rounds} existing={rounds.map((r) => r.round_no)} selected={selected} onSelect={setSelected} />
+            <RoundPicker total={event.rounds} existing={rounds.map((r) => r.round_no)} selected={selected} done={doneRoundNos} onSelect={setSelected} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {roundMatches.map((m, i) => (
                 <CourtScoreCard
