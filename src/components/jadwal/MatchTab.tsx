@@ -106,12 +106,21 @@ export function MatchTab({
                     const finished = r.status === "finished";
                     const aWin = finished && r.s1 > r.s2;
                     const bWin = finished && r.s2 > r.s1;
-                    const highlighted = filterKey && (r.p1Key === filterKey || r.p2Key === filterKey);
+                    // When a pair is picked, color the whole card by their result instead of the
+                    // generic winner-row highlight: green win, red loss, gray draw, white if not played.
+                    const mySide = filterKey ? (r.p1Key === filterKey ? "a" : r.p2Key === filterKey ? "b" : null) : null;
+                    const myResult = !finished || !mySide ? null : mySide === "a" ? (aWin ? "W" : bWin ? "L" : "D") : bWin ? "W" : aWin ? "L" : "D";
+                    const cardClass = mySide
+                      ? myResult === "W"
+                        ? "border-win/40 bg-win/10"
+                        : myResult === "L"
+                        ? "border-loss/40 bg-loss/8"
+                        : myResult === "D"
+                        ? "border-ink/20 bg-ink/5"
+                        : "border-ink/8"
+                      : "border-ink/8";
                     return (
-                      <div
-                        key={j}
-                        className={`rounded-lg border p-2.5 flex flex-col gap-1 ${highlighted ? "border-coral/40 bg-coral/5" : "border-ink/8"}`}
-                      >
+                      <div key={j} className={`rounded-lg border p-2.5 flex flex-col gap-1 ${cardClass}`}>
                         {g.rows.length > 1 && <div className="text-[10px] font-bold text-ink/35 uppercase tracking-wide">{r.time}</div>}
                         <div className={`flex items-center justify-between gap-2.5 min-h-[28px] px-1.5 rounded-md ${aWin ? "bg-[#2f9e5c]/12" : ""}`}>
                           <span className={`text-sm truncate ${aWin ? "font-bold text-ink" : bWin ? "font-semibold text-ink/50" : "font-semibold text-ink"}`}>
