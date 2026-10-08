@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { WHATSAPP_URL, YOUTUBE_URL } from "@/lib/config";
+import { WHATSAPP_URL } from "@/lib/config";
 import type { EventItem } from "@/lib/events";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 
@@ -155,26 +155,34 @@ export function InfoTab({ event }: { event: EventItem }) {
           </>
         )}
 
-        {/* 2. If Live: Stage Status Card */}
-        {isLive && (
+        {/* 2. If Live: who's playing right now + CTA to the real stream */}
+        {isLive && event.liveScore && (
           <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-xs">
-            <h2 className="font-display font-bold text-[19px] m-0">Peserta</h2>
-            <div className="flex justify-between items-center py-2.5 border-t border-ink/7 text-[15px]">
-              <span className="text-ink/70">Tim</span>
-              <span className="font-bold">11 tim · 4 grup</span>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-coral animate-livepulse" />
+              <h2 className="font-display font-bold text-[19px] m-0">Sedang main</h2>
             </div>
             <div className="flex justify-between items-center py-2.5 border-t border-ink/7 text-[15px]">
-              <span className="text-ink/70">Tahap sekarang</span>
-              <span className="font-bold">Semifinal</span>
+              <span className={event.liveScore.servingTeam === 1 ? "font-bold" : "text-ink/70"}>{event.liveScore.team1.name}</span>
+              <span className="font-display font-bold text-lg">{event.liveScore.team1.game}</span>
+            </div>
+            <div className="flex justify-between items-center py-2.5 border-t border-ink/7 text-[15px]">
+              <span className={event.liveScore.servingTeam === 2 ? "font-bold" : "text-ink/70"}>{event.liveScore.team2.name}</span>
+              <span className="font-display font-bold text-lg">{event.liveScore.team2.game}</span>
             </div>
             <a
-              href={YOUTUBE_URL}
+              href={event.liveScore.streamUrl}
               target="_blank"
               rel="noopener"
               className="mt-2 text-center no-underline bg-coral text-ink rounded-full py-3.5 px-4 font-sans font-bold text-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
             >
               Tonton live di YouTube
             </a>
+          </section>
+        )}
+        {isLive && !event.liveScore && (
+          <section className="bg-white border border-ink/8 rounded-2xl p-6 text-center text-ink/60 text-sm shadow-xs">
+            Belum ada court yang lagi live saat ini.
           </section>
         )}
 

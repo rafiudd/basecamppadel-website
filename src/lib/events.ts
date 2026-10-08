@@ -423,11 +423,22 @@ async function mapMabarToEventItem(supabase: any, event: CompEvent): Promise<Eve
   let participants: GenParticipant[] = [];
   let roundsData: any = null;
   let isLive = false;
+  let liveScore: EventItem["liveScore"] | undefined;
 
   if (event.gen_event_id) {
     roundsData = await loadMabarRounds(supabase, event.id, event.gen_event_id);
     participants = roundsData.participants ?? [];
-    isLive = Object.values(roundsData.live ?? {}).some((m: any) => m.is_live);
+    const liveM = Object.values(roundsData.live ?? {}).find((m: any) => m.is_live) as Match | undefined;
+    isLive = !!liveM;
+    if (liveM) {
+      liveScore = {
+        title: `LIVE · ${liveM.set_label || "Mabar"}`.toUpperCase(),
+        servingTeam: liveM.serve === "B" ? 2 : 1,
+        team1: { name: liveM.team_a_name, sets: liveM.team_a_sets?.length ? liveM.team_a_sets : [liveM.team_a_games], game: Number(liveM.team_a_game) || liveM.team_a_games },
+        team2: { name: liveM.team_b_name, sets: liveM.team_b_sets?.length ? liveM.team_b_sets : [liveM.team_b_games], game: Number(liveM.team_b_game) || liveM.team_b_games },
+        streamUrl: liveM.stream_url || YOUTUBE_URL,
+      };
+    }
   }
 
   const isFinished = event.status === "finished";
@@ -487,6 +498,7 @@ async function mapMabarToEventItem(supabase: any, event: CompEvent): Promise<Eve
     ],
     availableTabs: ["info", "match", "klasemen"],
     defaultTab: isLive ? "match" : isFinished ? "klasemen" : "info",
+    liveScore,
     podium,
     registeredParticipants,
     whatsapp_url: event.whatsapp_url,
