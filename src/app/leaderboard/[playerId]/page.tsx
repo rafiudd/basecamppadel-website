@@ -5,6 +5,9 @@ import { PublicShell } from "@/components/PublicShell";
 import { YOUTUBE_URL } from "@/lib/config";
 import { getPlayerById } from "@/lib/leaderboard";
 import { getLiveMatch } from "@/lib/queries";
+import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/auth";
+import { LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
 
 export const revalidate = 0;
 
@@ -19,10 +22,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PlayerPage({ params }: Props) {
   const { playerId } = await params;
-  const [player, liveMatch] = await Promise.all([
+  const supabase = await createClient();
+  const [{ isAdmin, isCoach }, player, liveMatch, { data: coachNotes }, { data: allSkills }] = await Promise.all([
+    getAdminUser(),
     getPlayerById(playerId),
     getLiveMatch(),
+    supabase
+      .from("coaching_assessments")
+      .select("*, coaching_sessions(title, session_date, venue_name), coaches(name)")
+      .eq("player_id", playerId)
+      .eq("published_to_player", true)
+      .eq("status", "submitted")
+      .order("created_at", { ascending: false }),
+    supabase.from("coaching_skills").select("id, name"),
   ]);
+
+  const canSeeLevelName = isAdmin || isCoach;
 
   if (!player) {
     return (
@@ -74,8 +89,17 @@ export default async function PlayerPage({ params }: Props) {
               <span className="rounded-full px-3 py-1.5 text-xs sm:text-[13px] font-bold bg-snow/12 text-snow">
                 {player.gender}
               </span>
-              <span className="rounded-full px-3 py-1.5 text-xs sm:text-[13px] font-bold bg-snow/12 text-snow">
-                {player.level || "Beginner"}
+              <span className="rounded-full px-3 py-1.5 text-xs sm:text-[13px] font-bold bg-snow/12 text-snow flex items-center gap-1.5">
+                <span
+                  className="w-2.5 h-2.5 rounded-full inline-block border border-snow/30"
+                  style={{
+                    backgroundColor:
+                      (LEVEL_DEFINITIONS as any)[player.level]?.color ||
+                      player.level_color ||
+                      "#FFD43B",
+                  }}
+                />
+                {canSeeLevelName ? (player.level || "Beginner") : "Level"}
               </span>
               <span className="rounded-full px-3 py-1.5 text-xs sm:text-[13px] font-bold bg-snow/12 text-snow">
                 {player.city || "Purwokerto"}
@@ -188,6 +212,53 @@ export default async function PlayerPage({ params }: Props) {
               </div>
             )}
 
+            {/* Catatan Coach (Publikasi Coaching) */}
+            {coachNotes && coachNotes.length > 0 && (
+              <div className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-4 text-ink shadow-xs">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="font-display font-bold text-xl m-0">Catatan Coach</h2>
+                  <span className="text-xs font-semibold text-ink/60">
+                    {coachNotes.length} evaluasi tercatat
+                  </span>
+                </div>
+                <div className="flex flex-col divide-y divide-ink/8">
+                  {coachNotes.map((note: any) => (
+                    <div key={note.id} className="py-3 flex flex-col gap-2 text-sm">
+                      <div className="flex items-center justify-between text-xs text-ink/60 flex-wrap gap-1">
+                        <span className="font-bold text-ink">
+                          {note.coaching_sessions?.title || "Sesi Coaching"}
+                        </span>
+                        <span>
+                          {note.coaching_sessions?.session_date}{" "}
+                          {note.coaches?.name ? `· Coach ${note.coaches.name}` : ""}
+                        </span>
+                      </div>
+                      {note.evaluation && (
+                        <div className="bg-ink/3 p-3 rounded-xl flex flex-col gap-1">
+                          <span className="text-2xs uppercase tracking-wider font-bold text-indigo">
+                            Evaluasi
+                          </span>
+                          <p className="text-xs text-ink/80 whitespace-pre-line m-0">
+                            {note.evaluation}
+                          </p>
+                        </div>
+                      )}
+                      {note.next_practice && (
+                        <div className="bg-volt/10 border border-volt/30 p-3 rounded-xl flex flex-col gap-1">
+                          <span className="text-2xs uppercase tracking-wider font-bold text-ink">
+                            Latihan Berikutnya
+                          </span>
+                          <p className="text-xs text-ink/80 whitespace-pre-line m-0">
+                            {note.next_practice}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Riwayat Match Terakhir */}
             {player.matches && player.matches.length > 0 ? (
               <div className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-3 text-ink shadow-xs">
@@ -244,7 +315,18 @@ export default async function PlayerPage({ params }: Props) {
               <h2 className="font-display font-bold text-xl m-0">Ringkasan Pemain</h2>
               <div className="flex justify-between items-center py-2 border-b border-ink/8 text-sm">
                 <span className="text-ink/70">Level Permainan</span>
-                <span className="font-bold text-ink">{player.level || "Beginner"}</span>
+                <span className="font-bold text-ink flex items-center gap-2">
+                  <span
+                    className="w-3.5 h-3.5 rounded-full border border-ink/20 inline-block"
+                    style={{
+                      backgroundColor:
+                        (LEVEL_DEFINITIONS as any)[player.level]?.color ||
+                        player.level_color ||
+                        "#FFD43B",
+                    }}
+                  />
+                  {canSeeLevelName && <span>{player.level || "Beginner"}</span>}
+                </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-ink/8 text-sm">
                 <span className="text-ink/70">Domisili / Region</span>
