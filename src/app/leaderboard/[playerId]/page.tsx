@@ -226,6 +226,20 @@ export default async function PlayerPage({ params }: Props) {
                             Kalah
                           </span>
                         )}
+                        {m.streamUrl && (
+                          <a
+                            href={m.streamUrl}
+                            target="_blank"
+                            rel="noopener"
+                            aria-label="Tonton replay match ini"
+                            title="Tonton replay"
+                            className="flex-none w-7 h-7 rounded-full bg-ink/6 text-ink/70 flex items-center justify-center hover:bg-coral hover:text-ink transition-colors"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}

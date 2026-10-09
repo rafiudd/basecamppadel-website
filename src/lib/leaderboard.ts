@@ -30,6 +30,7 @@ export interface PlayerMatchHistory {
   opponents: string;
   score: string;
   isWin: boolean | null;
+  streamUrl?: string | null;
 }
 
 export interface PlayerDetail extends Player {
@@ -124,6 +125,7 @@ export async function getPlayerById(playerId: string): Promise<PlayerDetail | nu
           opponents: h.opponent_label || "—",
           score: mine != null && theirs != null ? `${mine}–${theirs}` : "—",
           isWin: h.result === "W",
+          streamUrl: h.stream_url || null,
         };
       });
 
