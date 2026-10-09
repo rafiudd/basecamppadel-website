@@ -9,7 +9,7 @@ import { generateRound, pairKey, type Pool } from "@/lib/generator";
 import { americanoSchedule, teamRoundRobin } from "@/lib/mabarRules";
 import { isScored, loadMabarRounds, mabarProgress, mabarTable, unitKey } from "@/lib/mabar";
 import { streamUrlFor } from "@/lib/compData";
-import type { GenParticipant } from "@/lib/database.types";
+import type { GenParticipant, Match } from "@/lib/database.types";
 import { guard, revalidateEvent, str, type Supa } from "./_shared";
 
 /**
@@ -375,13 +375,48 @@ export async function finishMabar(_: ActionState, fd: FormData): Promise<ActionS
       .filter((r) => r.played > 0)
       .flatMap((r) =>
         r.unit.members
-          .filter((m) => m.player_id)
+          // a substituted-out member's games still count toward the pair's rank, but the award itself
+          // goes to whoever is actually on the pair now, not someone no longer playing
+          .filter((m) => m.active && m.player_id)
           .map((m) => ({ event_id: ctx.event.id, player_id: m.player_id!, stage: "mabar" as const, rank: r.rank, points: ranks[r.rank - 1] ?? participant })),
       );
     if (awards.length) {
       const { error } = await supabase.from("player_awards").upsert(awards, { onConflict: "event_id,player_id", ignoreDuplicates: true });
       if (error) throw new Error(error.message);
     }
+
+    // Per-match W/L so a player's leaderboard page has a real history to show, not just the award
+    // above — same shape as comp_set_result's kompetisi history (points_delta 0, since points here
+    // come from the rank-based award, not per match).
+    const byId = new Map(ctx.participants.map((p) => [p.id, p]));
+    const name = (ids: string[]) => ids.map((id) => byId.get(id)?.display_name ?? "?").join(" & ");
+    const side = (ids: string[], opponentIds: string[], won: boolean, live: Match | undefined) =>
+      ids
+        .map((id) => byId.get(id))
+        .filter((p): p is GenParticipant => !!p?.player_id)
+        .map((p) => ({
+          match_id: live?.id ?? null,
+          player_id: p.player_id!,
+          session_label: ctx.event.title,
+          opponent_label: name(opponentIds),
+          result: (won ? "W" : "L") as "W" | "L",
+          points_delta: 0,
+          stream_url: live?.stream_url ?? null,
+        }));
+    const history = played.flatMap((m) => {
+      if (m.team_a_points === m.team_b_points) return []; // a draw has no W or L to record
+      const aWins = m.team_a_points! > m.team_b_points!;
+      const live = ctx.live[m.id];
+      return [
+        ...side(m.team_a_participant_ids, m.team_b_participant_ids, aWins, live),
+        ...side(m.team_b_participant_ids, m.team_a_participant_ids, !aWins, live),
+      ];
+    });
+    if (history.length) {
+      const { error } = await supabase.from("match_history").insert(history);
+      if (error) throw new Error(error.message);
+    }
+
     await supabase.from("gen_events").update({ status: "finished" }).eq("id", ctx.genId);
     await supabase.from("events").update({ status: "finished" }).eq("id", ctx.event.id);
     revalidateEvent(ctx.event.id);
@@ -406,6 +441,10 @@ export async function resetMabarEvent(_: ActionState, fd: FormData): Promise<Act
     const ctx = await loadMabar(supabase, str(fd, "event_id"));
     // player_awards delete fires a trigger that recomputes players.points — no manual point math needed.
     await supabase.from("player_awards").delete().eq("event_id", ctx.event.id);
+    // match_history.match_id only SETs NULL on delete (not cascade), so without this the rows survive
+    // the cascade below as orphans and keep counting toward W-L/points forever.
+    const { data: ownMatches } = await supabase.from("matches").select("id").eq("event_id", ctx.event.id);
+    if (ownMatches?.length) await supabase.from("match_history").delete().in("match_id", ownMatches.map((m) => m.id));
     await supabase.from("gen_rounds").delete().eq("event_id", ctx.genId); // cascades gen_matches -> matches
     await supabase.from("gen_participants").update({ checked_in: true, sits_out_count: 0 }).eq("event_id", ctx.genId).eq("active", true);
     await supabase.from("gen_events").update({ status: "draft" }).eq("id", ctx.genId);

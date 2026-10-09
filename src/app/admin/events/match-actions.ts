@@ -321,6 +321,11 @@ export async function resetCompetition(_: ActionState, fd: FormData): Promise<Ac
     const id = str(fd, "event_id");
     // player_awards delete fires a trigger that recomputes players.points — no manual point math needed.
     await supabase.from("player_awards").delete().eq("event_id", id);
+    // match_history.match_id only SETs NULL on delete (not cascade), so without this the rows survive
+    // the matches delete below as orphans and keep counting toward W-L/points forever (same fix
+    // deleteCompetition already applies when removing an event outright).
+    const { data: ownMatches } = await supabase.from("matches").select("id").eq("event_id", id);
+    if (ownMatches?.length) await supabase.from("match_history").delete().in("match_id", ownMatches.map((m) => m.id));
     await supabase.from("matches").delete().eq("event_id", id);
     await supabase.from("comp_teams").update({ final_stage: null }).eq("event_id", id);
     await supabase.from("events").update({ status: "draft", bracket_generated: false, bracket_stale: false }).eq("id", id);
