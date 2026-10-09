@@ -45,8 +45,10 @@ export interface EventItem {
   deadline?: string;
   aboutText: string;
   formatBoxes: { val: string; label: string }[];
-  availableTabs: Array<"info" | "match" | "klasemen" | "playoff">;
+  availableTabs: Array<"info" | "match" | "klasemen" | "playoff" | "livestream">;
   defaultTab: "info" | "match" | "klasemen" | "playoff";
+  /** Courts with a YouTube link configured (edit-event "Link YouTube per court") — drives the public Livestream tab. */
+  courtStreams?: Array<{ courtId: string; courtName: string; url: string }>;
   liveScore?: {
     title: string;
     servingTeam: number;
@@ -370,6 +372,10 @@ function mapCompetitionToEventItem(data: CompetitionData): EventItem {
     avatar: t.name.slice(0, 2).toUpperCase(),
   }));
 
+  const courtStreams = courts
+    .map((c) => ({ courtId: c.id, courtName: c.name, url: event.court_stream_urls?.[c.id] }))
+    .filter((c): c is { courtId: string; courtName: string; url: string } => !!c.url);
+
   return {
     id: event.id,
     slug: event.slug,
@@ -397,8 +403,11 @@ function mapCompetitionToEventItem(data: CompetitionData): EventItem {
       { val: STAGE_LABEL[event.ko_start] || "8 besar", label: "Knockout mulai" },
       { val: "1 set", label: "Per match" },
     ],
-    availableTabs: ["info", "match", "klasemen", "playoff"],
+    availableTabs: courtStreams.length > 0
+      ? ["info", "livestream", "match", "klasemen", "playoff"]
+      : ["info", "match", "klasemen", "playoff"],
     defaultTab: isLive ? "match" : isFinished ? "klasemen" : "info",
+    courtStreams: courtStreams.length > 0 ? courtStreams : undefined,
     liveScore,
     podium,
     registeredTeams,
@@ -469,6 +478,10 @@ async function mapMabarToEventItem(supabase: any, event: CompEvent): Promise<Eve
     avatar: p.display_name.slice(0, 2).toUpperCase(),
   }));
 
+  const courtStreams = courtList
+    .map((c: Pick<Court, "id" | "name">) => ({ courtId: c.id, courtName: c.name, url: event.court_stream_urls?.[c.id] }))
+    .filter((c: { courtId: string; courtName: string; url?: string }): c is { courtId: string; courtName: string; url: string } => !!c.url);
+
   return {
     id: event.id,
     slug: event.slug,
@@ -496,8 +509,11 @@ async function mapMabarToEventItem(supabase: any, event: CompEvent): Promise<Eve
       { val: String(event.rounds || 7), label: "Ronde main" },
       scoreModeBox(event.score_mode || "points", event.points_target || 24),
     ],
-    availableTabs: ["info", "match", "klasemen"],
+    availableTabs: courtStreams.length > 0
+      ? ["info", "livestream", "match", "klasemen"]
+      : ["info", "match", "klasemen"],
     defaultTab: isLive ? "match" : isFinished ? "klasemen" : "info",
+    courtStreams: courtStreams.length > 0 ? courtStreams : undefined,
     liveScore,
     podium,
     registeredParticipants,
