@@ -63,22 +63,46 @@ export function rankByGender(players: Player[]) {
   };
 }
 
+/**
+ * A player's detail page needs more than the bare match_history row: which real event each match
+ * belonged to (Mabar vs Kompetisi — guessing from the title text was wrong, "Basecamp Battle #2" is
+ * a mabar event despite the name), the actual score, and the real round/court — none of which live on
+ * match_history itself (it only carries W/L + a fixed 0 points_delta, since points come from
+ * player_awards). So this also pulls the linked `matches` rows, their courts/events, and every
+ * player_awards row (the real source of "how many points did this event give me").
+ */
 export async function getPlayerWithHistory(playerId: string) {
   const supabase = await createClient();
-  const [{ data: player }, { data: history }, players] = await Promise.all([
+  const [{ data: player }, { data: history }, { data: awards }, players] = await Promise.all([
     supabase.from("players").select("*").eq("id", playerId).maybeSingle(),
     supabase
       .from("match_history")
       .select("*")
       .eq("player_id", playerId)
       .order("created_at", { ascending: false }),
+    supabase.from("player_awards").select("event_id, points").eq("player_id", playerId),
     getActivePlayers(),
   ]);
   if (!player) return null;
   const { men, women } = rankByGender(players);
   const group = player.gender === "F" ? women : men;
   const rank = group.find((p) => p.id === player.id)?.rank ?? group.length + 1;
-  return { player, history: history ?? [], rank };
+
+  const matchIds = [...new Set((history ?? []).map((h) => h.match_id).filter((id): id is string => !!id))];
+  const { data: matches } = matchIds.length
+    ? await supabase.from("matches").select("id, event_id, set_label, court_id, team_a_games, team_b_games, team_a_player_ids").in("id", matchIds)
+    : { data: [] };
+  const matchById = new Map((matches ?? []).map((m) => [m.id, m]));
+
+  const courtIds = [...new Set((matches ?? []).map((m) => m.court_id).filter((id): id is string => !!id))];
+  const { data: courts } = courtIds.length ? await supabase.from("courts").select("id, name").in("id", courtIds) : { data: [] };
+  const courtById = new Map((courts ?? []).map((c) => [c.id, c.name]));
+
+  const eventIds = [...new Set([...(matches ?? []).map((m) => m.event_id), ...(awards ?? []).map((a) => a.event_id)].filter((id): id is string => !!id))];
+  const { data: events } = eventIds.length ? await supabase.from("events").select("id, title, type, event_date").in("id", eventIds) : { data: [] };
+  const eventById = new Map((events ?? []).map((e) => [e.id, e]));
+
+  return { player, history: history ?? [], rank, matchById, courtById, eventById, awards: awards ?? [] };
 }
 
 export type NextSessionCardData = {
