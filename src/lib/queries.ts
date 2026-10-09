@@ -99,7 +99,7 @@ export async function getPlayerWithHistory(playerId: string) {
   const courtById = new Map((courts ?? []).map((c) => [c.id, c.name]));
 
   const eventIds = [...new Set([...(matches ?? []).map((m) => m.event_id), ...(awards ?? []).map((a) => a.event_id)].filter((id): id is string => !!id))];
-  const { data: events } = eventIds.length ? await supabase.from("events").select("id, title, type, event_date").in("id", eventIds) : { data: [] };
+  const { data: events } = eventIds.length ? await supabase.from("events").select("id, slug, title, type, event_date").in("id", eventIds) : { data: [] };
   const eventById = new Map((events ?? []).map((e) => [e.id, e]));
 
   return { player, history: history ?? [], rank, matchById, courtById, eventById, awards: awards ?? [] };
