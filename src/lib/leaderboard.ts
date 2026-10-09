@@ -19,6 +19,7 @@ export interface PlayerEventHistory {
   type: string;
   stage: string;
   points: string;
+  slug?: string;
 }
 
 export interface PlayerMatchHistory {
@@ -106,6 +107,7 @@ export async function getPlayerById(playerId: string): Promise<PlayerDetail | nu
           type: ev?.type === "kompetisi" ? "Kompetisi" : "Mabar",
           stage: "Hasil Akhir",
           points: a.points >= 0 ? `+${a.points} poin` : `${a.points} poin`,
+          slug: ev?.slug ?? "",
         };
       });
 

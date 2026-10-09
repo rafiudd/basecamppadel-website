@@ -158,7 +158,7 @@ export default async function PlayerPage({ params }: Props) {
                   {player.events.map((ev, i) => (
                     <Link
                       key={i}
-                      href="/jadwal"
+                      href={ev.slug ? `/jadwal/${ev.slug}` : "/jadwal"}
                       className="no-underline flex items-center gap-3 py-3 text-ink hover:bg-ink/3 -mx-2 px-2 rounded-lg transition-colors"
                     >
                       <div className="flex-none w-14 font-sans font-bold text-[13px] text-ink/60">
