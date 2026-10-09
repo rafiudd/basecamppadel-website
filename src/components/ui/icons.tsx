@@ -51,6 +51,13 @@ export const CloseIcon = make(
   { size: 18 },
 );
 export const CheckIcon = make(<polyline points="5 12 10 17 19 7" />, { size: 16 });
+export const PlusIcon = make(
+  <>
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </>,
+  { size: 18, strokeWidth: 2.2 },
+);
 export const CopyIcon = make(
   <>
     <rect x="9" y="9" width="11" height="11" rx="2" />
@@ -171,3 +178,22 @@ export const BracketIcon = make(
   </>,
   { size: 18 },
 );
+
+export const CoachingIcon = make(
+  <>
+    <path d="M5 4h11l3 3v13H5z" />
+    <line x1="9" y1="10" x2="15" y2="10" />
+    <line x1="9" y1="14" x2="15" y2="14" />
+  </>,
+  { size: 22 },
+);
+
+export const DotsHorizontalIcon = make(
+  <>
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    <circle cx="5" cy="12" r="1.5" fill="currentColor" />
+    <circle cx="19" cy="12" r="1.5" fill="currentColor" />
+  </>,
+  { size: 18 },
+);
+

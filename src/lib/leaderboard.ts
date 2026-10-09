@@ -7,6 +7,7 @@ export interface Player {
   name: string;
   points: number;
   level: string;
+  level_color?: string;
   region?: string;
   photo_url?: string;
   wins: number;
