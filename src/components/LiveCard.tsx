@@ -6,6 +6,7 @@ import type { Match, Serve } from "@/lib/database.types";
 import { usePolledLiveMatches } from "@/lib/useLiveMatch";
 import { formatClockTime } from "@/lib/format";
 import { YOUTUBE_URL } from "@/lib/config";
+import { extractYouTubeVideoId, getYouTubeThumbnail } from "@/lib/youtube";
 
 function Row({
   name,
@@ -59,19 +60,6 @@ function Row({
 
 const DEFAULT_PREVIEW = "/images/live-stream.jpg";
 
-function extractYouTubeVideoId(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const match = url.match(
-    /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i
-  );
-  return match ? match[1] : null;
-}
-
-function getYouTubeThumbnail(videoId: string | null): string {
-  if (!videoId) return DEFAULT_PREVIEW;
-  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-}
-
 /** "Live Sekarang" on Home: the first ON AIR match, if any. */
 export function LiveCard({ initial }: { initial?: Match[] }) {
   const polled = usePolledLiveMatches(initial ?? []);
@@ -100,7 +88,7 @@ export function LiveCard({ initial }: { initial?: Match[] }) {
   const [imgError, setImgError] = useState(false);
 
   const videoId = extractYouTubeVideoId(match.stream_url);
-  const thumbSrc = !imgError && videoId ? getYouTubeThumbnail(videoId) : DEFAULT_PREVIEW;
+  const thumbSrc = (!imgError && getYouTubeThumbnail(videoId)) || DEFAULT_PREVIEW;
 
   useEffect(() => {
     setIsPlaying(false);

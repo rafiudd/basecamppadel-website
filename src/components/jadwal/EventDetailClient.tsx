@@ -8,6 +8,7 @@ import { InfoTab } from "@/components/jadwal/InfoTab";
 import { MatchTab } from "@/components/jadwal/MatchTab";
 import { KlasemenTab } from "@/components/jadwal/KlasemenTab";
 import { PlayoffBracket } from "@/components/jadwal/PlayoffBracket";
+import { LivestreamTab } from "@/components/jadwal/LivestreamTab";
 import type { EventItem, EventMatchesData } from "@/lib/events";
 
 export function EventDetailClient({
@@ -55,6 +56,9 @@ export function EventDetailClient({
 
           {/* TAB 1: INFO */}
           {activeTab === "info" && <InfoTab event={event} />}
+
+          {/* TAB: LIVESTREAM */}
+          {activeTab === "livestream" && <LivestreamTab event={event} />}
 
           {/* TAB 2: MATCH */}
           {activeTab === "match" && (
