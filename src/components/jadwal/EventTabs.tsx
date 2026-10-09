@@ -1,4 +1,4 @@
-export type TabType = "info" | "match" | "klasemen" | "playoff";
+export type TabType = "info" | "match" | "klasemen" | "playoff" | "livestream";
 
 export function EventTabs({
   availableTabs,
@@ -19,6 +19,8 @@ export function EventTabs({
         return "Klasemen";
       case "playoff":
         return "Playoff";
+      case "livestream":
+        return "Livestream";
     }
   };
 
