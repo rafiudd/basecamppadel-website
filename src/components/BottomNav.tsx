@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { WHATSAPP_URL } from "@/lib/config";
 
 function Icon({ children }: { children: React.ReactNode }) {
   return (
@@ -36,9 +35,10 @@ const TrophyIcon = () => (
     <path d="M8 20h8l-1-3H9z" />
   </Icon>
 );
-const ChatIcon = () => (
+const UserIcon = () => (
   <Icon>
-    <path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.6 8.6 0 0 1-3.6-.8L3 20l1-5.3a8.4 8.4 0 0 1-.9-3.8A8.4 8.4 0 0 1 12.1 3a8.4 8.4 0 0 1 8.9 8.5z" />
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21a8 8 0 0 1 16 0" />
   </Icon>
 );
 
@@ -46,12 +46,15 @@ const LINKS = [
   { href: "/", label: "Home", icon: HomeIcon },
   { href: "/jadwal", label: "Jadwal", icon: CalendarIcon },
   { href: "/leaderboard", label: "Leaderboard", icon: TrophyIcon },
+  // signed out, /akun sends the visitor through /masuk first
+  { href: "/akun", label: "Akun", icon: UserIcon },
 ];
 
 /** Phone tab bar, fixed to the bottom (hidden from md up, where the top nav's links show instead). */
 export function BottomNav() {
   const pathname = usePathname();
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : href === "/akun" ? pathname.startsWith("/akun") || pathname.startsWith("/masuk") : pathname.startsWith(href);
 
   return (
     <nav
@@ -73,15 +76,6 @@ export function BottomNav() {
           </Link>
         );
       })}
-      <a
-        href={WHATSAPP_URL}
-        target="_blank"
-        rel="noopener"
-        className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 no-underline text-coral transition-transform active:scale-95"
-      >
-        <ChatIcon />
-        <span className="text-2xs font-bold">Gabung</span>
-      </a>
     </nav>
   );
 }

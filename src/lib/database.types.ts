@@ -20,7 +20,29 @@ export type Player = {
   losses: number;
   points_adjustment: number;
   active: boolean;
+  whatsapp: string | null; // normalized 628…, filled by admin so a new account can link to this player
   created_at: string;
+};
+
+export type DominantHand = "R" | "L";
+export type CourtPosition = "right" | "left" | "both";
+
+/** A player account (Google login), see 0012_player_accounts.sql. */
+export type Profile = {
+  user_id: string;
+  email: string;
+  full_name: string;
+  nickname: string;
+  gender: Gender;
+  whatsapp: string;
+  region: string;
+  dominant_hand: DominantHand | null;
+  position: CourtPosition | null;
+  photo_url: string | null;
+  player_id: string | null;
+  claim_player_id: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Session = {
@@ -286,6 +308,12 @@ export type Database = {
         Update: Partial<MatchHistory>;
         Relationships: [];
       };
+      profiles: {
+        Row: Profile;
+        Insert: Insert<Profile, "user_id" | "nickname" | "gender" | "whatsapp">;
+        Update: Partial<Profile>;
+        Relationships: [];
+      };
       admin_users: {
         Row: { user_id: string; created_at: string };
         Insert: { user_id: string; created_at?: string };
@@ -381,6 +409,26 @@ export type Database = {
         Args: { p_match_id: string; p_games_a: number; p_games_b: number; p_wo?: Serve | null };
         Returns: undefined;
       };
+      account_save_profile: {
+        Args: {
+          p_nickname: string;
+          p_gender: Gender;
+          p_whatsapp: string;
+          p_region: string;
+          p_hand: DominantHand | "";
+          p_position: CourtPosition | "";
+          p_photo_url: string | null;
+          p_remove_photo?: boolean;
+        };
+        Returns: "linked" | "choose" | "created" | "saved";
+      };
+      account_name_candidates: {
+        Args: Record<string, never>;
+        Returns: Pick<Player, "id" | "name" | "gender" | "region" | "points" | "photo_url">[];
+      };
+      account_choose_player: { Args: { p_player: string | null }; Returns: undefined };
+      account_delete: { Args: { p_confirm: string }; Returns: undefined };
+      account_resolve_claim: { Args: { p_uid: string; p_approve: boolean }; Returns: undefined };
       comp_finish_event: {
         Args: { p_event_id: string; p_stages: { team_id: string; stage: FinalStage }[] };
         Returns: undefined;

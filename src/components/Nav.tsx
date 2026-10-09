@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MountainMark } from "./Logo";
 import { WHATSAPP_URL } from "@/lib/config";
+import { Avatar } from "./ui/Avatar";
+import { useAccountChip } from "./account/useAccountChip";
 
 const LINKS = [
   { href: "/", label: "Home" },
@@ -13,6 +15,7 @@ const LINKS = [
 
 export function Nav() {
   const pathname = usePathname();
+  const account = useAccountChip();
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -45,14 +48,35 @@ export function Nav() {
           ))}
         </div>
 
-        <a
-          href={WHATSAPP_URL}
-          target="_blank"
-          rel="noopener"
-          className="no-underline bg-coral text-ink font-sans font-bold text-sm px-[22px] py-3 rounded-full whitespace-nowrap transition-transform hover:scale-[1.02] active:scale-[0.98]"
-        >
-          Gabung Mabar
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener"
+            className="no-underline bg-coral text-ink font-sans font-bold text-sm px-[22px] py-3 rounded-full whitespace-nowrap transition-transform hover:scale-[1.02] active:scale-[0.98]"
+          >
+            Gabung Mabar
+          </a>
+          {account ? (
+            <Link
+              href="/akun"
+              aria-current={pathname.startsWith("/akun") ? "page" : undefined}
+              className="flex items-center gap-2.5 no-underline text-snow font-semibold text-sm hover:text-volt"
+            >
+              <Avatar name={account.name} photoUrl={account.photoUrl} size={36} />
+              <span className="max-w-30 truncate">{account.name}</span>
+            </Link>
+          ) : (
+            <Link
+              href={`/masuk?next=${encodeURIComponent(pathname)}`}
+              className={`no-underline text-snow font-semibold text-sm rounded-full px-[18px] py-2.5 border border-snow/25 hover:border-volt hover:text-volt whitespace-nowrap ${
+                account === undefined ? "invisible" : ""
+              }`}
+            >
+              Masuk
+            </Link>
+          )}
+        </div>
       </nav>
 
 

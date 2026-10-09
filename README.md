@@ -11,6 +11,10 @@ Next.js 16 (App Router) + Supabase. Public site, admin CMS, and OBS overlay untu
 | `/leaderboard` | Kolom MEN (indigo) & WOMEN (coral), ranking per gender by poin, top-3 tinted |
 | `/leaderboard/[playerId]` | Hero pemain + stat tiles + **Riwayat Match** (tiap baris link ke `stream_url`) |
 | `/overlay` | OBS browser source 1920×1080, satu link untuk sepanjang event — scoreboard kalau ada match ON AIR, kartu "Starting Soon" otomatis kalau nggak (transparan, `?bg=1` untuk preview) |
+| `/masuk` | Login pemain, hanya Google. Kembali ke halaman asal (`?next=`); sesi berlaku 30 hari sejak kunjungan terakhir |
+| `/akun/lengkapi` | Wajib setelah login pertama (nama panggilan, gender, WA). Nomor WA yang cocok dengan `players.whatsapp` langsung menyambungkan data lama |
+| `/akun/sambungkan` | "Ini saya?" kalau yang cocok hanya nama → klaim diverifikasi admin di `/admin/players` |
+| `/akun`, `/akun/edit` | Profil, poin, riwayat match, edit profil & foto, Keluar, Hapus akun |
 | `/admin` | CMS (Supabase Auth, hanya user di tabel `admin_users`) |
 | `/admin/live` | Score Control → tulis langsung ke `matches` + tombol **Selesaikan Match** |
 | `/admin/sessions` | CRUD jadwal |
@@ -36,6 +40,12 @@ Next.js 16 (App Router) + Supabase. Public site, admin CMS, and OBS overlay untu
 
 Tanpa CLI: jalankan `supabase/migrations/0001_init.sql` lalu `supabase/seed.sql` di SQL Editor, bikin user di
 Authentication → Users, lalu `insert into public.admin_users (user_id) select id from auth.users where email = '...'`.
+
+## Login pemain (Google)
+
+Supabase → Authentication → Providers → **Google**: isi Client ID/Secret dari Google Cloud, lalu tambahkan
+`https://<domain>/auth/callback` (dan `http://localhost:3000/auth/callback`) di **URL Configuration → Redirect URLs**.
+Aturan akun ada di `supabase/migrations/0012_player_accounts.sql` (RPC `account_*`).
 
 ## Alur live match
 

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { sessionCookie } from "@/lib/supabase/cookies";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -16,7 +17,7 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
+            response.cookies.set(name, value, sessionCookie(options)),
           );
         },
       },
@@ -34,6 +35,15 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin/login";
     url.searchParams.set("next", path);
+    return NextResponse.redirect(url);
+  }
+
+  // player account pages: sign in first, then come back here
+  if (path.startsWith("/akun") && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/masuk";
+    url.search = "";
+    url.searchParams.set("next", path + request.nextUrl.search);
     return NextResponse.redirect(url);
   }
 

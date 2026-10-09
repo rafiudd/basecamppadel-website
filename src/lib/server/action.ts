@@ -21,6 +21,9 @@ export async function guard(fn: () => Promise<void>): Promise<ActionState> {
 const CONSTRAINT_MESSAGES: Record<string, string> = {
   comp_team_players_event_id_player_id_key: "Pemain ini sudah ada di tim lain pada event ini.",
   matches_one_on_air_per_court: "Court ini baru saja di-ON AIR-kan operator lain. Muat ulang lalu coba lagi.",
+  players_whatsapp_key: "Nomor WA ini sudah dipakai pemain lain.",
+  profiles_whatsapp_key: "Nomor WA ini sudah dipakai akun lain.",
+  profiles_player_id_key: "Data pemain ini sudah tersambung ke akun lain.",
 };
 
 export function friendly(message: string) {
