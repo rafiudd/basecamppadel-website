@@ -1,10 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Coach } from "@/lib/database.types";
 import type { CoachingSessionSummary, SessionFullData } from "@/lib/coaching-db";
-import { PlusIcon, EditIcon } from "@/components/ui/icons";
+import {
+  PlusIcon,
+  EditIcon,
+  DotsHorizontalIcon,
+  ListIcon,
+  ChartIcon,
+} from "@/components/ui/icons";
 
 export function CoachingHeader({
   sessions,
@@ -32,20 +39,17 @@ export function CoachingHeader({
   onPublishAll: () => void;
 }) {
   const router = useRouter();
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const activeSession = sessionData?.session;
 
   return (
     <>
-      {/* 1. TOP HEADER (Matches Prototype Desktop & Mobile) */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+      {/* ── 1. TOP HEADER ── */}
+
+      {/* Desktop Top Header (>= lg) */}
+      <div className="hidden lg:flex items-end justify-between gap-4">
         <div>
-          {/* Mobile Back Link if on mobile */}
-          <div className="block lg:hidden mb-1">
-            <span className="text-sm text-[#FBF7F1]/70">
-              ← {activeSession ? `${activeSession.title} · ${activeSession.session_date}` : "Coaching Clinic"}
-            </span>
-          </div>
-          <h1 className="font-display font-bold text-2xl lg:text-[26px] m-0 leading-tight">
+          <h1 className="font-display font-bold text-[26px] m-0 leading-tight">
             Catatan coaching
           </h1>
           <p className="m-0 mt-1 text-sm text-[#FBF7F1]/70">
@@ -53,7 +57,7 @@ export function CoachingHeader({
           </p>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons for Desktop */}
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && (
             <>
@@ -109,8 +113,120 @@ export function CoachingHeader({
         </div>
       </div>
 
-      {/* 2. SESSION & FILTER HEADER BAR (Exact Prototype: #221F30, p: 18px 20px) */}
-      <div className="bg-[#221F30] rounded-2xl p-4 md:p-[18px_20px] flex flex-wrap items-end gap-4 border border-[#FBF7F1]/5">
+      {/* Mobile Top Header (< lg) — Simplified & Compact */}
+      <div className="flex items-center justify-between gap-3 lg:hidden">
+        <div>
+          <h1 className="font-display font-bold text-xl m-0 leading-tight">
+            Catatan coaching
+          </h1>
+          <p className="hidden sm:block m-0 mt-0.5 text-xs text-[#FBF7F1]/60">
+            Isi nilai &amp; catatan tiap pemain setelah sesi.
+          </p>
+        </div>
+
+        {/* Compact Action Controls */}
+        <div className="flex items-center gap-1.5 flex-none relative">
+          {sessionData && (
+            <button
+              type="button"
+              onClick={onPublishAll}
+              disabled={isPublishingAll}
+              title="Kirim semua ke pemain"
+              className="border-0 rounded-lg h-9 px-3 font-sans font-bold text-xs whitespace-nowrap inline-flex items-center justify-center gap-1 bg-[#FF5A3C] text-[#17151F] hover:bg-[#FF5A3C]/90 transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+            >
+              {isPublishingAll ? "Mengirim..." : "Kirim Semua"}
+            </button>
+          )}
+
+          {isAdmin && (
+            <Link
+              href="/admin/coaching/sessions/new"
+              title="Tambah Sesi Baru"
+              aria-label="Tambah Sesi Baru"
+              className="border-0 rounded-lg w-9 h-9 inline-flex items-center justify-center bg-[#FFD43B] text-[#17151F] hover:bg-[#FFD43B]/90 transition-all no-underline cursor-pointer shadow-xs"
+            >
+              <PlusIcon size={16} strokeWidth={2.4} />
+            </Link>
+          )}
+
+          {/* More actions dropdown (•••) */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              aria-label="Aksi lainnya"
+              className={`border-0 rounded-lg w-9 h-9 inline-flex items-center justify-center transition-all cursor-pointer ${
+                showMobileMenu
+                  ? "bg-[#FBF7F1]/20 text-[#FBF7F1]"
+                  : "bg-[#FBF7F1]/10 text-[#FBF7F1]/80 hover:bg-[#FBF7F1]/15"
+              }`}
+            >
+              <DotsHorizontalIcon size={16} />
+            </button>
+
+            {showMobileMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowMobileMenu(false)}
+                />
+                <div className="absolute right-0 top-10 z-50 w-52 rounded-xl bg-[#221F30] border border-[#FBF7F1]/15 shadow-2xl p-1.5 flex flex-col gap-1 text-sm font-sans animate-in fade-in zoom-in-95 duration-150">
+                  {isAdmin && sessionData && (
+                    <Link
+                      href={`/admin/coaching/sessions/${sessionData.session.id}`}
+                      onClick={() => setShowMobileMenu(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#FBF7F1] hover:bg-[#FBF7F1]/10 transition-colors no-underline text-xs font-semibold"
+                    >
+                      <EditIcon size={15} />
+                      Edit Sesi Ini
+                    </Link>
+                  )}
+                  {isAdmin && (
+                    <Link
+                      href="/admin/coaching/skills"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#FBF7F1] hover:bg-[#FBF7F1]/10 transition-colors no-underline text-xs font-semibold"
+                    >
+                      <ListIcon size={15} />
+                      Master Teknik
+                    </Link>
+                  )}
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMobileMenu(false);
+                        onOpenImportRekap();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#FBF7F1] hover:bg-[#FBF7F1]/10 transition-colors text-left text-xs font-semibold cursor-pointer border-0 bg-transparent"
+                    >
+                      <PlusIcon size={15} />
+                      Import Excel
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      onExportXlsx();
+                    }}
+                    disabled={!sessionData}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#FBF7F1] hover:bg-[#FBF7F1]/10 transition-colors text-left text-xs font-semibold disabled:opacity-40 cursor-pointer border-0 bg-transparent"
+                  >
+                    <ChartIcon size={15} />
+                    Export Rekap (.xlsx)
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 2. SESSION & FILTER HEADER BAR ── */}
+
+      {/* Desktop Filter Bar (>= lg) */}
+      <div className="hidden lg:flex bg-[#221F30] rounded-2xl p-[18px_20px] items-end gap-4 border border-[#FBF7F1]/5">
         {/* Sesi coaching selector */}
         <label className="block flex-2 min-w-64">
           <span className="text-[12px] tracking-[0.08em] text-[#FBF7F1]/70 uppercase mb-2 block font-medium">
@@ -177,6 +293,77 @@ export function CoachingHeader({
             <span className="font-bold text-sm whitespace-nowrap">
               {sessionData?.progress.rated ?? 0} / {sessionData?.progress.total ?? 0}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Filter Bar (< lg) — Compact & Space-efficient */}
+      <div className="lg:hidden bg-[#221F30] rounded-xl p-3 flex flex-col gap-2.5 border border-[#FBF7F1]/5">
+        {/* Row 1: Sesi coaching selector */}
+        <div>
+          <span className="text-[11px] tracking-[0.08em] text-[#FBF7F1]/60 uppercase mb-1.5 block font-semibold">
+            Sesi coaching
+          </span>
+          <select
+            value={activeSessionId}
+            onChange={(e) => {
+              router.push(`/admin/coaching?session=${e.target.value}`);
+            }}
+            className="bg-[#FBF7F1]/10 border-0 rounded-lg px-2.5 py-2 font-sans text-xs sm:text-sm text-[#FBF7F1] w-full box-border appearance-auto focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
+          >
+            {sessions.map((s) => (
+              <option key={s.id} value={s.id} className="bg-[#17151F] text-[#FBF7F1]">
+                {s.title} · {s.session_date} {s.venue_name ? `· ${s.venue_name}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Row 2: Coach filter & Progres Penilaian in 2-column layout */}
+        <div className="grid grid-cols-2 gap-2.5 items-end">
+          <div>
+            <span className="text-[11px] tracking-[0.08em] text-[#FBF7F1]/60 uppercase mb-1 block font-semibold">
+              Coach
+            </span>
+            <select
+              value={selectedCoachFilter}
+              onChange={(e) => onCoachFilterChange(e.target.value)}
+              className="bg-[#FBF7F1]/10 border-0 rounded-lg px-2 py-1.5 font-sans text-xs text-[#FBF7F1] w-full box-border appearance-auto focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
+            >
+              <option value="all" className="bg-[#17151F] text-[#FBF7F1]">
+                Semua Coach
+              </option>
+              {allCoaches.map((c) => (
+                <option key={c.id} value={c.id} className="bg-[#17151F] text-[#FBF7F1]">
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-[#FBF7F1]/60 font-semibold mb-1">
+              <span>Progres</span>
+              <span className="text-[#FBF7F1] font-bold">
+                {sessionData?.progress.rated ?? 0} / {sessionData?.progress.total ?? 0}
+              </span>
+            </div>
+            <div
+              role="img"
+              aria-label={`${sessionData?.progress.rated ?? 0} dari ${sessionData?.progress.total ?? 0} pemain dinilai`}
+              className="h-2 rounded-full bg-[#FBF7F1]/12 overflow-hidden my-1"
+            >
+              <div
+                className="h-full bg-[#6FD39A] transition-all duration-300"
+                style={{
+                  width: `${
+                    sessionData && sessionData.progress.total > 0
+                      ? Math.round((sessionData.progress.rated / sessionData.progress.total) * 100)
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>

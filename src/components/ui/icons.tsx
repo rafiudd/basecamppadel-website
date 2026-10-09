@@ -188,3 +188,12 @@ export const CoachingIcon = make(
   { size: 22 },
 );
 
+export const DotsHorizontalIcon = make(
+  <>
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    <circle cx="5" cy="12" r="1.5" fill="currentColor" />
+    <circle cx="19" cy="12" r="1.5" fill="currentColor" />
+  </>,
+  { size: 18 },
+);
+
