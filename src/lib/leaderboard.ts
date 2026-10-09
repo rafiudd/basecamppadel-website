@@ -90,40 +90,40 @@ export async function getPlayerById(playerId: string): Promise<PlayerDetail | nu
   try {
     const data = await getPlayerWithHistory(playerId);
     if (data && data.player) {
-      const { player, history, rank } = data;
+      const { player, history, rank, matchById, courtById, eventById, awards } = data;
 
-      const sessionMap = new Map<string, { title: string; points: number; date: string }>();
-      history.forEach((h) => {
-        const title = h.session_label || "Sesi Basecamp";
-        const cur = sessionMap.get(title) || {
-          title,
-          points: 0,
-          date: new Date(h.created_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }),
+      // Real points per event come from player_awards (match_history's points_delta is always 0 —
+      // points are awarded by final rank/result, not per match), and the real event type comes from
+      // the events row itself, not a guess based on words in the title.
+      const events: PlayerEventHistory[] = awards.map((a) => {
+        const ev = eventById.get(a.event_id);
+        const date = ev?.event_date
+          ? new Date(`${ev.event_date}T00:00:00`).toLocaleDateString("id-ID", { day: "2-digit", month: "short" })
+          : "";
+        return {
+          date,
+          title: ev?.title ?? "Event",
+          type: ev?.type === "kompetisi" ? "Kompetisi" : "Mabar",
+          stage: "Hasil Akhir",
+          points: a.points >= 0 ? `+${a.points} poin` : `${a.points} poin`,
         };
-        cur.points += h.points_delta;
-        sessionMap.set(title, cur);
       });
 
-      const events: PlayerEventHistory[] = Array.from(sessionMap.values()).map((e) => ({
-        date: e.date,
-        title: e.title,
-        type:
-          e.title.toLowerCase().includes("battle") || e.title.toLowerCase().includes("kompetisi")
-            ? "Kompetisi"
-            : "Mabar",
-        stage: "Hasil Akhir",
-        points: e.points >= 0 ? `+${e.points} poin` : `${e.points} poin`,
-      }));
-
-      const matches: PlayerMatchHistory[] = history.map((h) => ({
-        round: h.session_label || "Match Sesi",
-        court: "Basecamp Padel",
-        status: "finished",
-        partner: "—",
-        opponents: h.opponent_label || "—",
-        score: h.points_delta > 0 ? `+${h.points_delta} poin` : `${h.points_delta} poin`,
-        isWin: h.result === "W",
-      }));
+      const matches: PlayerMatchHistory[] = history.map((h) => {
+        const m = h.match_id ? matchById.get(h.match_id) : undefined;
+        const onA = m?.team_a_player_ids?.includes(player.id) ?? true;
+        const mine = m ? (onA ? m.team_a_games : m.team_b_games) : null;
+        const theirs = m ? (onA ? m.team_b_games : m.team_a_games) : null;
+        return {
+          round: m?.set_label || h.session_label || "Match",
+          court: (m?.court_id && courtById.get(m.court_id)) || "Basecamp Padel",
+          status: "finished",
+          partner: "—",
+          opponents: h.opponent_label || "—",
+          score: mine != null && theirs != null ? `${mine}–${theirs}` : "—",
+          isWin: h.result === "W",
+        };
+      });
 
       return {
         id: player.id,
