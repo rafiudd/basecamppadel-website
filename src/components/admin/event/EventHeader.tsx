@@ -7,7 +7,7 @@ import { BackLink } from "@/components/ui/PageHeader";
 import { EventTypeBadge } from "@/components/ui/Badge";
 import { EditIcon, LinkIcon, PlayIcon, ResetIcon } from "@/components/ui/icons";
 import { resetEvent } from "@/app/admin/events/actions";
-import type { CompEvent, Court, Venue } from "@/lib/database.types";
+import type { CompEvent, Court, Venue, CourtHourRate } from "@/lib/database.types";
 import { ObsPopover } from "./ObsLinks";
 import { EditEventModal } from "./EditEventModal";
 
@@ -20,12 +20,14 @@ export function EventHeader({
   publicHref,
   venues,
   courts,
+  hourRates,
 }: {
   event: CompEvent;
   dateLine: string;
   publicHref: string | null;
   venues: Venue[];
   courts: Court[];
+  hourRates: CourtHourRate[];
 }) {
   const [obsOpen, setObsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -70,7 +72,7 @@ export function EventHeader({
         </div>
       </div>
       {obsOpen && <ObsPopover slug={event.slug} courts={courts.filter((c) => event.court_ids.includes(c.id))} onClose={() => setObsOpen(false)} />}
-      {editOpen && <EditEventModal event={event} venues={venues} courts={courts} onClose={() => setEditOpen(false)} />}
+      {editOpen && <EditEventModal event={event} venues={venues} courts={courts} hourRates={hourRates} onClose={() => setEditOpen(false)} />}
     </div>
   );
 }

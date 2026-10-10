@@ -3,7 +3,7 @@
 import { ActionForm } from "@/components/admin/ActionForm";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { createCompetition } from "@/app/admin/events/actions";
-import type { Court, Venue } from "@/lib/database.types";
+import type { Court, Venue, CourtHourRate } from "@/lib/database.types";
 import type { PlayerSummary } from "@/components/admin/event/types";
 import { useEventWizard, type EventWizard, type PresetSummary, type Step } from "./useEventWizard";
 import { StepType } from "./StepType";
@@ -23,7 +23,19 @@ const STEPS: { n: Step; label: string }[] = [
  * Buat Event: Tipe → Format → Peserta → Detail & poin, in order (no skipping ahead). Only the last
  * step is a form; earlier steps post as hidden fields.
  */
-export function NewEventWizard({ players, venues, courts, presets }: { players: PlayerSummary[]; venues: Venue[]; courts: Court[]; presets: PresetSummary[] }) {
+export function NewEventWizard({
+  players,
+  venues,
+  courts,
+  presets,
+  hourRates,
+}: {
+  players: PlayerSummary[];
+  venues: Venue[];
+  courts: Court[];
+  presets: PresetSummary[];
+  hourRates: CourtHourRate[];
+}) {
   const w = useEventWizard({ players, courts });
   const back = w.step > 1 && (
     <button type="button" onClick={() => w.back((w.step - 1) as Step)} className="btn min-h-11">← Kembali</button>
@@ -51,7 +63,7 @@ export function NewEventWizard({ players, venues, courts, presets }: { players: 
         <div onSubmitCapture={(e) => !w.canSubmit() && e.preventDefault()}>
           <ActionForm action={createCompetition} successText="Event dibuat" className="flex flex-col gap-5">
             <EarlierStepsFields w={w} />
-            <StepDetail w={w} venues={venues} presets={presets} />
+            <StepDetail w={w} venues={venues} presets={presets} hourRates={hourRates} />
             <StepErrors messages={w.stepErrors} />
             <div className="flex justify-between gap-2">
               {back}

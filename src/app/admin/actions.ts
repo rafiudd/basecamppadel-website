@@ -95,6 +95,7 @@ export async function upsertCourt(_: ActionState, fd: FormData): Promise<ActionS
     const row = {
       name: str(fd, "name"),
       venue_id: venueId,
+      price_per_hour: Math.max(0, Number(str(fd, "price_per_hour")) || 0),
       active: fd.get("active") === "on",
     };
     const q = id ? supabase.from("courts").update(row).eq("id", id) : supabase.from("courts").insert(row);
@@ -116,6 +117,37 @@ export async function deleteCourt(_: ActionState, fd: FormData): Promise<ActionS
     if (error) throw new Error(error.message);
     if (court?.venue_id) revalidatePath(`/admin/venues/${court.venue_id}`);
     revalidatePath("/admin/live");
+  });
+}
+
+/** Saves the whole day × hour price grid to every selected court at once (the admin "Harga prime
+ *  time" form) — a venue whose courts share one price only needs this filled in once. Blank cells
+ *  mean "use that court's base rate", so each court's grid is wiped and reinserted from the filled ones. */
+export async function upsertCourtHourRates(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    await requireAdmin();
+    const supabase = await createClient();
+    const venueId = str(fd, "venue_id");
+    const courtIds = fd.getAll("apply_court_ids").map(String).filter(Boolean);
+    if (!courtIds.length) throw new Error("Pilih minimal 1 court.");
+
+    const cells: { day_of_week: number; hour: number; price_per_hour: number }[] = [];
+    for (const key of fd.keys()) {
+      const m = key.match(/^price_(\d)_(\d{1,2})$/);
+      if (!m) continue;
+      const v = str(fd, key);
+      if (!v) continue;
+      cells.push({ day_of_week: Number(m[1]), hour: Number(m[2]), price_per_hour: Math.max(0, Number(v) || 0) });
+    }
+
+    const { error: delErr } = await supabase.from("court_hour_rates").delete().in("court_id", courtIds);
+    if (delErr) throw new Error(delErr.message);
+    if (cells.length) {
+      const rows = courtIds.flatMap((court_id) => cells.map((c) => ({ court_id, ...c })));
+      const { error } = await supabase.from("court_hour_rates").insert(rows);
+      if (error) throw new Error(error.message);
+    }
+    revalidatePath(`/admin/venues/${venueId}`);
   });
 }
 

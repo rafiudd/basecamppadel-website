@@ -1,15 +1,37 @@
 import Link from "next/link";
 import { CheckboxField, Field, inputClass, invalidIf, labelClass } from "@/components/ui/Field";
-import { courtLabel } from "@/lib/format";
-import type { Venue } from "@/lib/database.types";
+import { courtLabel, formatRupiah } from "@/lib/format";
+import { courtRentalCost, dayOfWeekFromDateStr } from "@/lib/venuePricing";
+import type { Venue, CourtHourRate } from "@/lib/database.types";
 import type { EventWizard, PresetSummary } from "./useEventWizard";
 import { StepSection } from "./parts";
 
 /** Name, date/time, venue + courts, point preset, visibility. Fields carry `name` for the submit form. */
-export function StepDetail({ w, venues, presets }: { w: EventWizard; venues: Venue[]; presets: PresetSummary[] }) {
+export function StepDetail({
+  w,
+  venues,
+  presets,
+  hourRates,
+}: {
+  w: EventWizard;
+  venues: Venue[];
+  presets: PresetSummary[];
+  hourRates: CourtHourRate[];
+}) {
   const d = w.details;
   /** Input props: base style, plus the red outline and aria-invalid when this field is missing. */
   const bad = (field: string) => ({ "aria-invalid": w.invalid(field), className: `${inputClass} ${invalidIf(w.invalid(field))}` });
+
+  const selectedCourts = d.venueCourts.filter((c) => d.courtIds.includes(c.id));
+  const estimate = d.eventDate && d.startTime && selectedCourts.length
+    ? courtRentalCost({
+        courts: selectedCourts.map((c) => ({ basePricePerHour: c.price_per_hour || 0, rates: hourRates.filter((r) => r.court_id === c.id) })),
+        dayOfWeek: dayOfWeekFromDateStr(d.eventDate),
+        startTime: d.startTime,
+        durationHours: Number(d.durationHours) || 0,
+      })
+    : null;
+
   return (
     <StepSection title="Detail & poin">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -21,6 +43,12 @@ export function StepDetail({ w, venues, presets }: { w: EventWizard; venues: Ven
         </Field>
         <Field label="Jam">
           <input type="time" name="start_time" value={d.startTime} onChange={(e) => d.setStartTime(e.target.value)} {...bad("startTime")} />
+        </Field>
+        <Field label="Durasi (jam)">
+          <input type="number" min={0.5} step={0.5} name="duration_hours" value={d.durationHours} onChange={(e) => d.setDurationHours(e.target.value)} className={inputClass} />
+        </Field>
+        <Field label={`Harga pendaftaran per ${w.isMabar ? "pemain" : "tim"} (Rp)`}>
+          <input type="number" min={0} step={1000} name="price_amount" value={d.priceAmount} onChange={(e) => d.setPriceAmount(e.target.value)} placeholder="50000" className={inputClass} />
         </Field>
         <Field label="Venue">
           <select name="venue_id" value={d.venueId} onChange={(e) => d.setVenueId(e.target.value)} {...bad("venueId")}>
@@ -50,6 +78,12 @@ export function StepDetail({ w, venues, presets }: { w: EventWizard; venues: Ven
           {d.courtIds.map((id) => <input key={id} type="hidden" name="court_ids" value={id} />)}
         </div>
       </div>
+      {estimate !== null && (
+        <div className="rounded-xl bg-snow/6 px-4 py-3 flex items-center justify-between gap-3">
+          <span className="text-sm text-snow/75">Estimasi modal sewa lapangan</span>
+          <span className="font-display font-bold text-lg">{formatRupiah(estimate)}</span>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
         <div>
           <Field label="Preset poin leaderboard">

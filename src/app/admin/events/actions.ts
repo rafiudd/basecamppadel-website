@@ -33,6 +33,8 @@ function readDetails(fd: FormData) {
     venue_id: () => str(fd, "venue_id") || null,
     court_ids: () => fd.getAll("court_ids").map(String).filter(Boolean),
     price: () => str(fd, "price"),
+    price_amount: () => Math.max(0, Number(str(fd, "price_amount")) || 0),
+    duration_hours: () => Math.max(0.5, Number(str(fd, "duration_hours")) || 2),
     whatsapp_url: () => str(fd, "whatsapp_url") || null,
     match_minutes: () => Math.max(5, int(fd, "match_minutes", 20)),
     published: () => fd.getAll("published").includes("on"),

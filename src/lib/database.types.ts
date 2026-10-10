@@ -135,7 +135,21 @@ export type Court = {
   id: string;
   name: string;
   venue_id: string | null;
+  /** Base (non-prime) court rental rate, Rp per hour. */
+  price_per_hour: number;
   active: boolean;
+  created_at: string;
+};
+
+/** An override rate for one (day of week, hour) cell at a court — 0 = Sunday .. 6 = Saturday, matches
+ *  JS Date#getDay(); hour is 0-23. A cell with no row here just uses the court's base price_per_hour.
+ *  The admin form can write the same grid to several courts at once when a venue's courts share a price. */
+export type CourtHourRate = {
+  id: string;
+  court_id: string;
+  day_of_week: number;
+  hour: number;
+  price_per_hour: number;
   created_at: string;
 };
 
@@ -204,6 +218,10 @@ export type CompEvent = {
   /** YouTube live link per court id, set from the edit-event modal (not at creation). */
   court_stream_urls: Record<string, string>;
   price: string;
+  /** Registration fee, Rp per team (kompetisi) or per player (mabar) — drives the auto income line on the Keuangan tab. */
+  price_amount: number;
+  /** Session length in hours, used for the court-rental cost estimate. */
+  duration_hours: number;
   whatsapp_url: string | null;
   num_teams: number;
   num_groups: number;
@@ -230,6 +248,17 @@ export type CompEvent = {
 
 /** Leaderboard points for a mabar: `ranks[i]` for final position i + 1, `participant` for everyone else. */
 export type MabarPoints = { ranks: number[]; participant: number };
+
+/** A manual expense/income line on an event's Keuangan tab (the court-rental cost and registration
+ *  income lines are computed on the fly, not stored here). */
+export type EventTransaction = {
+  id: string;
+  event_id: string;
+  type: "expense" | "income";
+  label: string;
+  amount: number;
+  created_at: string;
+};
 
 export type CompTeam = {
   id: string;
@@ -406,6 +435,12 @@ export type Database = {
         Update: Partial<Court>;
         Relationships: [];
       };
+      court_hour_rates: {
+        Row: CourtHourRate;
+        Insert: Insert<CourtHourRate, "court_id" | "day_of_week" | "hour" | "price_per_hour">;
+        Update: Partial<CourtHourRate>;
+        Relationships: [];
+      };
       gen_events: {
         Row: GenEvent;
         Insert: Insert<GenEvent, "format">;
@@ -500,6 +535,12 @@ export type Database = {
         Row: CoachingAssessment;
         Insert: Insert<CoachingAssessment, "session_id" | "player_id">;
         Update: Partial<CoachingAssessment>;
+        Relationships: [];
+      };
+      event_transactions: {
+        Row: EventTransaction;
+        Insert: Insert<EventTransaction, "event_id" | "type" | "label">;
+        Update: Partial<EventTransaction>;
         Relationships: [];
       };
     };
