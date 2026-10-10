@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { CourtForm } from "@/components/admin/venues/CourtForm";
+import { VenuePricingForm } from "@/components/admin/venues/VenuePricingForm";
 import { InlineDelete } from "@/components/admin/InlineDelete";
 import { MOBILE_CARD } from "@/components/admin/cardStyles";
 import { ActiveBadge } from "@/components/ui/Badge";
@@ -28,12 +29,17 @@ export default async function VenueDetail({
 
   const list = courts ?? [];
   const editing = list.find((c) => c.id === edit);
+  const { data: hourRates } = list.length
+    ? await supabase.from("court_hour_rates").select("*").in("court_id", list.map((c) => c.id))
+    : { data: [] };
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title={venue.name} back={{ href: "/admin/venues", label: "Venue" }} badge={<ActiveBadge active={venue.active} />} />
 
       <CourtForm key={editing?.id ?? "new"} court={editing} venueId={id} nextName={`Court ${list.length + 1}`} />
+
+      <VenuePricingForm venueId={id} courts={list} rates={hourRates ?? []} />
 
       <div className="flex flex-col gap-3">
         <div className="font-display font-bold text-lg">

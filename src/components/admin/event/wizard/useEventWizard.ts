@@ -138,6 +138,8 @@ export function useEventWizard({
   const [courtIds, setCourtIds] = useState<string[]>([]);
   const [presetId, setPresetId] = useState(initialLeague?.presetId ?? "");
   const [published, setPublished] = useState(false);
+  const [durationHours, setDurationHours] = useState("2");
+  const [priceAmount, setPriceAmount] = useState("");
   const setVenueId = (id: string) => {
     setVenueIdRaw(id);
     setCourtIds(courtsOf(id).map((c) => c.id)); // a new venue starts with all of its courts
@@ -263,7 +265,27 @@ export function useEventWizard({
       reshuffle: () => setPairSeed((s) => s + 1),
     },
     teams: { list: teams, chosen, filled: filledTeams, ...teamActions },
-    details: { title, setTitle, eventDate, setEventDate, startTime, setStartTime, venueId, setVenueId, venueCourts: courtsOf(venueId), courtIds, toggleCourt, presetId, setPresetId, published, setPublished },
+    details: {
+      title,
+      setTitle,
+      eventDate,
+      setEventDate,
+      startTime,
+      setStartTime,
+      venueId,
+      setVenueId,
+      venueCourts: courtsOf(venueId),
+      courtIds,
+      toggleCourt,
+      presetId,
+      setPresetId,
+      published,
+      setPublished,
+      durationHours,
+      setDurationHours,
+      priceAmount,
+      setPriceAmount,
+    },
     nameOf,
     courtName,
   };

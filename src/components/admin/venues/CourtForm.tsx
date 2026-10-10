@@ -13,6 +13,10 @@ export function CourtForm({ court, venueId, nextName }: { court?: Court; venueId
         <span className="label block">{court ? "Edit court" : "Tambah court"}</span>
         <input className="field min-h-11" name="name" required defaultValue={court?.name} placeholder={nextName ?? "Court 1"} />
       </label>
+      <label className="block w-full md:w-40">
+        <span className="label block">Harga / jam (Rp)</span>
+        <input className="field min-h-11" type="number" min={0} step={1000} name="price_per_hour" defaultValue={court?.price_per_hour || ""} placeholder="100000" />
+      </label>
       <label className="flex items-center gap-2 text-sm min-h-11">
         <input type="checkbox" name="active" defaultChecked={court?.active ?? true} className="w-4.5 h-4.5 accent-volt" /> Aktif
       </label>

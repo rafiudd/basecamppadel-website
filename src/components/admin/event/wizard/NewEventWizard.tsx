@@ -3,7 +3,7 @@
 import { ActionForm } from "@/components/admin/ActionForm";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { createCompetition } from "@/app/admin/events/actions";
-import type { Court, Venue } from "@/lib/database.types";
+import type { Court, Venue, CourtHourRate } from "@/lib/database.types";
 import type { PlayerSummary } from "@/components/admin/event/types";
 import { useEventWizard, type EventWizard, type PresetSummary, type Step } from "./useEventWizard";
 import { StepType } from "./StepType";
@@ -28,12 +28,14 @@ export function NewEventWizard({
   venues,
   courts,
   presets,
+  hourRates,
   initialLeague,
 }: {
   players: PlayerSummary[];
   venues: Venue[];
   courts: Court[];
   presets: PresetSummary[];
+  hourRates: CourtHourRate[];
   initialLeague?: import("./useEventWizard").InitialLeagueContext;
 }) {
   const w = useEventWizard({ players, courts, initialLeague });
@@ -66,7 +68,7 @@ export function NewEventWizard({
         <div onSubmitCapture={(e) => !w.canSubmit() && e.preventDefault()}>
           <ActionForm action={createCompetition} successText="Event dibuat" className="flex flex-col gap-5">
             <EarlierStepsFields w={w} initialLeague={initialLeague} />
-            <StepDetail w={w} venues={venues} presets={presets} />
+            <StepDetail w={w} venues={venues} presets={presets} hourRates={hourRates} />
             <StepErrors messages={w.stepErrors} />
             <div className="flex justify-between gap-2">
               {back}
