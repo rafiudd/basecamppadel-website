@@ -20,6 +20,9 @@ export type Player = {
   wins: number;
   losses: number;
   points_adjustment: number;
+  level_color?: string;
+  level_overridden?: boolean;
+  level_override_reason?: string | null;
   active: boolean;
   whatsapp: string | null; // normalized 628…, filled by admin so a new account can link to this player
   created_at: string;
@@ -47,50 +50,6 @@ export type Profile = {
   claim_player_id: string | null;
   created_at: string;
   updated_at: string;
-};
-
-/**
- * Coaching (schema owned by the admin coaching task, created in the database outside this repo's
- * migrations). Players see an assessment once it is submitted and published.
- */
-export type CoachingSkill = {
-  id: string;
-  type: "teknik" | "in_game";
-  category: string;
-  name: string;
-  sort_order: number;
-  active: boolean;
-  created_at: string;
-};
-export type Coach = { id: string; name: string; user_id: string | null; active: boolean; created_at: string };
-export type CoachingSession = {
-  id: string;
-  title: string;
-  session_date: string;
-  venue_id: string | null;
-  venue_name: string;
-  event_id: string | null;
-  default_skill_ids: string[];
-  status: "draft" | "active" | "finished";
-  created_at: string;
-};
-export type CoachingAssessment = {
-  id: string;
-  session_id: string;
-  player_id: string;
-  coach_id: string | null;
-  group_id: string | null;
-  scores: Record<string, number>; // skill id -> 1..5 in 0.5 steps
-  active_skill_ids: string[];
-  evaluation: string; // "- line" per point
-  next_practice: string;
-  published_to_player: boolean;
-  status: "draft" | "submitted";
-  computed_level: string | null;
-  override_level: string | null;
-  override_reason: string | null;
-  updated_at: string;
-  created_at: string;
 };
 
 export type Session = {
@@ -327,6 +286,72 @@ export type PointPreset = {
   updated_at: string;
 };
 
+export type Coach = {
+  id: string;
+  name: string;
+  user_id: string | null;
+  active: boolean;
+  created_at: string;
+};
+
+export type CoachingSkill = {
+  id: string;
+  type: "teknik" | "in_game";
+  category: string;
+  name: string;
+  sort_order: number;
+  active: boolean;
+  created_at: string;
+};
+
+export type CoachingSession = {
+  id: string;
+  title: string;
+  session_date: string;
+  venue_id: string | null;
+  venue_name: string;
+  event_id: string | null;
+  default_skill_ids: string[];
+  status: "draft" | "active" | "finished";
+  created_at: string;
+};
+
+export type CoachingGroup = {
+  id: string;
+  session_id: string;
+  name: string;
+  color: string;
+  coach_id: string | null;
+  created_at: string;
+};
+
+export type CoachingSessionPlayer = {
+  id: string;
+  session_id: string;
+  group_id: string | null;
+  player_id: string;
+  created_at: string;
+};
+
+export type CoachingAssessment = {
+  id: string;
+  session_id: string;
+  player_id: string;
+  coach_id: string | null;
+  group_id: string | null;
+  scores: Record<string, number>;
+  active_skill_ids: string[];
+  evaluation: string;
+  next_practice: string;
+  published_to_player: boolean;
+  status: "draft" | "submitted";
+  computed_level: string | null;
+  override_level: string | null;
+  override_reason: string | null;
+  updated_at: string;
+  created_at: string;
+};
+
 type Insert<T, Required extends keyof T> = Pick<T, Required> & Partial<Omit<T, Required>>;
 
 export type Database = {
@@ -362,34 +387,10 @@ export type Database = {
         Update: Partial<Profile>;
         Relationships: [];
       };
-      coaching_skills: {
-        Row: CoachingSkill;
-        Insert: Insert<CoachingSkill, "type" | "category" | "name">;
-        Update: Partial<CoachingSkill>;
-        Relationships: [];
-      };
-      coaches: {
-        Row: Coach;
-        Insert: Insert<Coach, "name">;
-        Update: Partial<Coach>;
-        Relationships: [];
-      };
-      coaching_sessions: {
-        Row: CoachingSession;
-        Insert: Insert<CoachingSession, "title">;
-        Update: Partial<CoachingSession>;
-        Relationships: [];
-      };
-      coaching_assessments: {
-        Row: CoachingAssessment;
-        Insert: Insert<CoachingAssessment, "session_id" | "player_id">;
-        Update: Partial<CoachingAssessment>;
-        Relationships: [];
-      };
       admin_users: {
-        Row: { user_id: string; created_at: string };
-        Insert: { user_id: string; created_at?: string };
-        Update: { user_id?: string };
+        Row: { user_id: string; created_at: string; role?: string; coach_id?: string | null };
+        Insert: { user_id: string; created_at?: string; role?: string; coach_id?: string | null };
+        Update: { user_id?: string; role?: string; coach_id?: string | null };
         Relationships: [];
       };
       venues: {
@@ -464,10 +465,48 @@ export type Database = {
         Update: Partial<PointPreset>;
         Relationships: [];
       };
+      coaches: {
+        Row: Coach;
+        Insert: Insert<Coach, "name">;
+        Update: Partial<Coach>;
+        Relationships: [];
+      };
+      coaching_skills: {
+        Row: CoachingSkill;
+        Insert: Insert<CoachingSkill, "name" | "type" | "category">;
+        Update: Partial<CoachingSkill>;
+        Relationships: [];
+      };
+      coaching_sessions: {
+        Row: CoachingSession;
+        Insert: Insert<CoachingSession, "title" | "session_date">;
+        Update: Partial<CoachingSession>;
+        Relationships: [];
+      };
+      coaching_groups: {
+        Row: CoachingGroup;
+        Insert: Insert<CoachingGroup, "session_id" | "name">;
+        Update: Partial<CoachingGroup>;
+        Relationships: [];
+      };
+      coaching_session_players: {
+        Row: CoachingSessionPlayer;
+        Insert: Insert<CoachingSessionPlayer, "session_id" | "player_id">;
+        Update: Partial<CoachingSessionPlayer>;
+        Relationships: [];
+      };
+      coaching_assessments: {
+        Row: CoachingAssessment;
+        Insert: Insert<CoachingAssessment, "session_id" | "player_id">;
+        Update: Partial<CoachingAssessment>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
+      is_coach: { Args: Record<string, never>; Returns: boolean };
+      has_admin_access: { Args: Record<string, never>; Returns: boolean };
       finalize_match: {
         Args: {
           p_match_id: string;
