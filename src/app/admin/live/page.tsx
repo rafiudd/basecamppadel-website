@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { courtLabel } from "@/lib/format";
 import { courtNameOf, loadCompetition } from "@/lib/compData";
 import { matchName } from "@/lib/compLabels";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -10,14 +11,19 @@ import { LiveEventBar, type EventLiveSummary } from "@/components/admin/live/Liv
 import { MatchQueue, pickCurrentMatch } from "@/components/admin/live/MatchQueue";
 import { NoRunningEvent } from "@/components/admin/live/NoRunningEvent";
 import { FinishedNotice } from "@/components/admin/live/FinishedNotice";
-import type { CompEvent } from "@/lib/database.types";
+import { StartFreeformButton } from "@/components/admin/live/StartFreeformForm";
+import type { CompEvent, Court, Match } from "@/lib/database.types";
 
 export default async function LiveAdmin({ searchParams }: { searchParams: Promise<{ event?: string; match?: string; done?: string }> }) {
   const { event: eventParam, match: matchParam, done: doneParam } = await searchParams;
   const supabase = await createClient();
-  const [{ data: events }, { data: liveRows }] = await Promise.all([
+  const [{ data: events }, { data: liveRows }, { data: courts }, { data: venues }, { data: freeformLive }, { data: players }] = await Promise.all([
     supabase.from("events").select("*").neq("status", "finished").order("event_date", { nullsFirst: false }).order("created_at", { ascending: false }),
     supabase.from("matches").select("event_id, is_live, status").neq("status", "finished").eq("is_bye", false).not("event_id", "is", null),
+    supabase.from("courts").select("*").eq("active", true).order("name"),
+    supabase.from("venues").select("*").eq("active", true).order("name"),
+    supabase.from("matches").select("*").is("event_id", null).eq("is_live", true).order("updated_at", { ascending: false }),
+    supabase.from("players").select("id, name, gender, level, region").eq("active", true).order("name"),
   ]);
   const all = (events ?? []) as CompEvent[];
   const running = all.filter((e) => e.status === "active");
@@ -31,10 +37,21 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
   }
   const event = all.find((e) => e.id === eventParam) ?? running.find((e) => onAir.has(e.id)) ?? running[0] ?? null;
 
+  const freeformSection = (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs font-bold tracking-caps text-snow/70">LIVE TANPA EVENT</div>
+        <StartFreeformButton courts={(courts ?? []) as Court[]} venues={venues ?? []} players={players ?? []} />
+      </div>
+      {freeformLive && freeformLive.length > 0 && <FreeformLiveList matches={freeformLive} courts={(courts ?? []) as Court[]} />}
+    </>
+  );
+
   if (!event) {
     return (
       <div className="flex flex-col gap-5">
         <PageHeader title="Live" />
+        {freeformSection}
         <NoRunningEvent drafts={all.filter((e) => e.status === "draft")} />
       </div>
     );
@@ -58,6 +75,7 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
           )
         }
       />
+      {freeformSection}
       <LiveEventBar event={event} running={running} summaries={summaries} courts={data.courts.filter((c) => event.court_ids.includes(c.id))} />
       {done && <FinishedNotice done={done} next={current} all={data.matches} dismissHref={`/admin/live?event=${event.id}${current ? `&match=${current.id}` : ""}`} />}
       <div className="grid grid-cols-1 lg:grid-main-aside gap-6 items-start">
@@ -72,6 +90,30 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
         )}
         <MatchQueue data={data} currentId={current?.id ?? null} />
       </div>
+    </div>
+  );
+}
+
+/** Currently ON AIR matches with no event attached, each linking to its own control page. */
+function FreeformLiveList({ matches, courts }: { matches: Match[]; courts: Court[] }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {matches.map((m) => {
+        const court = courts.find((c) => c.id === m.court_id);
+        return (
+          <Link
+            key={m.id}
+            href={`/admin/live/freeform/${m.id}`}
+            className="no-underline text-snow bg-ink-3 rounded-card py-3 px-4 flex items-center gap-3"
+          >
+            <span className="w-2 h-2 rounded-full bg-coral animate-livepulse flex-none" />
+            <span className="flex-1 min-w-0 truncate font-semibold text-sm">
+              {m.team_a_name} vs {m.team_b_name}
+            </span>
+            <span className="text-caption text-snow/65 flex-none">{court ? courtLabel(court.name) : "—"}</span>
+          </Link>
+        );
+      })}
     </div>
   );
 }

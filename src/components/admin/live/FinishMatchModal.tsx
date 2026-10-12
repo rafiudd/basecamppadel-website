@@ -6,31 +6,43 @@ import { toast } from "@/components/ui/Toast";
 import { WalkoverSelect } from "@/components/admin/event/kompetisi/ScoreModal";
 import { setCompResult } from "@/app/admin/events/match-actions";
 import { finishMabarMatch } from "@/app/admin/events/mabar-actions";
+import { finishFreeformMatch } from "@/app/admin/live/freeform-actions";
 import type { Match, Serve } from "@/lib/database.types";
 
 /**
  * "Selesaikan match": final games, prefilled from the live score. Kompetisi needs a winner (or a
- * walkover) and the winner advances; a mabar court may end level and its games go to the table.
+ * walkover) and the winner advances; a mabar court may end level and its games go to the table; a
+ * freeform (no-event) match just records a final score with no bracket/leaderboard bookkeeping.
  */
 export function FinishMatchModal({ m, onClose, onDone }: { m: Match; onClose: () => void; onDone: () => void }) {
   const isMabar = !!m.gen_match_id;
+  const isFreeform = !m.event_id;
+  const tieAllowed = isMabar || isFreeform;
   const [games, setGames] = useState({ A: String(m.team_a_games), B: String(m.team_b_games) });
   const [wo, setWo] = useState<"" | Serve>("");
   const [pending, start] = useTransition();
   const a = Number(games.A) || 0;
   const b = Number(games.B) || 0;
-  const tie = !isMabar && !wo && a === b;
+  const tie = !tieAllowed && !wo && a === b;
 
   const submit = () =>
     start(async () => {
-      const res = isMabar ? await finishMabarMatch(m.id, a, b) : await setCompResult(m.id, a, b, wo || null);
+      const res = isFreeform
+        ? await finishFreeformMatch(m.id, a, b, wo || null)
+        : isMabar
+          ? await finishMabarMatch(m.id, a, b)
+          : await setCompResult(m.id, a, b, wo || null);
       if (toast.result(res, "Hasil match tersimpan")) onDone();
     });
 
   return (
     <Modal title="Selesaikan match" onClose={onClose}>
       <p className="text-caption text-snow/70 m-0">
-        {isMabar ? "Skor akhir dalam game. Seri boleh; game masuk ke klasemen mabar." : "Skor akhir dalam game. Pemenang otomatis maju ke babak berikutnya."}
+        {isMabar
+          ? "Skor akhir dalam game. Seri boleh; game masuk ke klasemen mabar."
+          : isFreeform
+            ? "Skor akhir dalam game. Match ini nggak nempel ke event, jadi gak masuk leaderboard."
+            : "Skor akhir dalam game. Pemenang otomatis maju ke babak berikutnya."}
       </p>
       <div className="flex items-end gap-3">
         {(["A", "B"] as const).map((side) => (

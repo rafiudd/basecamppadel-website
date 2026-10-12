@@ -39,7 +39,10 @@ async function putOnAir(supabase: Supa, eventId: string, matchId: string) {
   const m = await loadMatch(supabase, matchId);
   if (m.status === "finished") throw new Error("Match sudah selesai.");
   if (m.status === "scheduled") await assertTeamsFree(supabase, m);
-  let sameCourt = supabase.from("matches").update({ is_live: false }).eq("event_id", eventId).eq("is_live", true).neq("id", matchId);
+  // scoped to the same event (or, for a freeform match, other freeform matches) so this never
+  // silently takes a *different* event's live match off air just because they share a court
+  let sameCourt = supabase.from("matches").update({ is_live: false }).eq("is_live", true).neq("id", matchId);
+  sameCourt = eventId ? sameCourt.eq("event_id", eventId) : sameCourt.is("event_id", null);
   sameCourt = m.court_id ? sameCourt.eq("court_id", m.court_id) : sameCourt.is("court_id", null);
   await sameCourt;
   const { error } = await supabase.from("matches").update({ is_live: true, status: "live" }).eq("id", matchId).neq("status", "finished");
