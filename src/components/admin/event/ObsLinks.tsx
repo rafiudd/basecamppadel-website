@@ -46,7 +46,7 @@ export function ObsPopover({ slug, courts, onClose, top = "top-20" }: { slug: st
   );
 }
 
-function CopyRow({ label, path }: { label: string; path: string }) {
+export function CopyRow({ label, path }: { label: string; path: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {

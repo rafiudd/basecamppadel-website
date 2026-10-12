@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "nextjs-toploader/app";
 import type { Match } from "@/lib/database.types";
 import { useMatchControl, type MatchControl } from "./useMatchControl";
 import { GameButtons, ServeButton, SetSteppers, StatusNotes } from "./ScoreInputs";
 import { FinishMatchModal } from "./FinishMatchModal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { EditIcon } from "@/components/ui/icons";
+import { toast } from "@/components/ui/Toast";
+import { renameFreeformMatch } from "@/app/admin/live/freeform-actions";
 
 /** Live page: full score control of the current match. */
 export function LiveControl({ initial, label }: { initial: Match; label: string }) {
@@ -21,7 +24,7 @@ export function LiveControl({ initial, label }: { initial: Match; label: string 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex flex-col gap-1 min-w-0">
           <div className="text-xs font-bold tracking-caps text-snow/70 uppercase">{label}</div>
-          <div className="font-display font-bold text-title">{m.team_a_name} vs {m.team_b_name}</div>
+          {m.event_id ? <div className="font-display font-bold text-title">{m.team_a_name} vs {m.team_b_name}</div> : <FreeformTitle m={m} />}
         </div>
         <OnAirToggle on={m.is_live} disabled={finished || ctl.pending} loading={ctl.pending} onClick={ctl.toggleOnAir} />
       </div>
@@ -74,7 +77,62 @@ export function LiveControl({ initial, label }: { initial: Match; label: string 
           onCancel={() => setResetting(false)}
         />
       )}
-      {finishing && <FinishMatchModal m={m} onClose={() => setFinishing(false)} onDone={() => { setFinishing(false); router.replace(`/admin/live?event=${m.event_id}&done=${m.id}`, { scroll: false }); }} />}
+      {finishing && (
+        <FinishMatchModal
+          m={m}
+          onClose={() => setFinishing(false)}
+          onDone={() => {
+            setFinishing(false);
+            const href = m.event_id ? `/admin/live?event=${m.event_id}&done=${m.id}` : `/admin/live/freeform/${m.id}`;
+            router.replace(href, { scroll: false });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Match title for a freeform (no-event) match: click to rename both team names in place. */
+function FreeformTitle({ m }: { m: Match }) {
+  const [editing, setEditing] = useState(false);
+  const [a, setA] = useState(m.team_a_name);
+  const [b, setB] = useState(m.team_b_name);
+  const [pending, start] = useTransition();
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setA(m.team_a_name);
+          setB(m.team_b_name);
+          setEditing(true);
+        }}
+        className="group flex items-center gap-2 bg-transparent border-none p-0 text-left cursor-pointer min-w-0"
+      >
+        <span className="font-display font-bold text-title truncate">{m.team_a_name} vs {m.team_b_name}</span>
+        <EditIcon size={15} className="text-snow/40 group-hover:text-snow/80 flex-none" />
+      </button>
+    );
+  }
+
+  const save = () =>
+    start(async () => {
+      const fd = new FormData();
+      fd.set("match_id", m.id);
+      fd.set("team_a_name", a);
+      fd.set("team_b_name", b);
+      const res = await renameFreeformMatch(null, fd);
+      if (toast.result(res, "Nama tersimpan")) setEditing(false);
+    });
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <input value={a} onChange={(e) => setA(e.target.value)} placeholder="Tim A" className="field min-h-9 text-sm w-36" />
+      <span className="text-snow/50 text-sm">vs</span>
+      <input value={b} onChange={(e) => setB(e.target.value)} placeholder="Tim B" className="field min-h-9 text-sm w-36" />
+      <button type="button" disabled={pending} data-loading={pending || undefined} onClick={save} className="btn btn-volt min-h-9 px-3 text-xs">Simpan</button>
+      <button type="button" disabled={pending} onClick={() => setEditing(false)} className="btn bg-transparent text-snow/85 min-h-9 px-3 text-xs">Batal</button>
     </div>
   );
 }
