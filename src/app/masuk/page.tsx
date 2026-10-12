@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PublicShell } from "@/components/PublicShell";
 import { GoogleButton } from "@/components/account/GoogleButton";
 import { getAccount } from "@/lib/account";
-import { safeNext } from "@/lib/accountRules";
+import { safeNext, stepPath } from "@/lib/accountRules";
+import { ACCOUNT_DEMO } from "@/lib/config";
 
 export const metadata: Metadata = { title: "Masuk — Basecamp Padel", robots: { index: false } };
 
@@ -17,7 +19,7 @@ export default async function MasukPage({ searchParams }: { searchParams: Promis
   const { next: rawNext, error } = await searchParams;
   const next = safeNext(rawNext);
   const { user, step } = await getAccount();
-  if (user) redirect(step === "profile" ? `/akun/lengkapi?next=${encodeURIComponent(next)}` : next);
+  if (user) redirect(stepPath(step, next));
 
   return (
     <PublicShell>
@@ -57,6 +59,14 @@ export default async function MasukPage({ searchParams }: { searchParams: Promis
               </div>
             )}
             <GoogleButton next={next} />
+            {ACCOUNT_DEMO && (
+              <Link
+                href="/akun-demo/lengkapi"
+                className="flex items-center justify-center w-full min-h-12 rounded-xl border border-dashed border-indigo/40 bg-indigo/5 text-indigo font-semibold text-input no-underline hover:bg-indigo/10"
+              >
+                Lihat demo akun (tanpa login)
+              </Link>
+            )}
             <div className="flex items-center gap-3 text-caption text-ink/55">
               <span className="flex-1 h-px bg-ink/12" />
               Pertama kali?

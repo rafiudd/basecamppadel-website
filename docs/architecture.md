@@ -38,6 +38,17 @@ supabase/migrations/      ── skema, RLS, RPC, constraint (penjaga terakhir a
    - Admin dan overlay OBS memakai `useLiveMatch` (Realtime).
    - Publik (home) memakai `usePolledLiveMatches` (polling REST), supaya tidak menghabiskan kuota koneksi Realtime.
 
+## Akun pemain (publik)
+
+- **Aturan murni:** `lib/accountRules.ts` (WA, Instagram, `safeNext`, langkah akun `stepPath`) dan `lib/coachingRules.ts` (papan skill, rata-rata, catatan, riwayat event, label rapor). Dites di `tests/account.test.mjs` dan `tests/coaching.test.mjs`.
+- **Gate:** `lib/account.ts`.
+  - `requireAccount(path)` untuk halaman yang butuh akun lengkap.
+  - `requireStep()` untuk halaman Lengkapi profil dan "Ini kamu?".
+- **Data:** `lib/profileData.ts` membaca coaching dan riwayat event, lalu memetakannya ke tipe di `coachingRules`. Tabel coaching milik task admin. Query selalu difilter `player_id` milik pemain sendiri.
+- **Tulis ke DB:** hanya lewat RPC `account_*` (security definer, lihat migrasi 0012 dan 0013). Server action ada di `app/akun/actions.ts`.
+- **Tampilan dipakai bersama `/akun` dan `/akun-demo`:** `ProfileView`, `ProfileSetupView`, `ProfileEditView`, `ClaimView`. Action-nya diteruskan sebagai prop. Demo memakai data contoh di `lib/demoAccount.ts` dan tersembunyi kecuali `NEXT_PUBLIC_ACCOUNT_DEMO=1`.
+- **Rapor PDF:** `lib/rapor.ts` dan `lib/raporTemplate.ts`, berupa HTML A4 yang dicetak lewat browser. `<title>` = nama file.
+
 ## Status
 
 - **Halaman publik** (`/jadwal`, `/leaderboard`) masih memakai data JSON dummy di `src/data/`. Membuatnya dinamis adalah task dan branch terpisah.

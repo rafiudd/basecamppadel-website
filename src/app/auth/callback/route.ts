@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { safeNext } from "@/lib/accountRules";
+import { accountStep, safeNext, stepPath } from "@/lib/accountRules";
 
 /** Lands the Google login (players) and the magic link (admin); `next` is where the visitor came from. */
 export async function GET(request: NextRequest) {
@@ -27,8 +27,7 @@ export async function GET(request: NextRequest) {
   if (error || !data.user) return fail("Login gagal. Coba lagi.");
   if (isAdmin) return NextResponse.redirect(`${origin}${next}`);
 
-  // a new player fills in the profile first, then continues to `next`
-  const { data: profile } = await supabase.from("profiles").select("user_id").eq("user_id", data.user.id).maybeSingle();
-  if (!profile) return NextResponse.redirect(`${origin}/akun/lengkapi?next=${encodeURIComponent(next)}`);
-  return NextResponse.redirect(`${origin}${next}`);
+  // a new player fills in the profile (and answers "Ini saya?") first, then continues to `next`
+  const { data: profile } = await supabase.from("profiles").select("player_id, claim_player_id").eq("user_id", data.user.id).maybeSingle();
+  return NextResponse.redirect(`${origin}${stepPath(accountStep(profile), next)}`);
 }

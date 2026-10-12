@@ -10,6 +10,12 @@ export const SPONSOR_LOGOS = [
   "/images/sponsors/kaliandra.jpeg",
 ];
 
+/**
+ * "Lihat demo akun" on /masuk and the /akun-demo pages: the account UI with sample data, no login.
+ * Hidden unless NEXT_PUBLIC_ACCOUNT_DEMO=1 (any environment); /akun-demo is a 404 otherwise.
+ */
+export const ACCOUNT_DEMO = process.env.NEXT_PUBLIC_ACCOUNT_DEMO === "1";
+
 /** Media partner logos — shown smaller, separate from the main sponsors. */
 export const MEDIA_PARTNER_LOGOS = [
   "/images/sponsors/padellens.png",

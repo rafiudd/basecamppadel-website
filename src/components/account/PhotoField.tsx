@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Avatar } from "@/components/ui/Avatar";
 import { toast } from "@/components/ui/Toast";
 import { PHOTO_MAX_BYTES } from "@/lib/accountRules";
+import { InitialsAvatar } from "./InitialsAvatar";
 import { secondaryButton } from "./styles";
 
 const SIZE = 512;
@@ -71,7 +71,7 @@ export function PhotoField({ name, current }: { name: string; current: string | 
         // eslint-disable-next-line @next/next/no-img-element -- local preview / Supabase Storage avatar
         <img src={shown} alt="" className="w-20 h-20 rounded-full object-cover flex-none bg-indigo" />
       ) : (
-        <Avatar name={name || "?"} size={80} />
+        <InitialsAvatar name={name} className="w-20 h-20 text-2xl" />
       )}
       <div className="flex flex-col gap-2 items-start">
         <div className="flex gap-2 flex-wrap">

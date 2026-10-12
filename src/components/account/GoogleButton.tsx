@@ -19,6 +19,21 @@ export function GoogleButton({ next }: { next: string }) {
 
   async function signIn() {
     setBusy(true);
+    const fail = (message: string) => {
+      toast.error(message);
+      setBusy(false);
+    };
+    // A disabled provider would otherwise land the player on Supabase's raw JSON error page.
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`, {
+        headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
+      });
+      const settings = (await res.json()) as { external?: { google?: boolean } };
+      if (settings.external?.google === false) return fail("Login Google belum diaktifkan. Hubungi admin Basecamp.");
+    } catch {
+      // settings unreachable: try the login anyway
+    }
+
     const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -27,10 +42,7 @@ export function GoogleButton({ next }: { next: string }) {
       },
     });
     // on success the browser is already leaving for Google, so keep the spinner
-    if (error) {
-      toast.error("Login dengan Google gagal. Coba lagi.");
-      setBusy(false);
-    }
+    if (error) fail("Login dengan Google gagal. Coba lagi.");
   }
 
   return (

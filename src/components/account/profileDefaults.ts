@@ -1,0 +1,42 @@
+import { formatWhatsapp } from "@/lib/accountRules";
+import type { Profile } from "@/lib/database.types";
+import type { ProfileDefaults } from "./ProfileForm";
+
+/** First visit to Lengkapi profil: only what Google gave us. */
+export function blankProfileDefaults(googleName: string): ProfileDefaults {
+  return {
+    fullName: googleName,
+    nickname: googleName.trim().split(/\s+/)[0] ?? "",
+    gender: "",
+    region: "",
+    whatsapp: "",
+    instagram: "",
+    playDuration: "",
+    hand: "",
+    position: "",
+    selfLevel: "",
+    photoUrl: null,
+  };
+}
+
+export type EditableProfile = Pick<
+  Profile,
+  "full_name" | "nickname" | "gender" | "region" | "whatsapp" | "instagram" | "play_duration" | "dominant_hand" | "position" | "self_level" | "photo_url"
+>;
+
+/** Edit profil: the saved profile as form values. */
+export function profileDefaults(p: EditableProfile): ProfileDefaults {
+  return {
+    fullName: p.full_name,
+    nickname: p.nickname,
+    gender: p.gender,
+    region: p.region,
+    whatsapp: formatWhatsapp(p.whatsapp),
+    instagram: p.instagram,
+    playDuration: p.play_duration ?? "",
+    hand: p.dominant_hand ?? "",
+    position: p.position ?? "",
+    selfLevel: p.self_level ?? "",
+    photoUrl: p.photo_url,
+  };
+}

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { guard, str, type Supa } from "@/lib/server/action";
-import { normalizeWhatsapp, PHOTO_MAX_BYTES, safeNext } from "@/lib/accountRules";
+import { normalizeInstagram, normalizeWhatsapp, PHOTO_MAX_BYTES, safeNext, type PlayDuration, type SelfLevel } from "@/lib/accountRules";
 import type { ActionState } from "@/lib/actionState";
 import type { CourtPosition, DominantHand, Gender } from "@/lib/database.types";
 
@@ -38,8 +38,10 @@ export async function saveProfile(_: ActionState, fd: FormData): Promise<ActionS
     const { supabase, user } = await signedIn();
     const whatsapp = normalizeWhatsapp(str(fd, "whatsapp"));
     if (!str(fd, "nickname")) throw new Error("Nama panggilan wajib diisi.");
-    if (!str(fd, "gender")) throw new Error("Pilih gender dulu.");
+    if (!str(fd, "gender")) throw new Error("Pilih kategori dulu.");
     if (!whatsapp) throw new Error("Nomor WA tidak valid. Contoh: 0812-3456-7890.");
+    const instagram = normalizeInstagram(str(fd, "instagram"));
+    if (instagram === null) throw new Error("Username Instagram tidak valid. Contoh: @basecamppadel.id");
 
     const photo = await uploadAvatar(supabase, user.id, fd.get("photo") as File | null);
     const { data, error } = await supabase.rpc("account_save_profile", {
@@ -51,6 +53,10 @@ export async function saveProfile(_: ActionState, fd: FormData): Promise<ActionS
       p_position: str(fd, "position") as CourtPosition | "",
       p_photo_url: photo,
       p_remove_photo: !photo && fd.get("remove_photo") === "on",
+      p_full_name: str(fd, "full_name"),
+      p_instagram: instagram,
+      p_play_duration: str(fd, "play_duration") as PlayDuration | "",
+      p_self_level: str(fd, "self_level") as SelfLevel | "",
     });
     if (error) throw new Error(error.message);
     result = data ?? "";

@@ -40,3 +40,37 @@ export function accountStep(profile: { player_id: string | null; claim_player_id
   if (!profile) return "profile";
   return profile.player_id || profile.claim_player_id ? "ready" : "choose";
 }
+
+/** Where a visitor at `step` (null = signed out) goes next on the way to `next`. */
+export function stepPath(step: AccountStep | null, next: string): string {
+  const q = `?next=${encodeURIComponent(next)}`;
+  if (!step) return `/masuk${q}`;
+  if (step === "profile") return `/akun/lengkapi${q}`;
+  if (step === "choose") return `/akun/sambungkan${q}`;
+  return next;
+}
+
+/** "Udah main padel berapa lama?" (stored key → label). */
+export const PLAY_DURATIONS = [
+  { value: "lt3m", label: "Kurang dari 3 bulan" },
+  { value: "3to6m", label: "3–6 bulan" },
+  { value: "6to12m", label: "6–12 bulan" },
+  { value: "1to2y", label: "1–2 tahun" },
+  { value: "gt2y", label: "Lebih dari 2 tahun" },
+] as const;
+export type PlayDuration = (typeof PLAY_DURATIONS)[number]["value"];
+
+/** "Level (perkiraan sendiri)": the coach's assessment refines it later. */
+export const SELF_LEVELS = ["Pemula", "Beginner", "Intermediate"] as const;
+export type SelfLevel = (typeof SELF_LEVELS)[number];
+
+/**
+ * "@nadia.putri", "nadia.putri" or an instagram.com profile link → "nadia.putri"; "" when empty,
+ * null when it is not a valid handle.
+ */
+export function normalizeInstagram(input: string): string | null {
+  let s = input.trim();
+  if (!s) return "";
+  s = s.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/[/?#].*$/, "").replace(/^@/, "");
+  return /^[A-Za-z0-9._]{1,30}$/.test(s) ? s : null;
+}

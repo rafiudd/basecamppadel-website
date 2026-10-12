@@ -2,6 +2,7 @@
 // Regenerate with `supabase gen types typescript` once the project is linked.
 
 import type { FinalStage, KoStage, Stage } from "@/lib/competition";
+import type { PlayDuration, SelfLevel } from "@/lib/accountRules";
 
 export type Gender = "M" | "F";
 export type Serve = "A" | "B";
@@ -39,10 +40,57 @@ export type Profile = {
   dominant_hand: DominantHand | null;
   position: CourtPosition | null;
   photo_url: string | null;
+  instagram: string; // handle without "@"
+  play_duration: PlayDuration | null;
+  self_level: SelfLevel | null;
   player_id: string | null;
   claim_player_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/**
+ * Coaching (schema owned by the admin coaching task, created in the database outside this repo's
+ * migrations). Players see an assessment once it is submitted and published.
+ */
+export type CoachingSkill = {
+  id: string;
+  type: "teknik" | "in_game";
+  category: string;
+  name: string;
+  sort_order: number;
+  active: boolean;
+  created_at: string;
+};
+export type Coach = { id: string; name: string; user_id: string | null; active: boolean; created_at: string };
+export type CoachingSession = {
+  id: string;
+  title: string;
+  session_date: string;
+  venue_id: string | null;
+  venue_name: string;
+  event_id: string | null;
+  default_skill_ids: string[];
+  status: "draft" | "active" | "finished";
+  created_at: string;
+};
+export type CoachingAssessment = {
+  id: string;
+  session_id: string;
+  player_id: string;
+  coach_id: string | null;
+  group_id: string | null;
+  scores: Record<string, number>; // skill id -> 1..5 in 0.5 steps
+  active_skill_ids: string[];
+  evaluation: string; // "- line" per point
+  next_practice: string;
+  published_to_player: boolean;
+  status: "draft" | "submitted";
+  computed_level: string | null;
+  override_level: string | null;
+  override_reason: string | null;
+  updated_at: string;
+  created_at: string;
 };
 
 export type Session = {
@@ -314,6 +362,30 @@ export type Database = {
         Update: Partial<Profile>;
         Relationships: [];
       };
+      coaching_skills: {
+        Row: CoachingSkill;
+        Insert: Insert<CoachingSkill, "type" | "category" | "name">;
+        Update: Partial<CoachingSkill>;
+        Relationships: [];
+      };
+      coaches: {
+        Row: Coach;
+        Insert: Insert<Coach, "name">;
+        Update: Partial<Coach>;
+        Relationships: [];
+      };
+      coaching_sessions: {
+        Row: CoachingSession;
+        Insert: Insert<CoachingSession, "title">;
+        Update: Partial<CoachingSession>;
+        Relationships: [];
+      };
+      coaching_assessments: {
+        Row: CoachingAssessment;
+        Insert: Insert<CoachingAssessment, "session_id" | "player_id">;
+        Update: Partial<CoachingAssessment>;
+        Relationships: [];
+      };
       admin_users: {
         Row: { user_id: string; created_at: string };
         Insert: { user_id: string; created_at?: string };
@@ -419,6 +491,10 @@ export type Database = {
           p_position: CourtPosition | "";
           p_photo_url: string | null;
           p_remove_photo?: boolean;
+          p_full_name?: string;
+          p_instagram?: string;
+          p_play_duration?: PlayDuration | "";
+          p_self_level?: SelfLevel | "";
         };
         Returns: "linked" | "choose" | "created" | "saved";
       };
