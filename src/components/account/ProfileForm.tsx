@@ -94,11 +94,16 @@ const GoogleG = () => (
   </svg>
 );
 
-/** The Google account a profile belongs to: initials, name, email, "Terhubung". */
-export function GoogleAccount({ name, email }: { name: string; email: string }) {
+/** The Google account a profile belongs to: its picture (or initials), name, email, "Terhubung". */
+export function GoogleAccount({ name, email, photoUrl }: { name: string; email: string; photoUrl?: string | null }) {
   return (
     <div className="flex items-center gap-3 bg-[#F1EFF7] rounded-xl px-3.5 py-3">
-      <InitialsAvatar name={name || email} className="w-11 h-11 text-base" />
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- Google account picture
+        <img src={photoUrl} alt="" referrerPolicy="no-referrer" className="w-11 h-11 rounded-full object-cover flex-none bg-volt" />
+      ) : (
+        <InitialsAvatar name={name || email} className="w-11 h-11 text-base" />
+      )}
       <div className="min-w-0 flex-1">
         <div className="font-bold text-input truncate">{name || email}</div>
         <div className="text-caption text-ink/65 flex items-center gap-1.5 min-w-0">
@@ -132,6 +137,7 @@ export function ProfileForm({
   next,
   email,
   googleName,
+  googleAvatar = null,
   defaults,
   categoryLocked = false,
   action = saveProfile,
@@ -140,6 +146,7 @@ export function ProfileForm({
   next: string;
   email: string;
   googleName: string;
+  googleAvatar?: string | null;
   defaults: ProfileDefaults;
   categoryLocked?: boolean;
   /** Defaults to saving the account; the demo passes a no-op. */
@@ -179,7 +186,7 @@ export function ProfileForm({
 
         <div className={`${lightCard} flex flex-col gap-5.5`}>
           {/* on Edit profil the Google account sits in the "Akun" card below the form instead */}
-          {mode === "setup" && <GoogleAccount name={googleName || nickname} email={email} />}
+          {mode === "setup" && <GoogleAccount name={googleName || nickname} email={email} photoUrl={googleAvatar} />}
 
           <h2 className={sectionHeading}>Data diri</h2>
 

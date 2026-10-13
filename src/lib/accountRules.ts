@@ -74,3 +74,15 @@ export function normalizeInstagram(input: string): string | null {
   s = s.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/[/?#].*$/, "").replace(/^@/, "");
   return /^[A-Za-z0-9._]{1,30}$/.test(s) ? s : null;
 }
+
+/** Name and picture Google gave the account (Supabase keeps them in user_metadata). */
+export function googleIdentity(meta: Record<string, unknown> | null | undefined): { name: string; avatarUrl: string | null } {
+  const pick = (...keys: string[]) => keys.map((k) => meta?.[k]).find((v): v is string => typeof v === "string" && v.trim() !== "");
+  const avatar = pick("avatar_url", "picture");
+  return { name: pick("full_name", "name") ?? "", avatarUrl: avatar && /^https:\/\//.test(avatar) ? avatar : null };
+}
+
+/** Google profile pictures come as small thumbnails ("=s96-c"); ask for one big enough for the avatar. */
+export function largeGoogleAvatar(url: string, size = 512): string {
+  return /=s\d+(-c)?$/.test(url) ? url.replace(/=s\d+(-c)?$/, `=s${size}-c`) : url;
+}

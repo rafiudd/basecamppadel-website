@@ -1,3 +1,5 @@
+/** Contact for players (privacy & terms pages); also the consent screen's support email. */
+export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "padellensid@gmail.com";
 export const WHATSAPP_URL = process.env.NEXT_PUBLIC_WHATSAPP_URL ?? "https://wa.me/";
 export const YOUTUBE_URL =
   process.env.NEXT_PUBLIC_YOUTUBE_URL ?? "https://youtube.com/@basecamppadel/live";

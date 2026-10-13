@@ -55,3 +55,16 @@ test("normalizeInstagram: @handle, bare handle, or profile link", async () => {
   assert.equal(normalizeInstagram("nadia putri"), null);
   assert.equal(normalizeInstagram("@" + "a".repeat(31)), null);
 });
+
+test("googleIdentity: name and https picture from user_metadata", async () => {
+  const { googleIdentity, largeGoogleAvatar } = await import("../src/lib/accountRules.ts");
+  assert.deepEqual(googleIdentity({ full_name: "AGIL01", avatar_url: "https://lh3.googleusercontent.com/a/x=s96-c" }), {
+    name: "AGIL01",
+    avatarUrl: "https://lh3.googleusercontent.com/a/x=s96-c",
+  });
+  assert.deepEqual(googleIdentity({ name: "Nadia", picture: "https://lh3.googleusercontent.com/a/y" }), { name: "Nadia", avatarUrl: "https://lh3.googleusercontent.com/a/y" });
+  assert.deepEqual(googleIdentity({ avatar_url: "javascript:alert(1)" }), { name: "", avatarUrl: null });
+  assert.deepEqual(googleIdentity(undefined), { name: "", avatarUrl: null });
+  assert.equal(largeGoogleAvatar("https://lh3.googleusercontent.com/a/x=s96-c"), "https://lh3.googleusercontent.com/a/x=s512-c");
+  assert.equal(largeGoogleAvatar("https://lh3.googleusercontent.com/a/y"), "https://lh3.googleusercontent.com/a/y");
+});

@@ -10,6 +10,7 @@ type Action = (state: ActionState, fd: FormData) => Promise<ActionState>;
 export function ProfileEditView({
   profile,
   email,
+  googleAvatar = null,
   backHref,
   categoryLocked,
   saveAction,
@@ -17,6 +18,7 @@ export function ProfileEditView({
 }: {
   profile: EditableProfile;
   email: string;
+  googleAvatar?: string | null;
   backHref: string;
   categoryLocked: boolean;
   saveAction?: Action;
@@ -30,10 +32,10 @@ export function ProfileEditView({
         email={email}
         googleName={profile.full_name}
         categoryLocked={categoryLocked}
-        defaults={profileDefaults(profile)}
+        defaults={profileDefaults(profile, googleAvatar)}
         action={saveAction}
       />
-      <AccountSettings name={profile.full_name || profile.nickname} email={email} action={deleteAction} />
+      <AccountSettings name={profile.full_name || profile.nickname} email={email} photoUrl={googleAvatar} action={deleteAction} />
     </AccountPageLayout>
   );
 }

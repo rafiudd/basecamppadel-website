@@ -7,11 +7,13 @@ import { blankProfileDefaults } from "./profileDefaults";
 export function ProfileSetupView({
   email,
   googleName,
+  googleAvatar = null,
   next,
   action,
 }: {
   email: string;
   googleName: string;
+  googleAvatar?: string | null;
   next: string;
   action?: (state: ActionState, fd: FormData) => Promise<ActionState>;
 }) {
@@ -25,7 +27,7 @@ export function ProfileSetupView({
         </>
       }
     >
-      <ProfileForm mode="setup" next={next} email={email} googleName={googleName} defaults={blankProfileDefaults(googleName)} action={action} />
+      <ProfileForm mode="setup" next={next} email={email} googleName={googleName} googleAvatar={googleAvatar} defaults={blankProfileDefaults(googleName, googleAvatar)} action={action} />
     </AccountPageLayout>
   );
 }

@@ -2,8 +2,8 @@ import { formatWhatsapp } from "@/lib/accountRules";
 import type { Profile } from "@/lib/database.types";
 import type { ProfileDefaults } from "./ProfileForm";
 
-/** First visit to Lengkapi profil: only what Google gave us. */
-export function blankProfileDefaults(googleName: string): ProfileDefaults {
+/** First visit to Lengkapi profil: only what Google gave us (the photo defaults to the Google picture). */
+export function blankProfileDefaults(googleName: string, googleAvatar: string | null = null): ProfileDefaults {
   return {
     fullName: googleName,
     nickname: googleName.trim().split(/\s+/)[0] ?? "",
@@ -15,7 +15,7 @@ export function blankProfileDefaults(googleName: string): ProfileDefaults {
     hand: "",
     position: "",
     selfLevel: "",
-    photoUrl: null,
+    photoUrl: googleAvatar,
   };
 }
 
@@ -24,8 +24,8 @@ export type EditableProfile = Pick<
   "full_name" | "nickname" | "gender" | "region" | "whatsapp" | "instagram" | "play_duration" | "dominant_hand" | "position" | "self_level" | "photo_url"
 >;
 
-/** Edit profil: the saved profile as form values. */
-export function profileDefaults(p: EditableProfile): ProfileDefaults {
+/** Edit profil: the saved profile as form values; no photo yet shows the Google picture as the default. */
+export function profileDefaults(p: EditableProfile, googleAvatar: string | null = null): ProfileDefaults {
   return {
     fullName: p.full_name,
     nickname: p.nickname,
@@ -37,6 +37,6 @@ export function profileDefaults(p: EditableProfile): ProfileDefaults {
     hand: p.dominant_hand ?? "",
     position: p.position ?? "",
     selfLevel: p.self_level ?? "",
-    photoUrl: p.photo_url,
+    photoUrl: p.photo_url ?? googleAvatar,
   };
 }

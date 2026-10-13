@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PublicShell } from "@/components/PublicShell";
 import { ProfileSetupView } from "@/components/account/ProfileSetupView";
 import { requireStep } from "@/lib/account";
-import { safeNext } from "@/lib/accountRules";
+import { googleIdentity, safeNext } from "@/lib/accountRules";
 
 export const metadata: Metadata = { title: "Lengkapi profil — Basecamp Padel", robots: { index: false } };
 
@@ -10,10 +10,11 @@ export const metadata: Metadata = { title: "Lengkapi profil — Basecamp Padel",
 export default async function LengkapiProfilPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const next = safeNext((await searchParams).next);
   const { user } = await requireStep("profile", next);
+  const google = googleIdentity(user.user_metadata);
 
   return (
     <PublicShell>
-      <ProfileSetupView email={user.email ?? ""} googleName={String(user.user_metadata?.full_name ?? user.user_metadata?.name ?? "")} next={next} />
+      <ProfileSetupView email={user.email ?? ""} googleName={google.name} googleAvatar={google.avatarUrl} next={next} />
     </PublicShell>
   );
 }

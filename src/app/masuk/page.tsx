@@ -76,7 +76,15 @@ export default async function MasukPage({ searchParams }: { searchParams: Promis
               Login pertama otomatis bikin akun. Setelah itu kamu cukup isi profil singkat (1 menit).
             </p>
             <p className="m-0 text-xs leading-relaxed text-ink/55">
-              Dengan masuk, kamu setuju dengan Syarat &amp; Kebijakan Privasi Basecamp Padel.
+              Dengan masuk, kamu setuju dengan{" "}
+              <Link href="/syarat" className="text-indigo font-semibold">
+                Syarat
+              </Link>{" "}
+              &amp;{" "}
+              <Link href="/privasi" className="text-indigo font-semibold">
+                Kebijakan Privasi
+              </Link>{" "}
+              Basecamp Padel.
             </p>
           </div>
         </section>

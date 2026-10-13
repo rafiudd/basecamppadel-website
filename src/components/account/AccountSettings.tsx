@@ -15,10 +15,12 @@ import { lightCard, sectionHeading } from "./styles";
 export function AccountSettings({
   name,
   email,
+  photoUrl,
   action = deleteAccount,
 }: {
   name: string;
   email: string;
+  photoUrl?: string | null;
   action?: (state: ActionState, fd: FormData) => Promise<ActionState>;
 }) {
   const [open, setOpen] = useState(false);
@@ -30,7 +32,7 @@ export function AccountSettings({
         <h2 className={sectionHeading}>Akun</h2>
         <p className="m-0 mt-1 text-caption text-ink/60">Kamu masuk pakai akun Google ini. Email-nya tidak bisa diubah.</p>
       </div>
-      <GoogleAccount name={name} email={email} />
+      <GoogleAccount name={name} email={email} photoUrl={photoUrl} />
 
       <div className="border-t border-ink/10 pt-5 flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
         <div className="flex-1">

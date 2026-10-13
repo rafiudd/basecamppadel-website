@@ -69,7 +69,7 @@ export function PhotoField({ name, current }: { name: string; current: string | 
     <div className="flex items-center gap-4">
       {shown ? (
         // eslint-disable-next-line @next/next/no-img-element -- local preview / Supabase Storage avatar
-        <img src={shown} alt="" className="w-20 h-20 rounded-full object-cover flex-none bg-indigo" />
+        <img src={shown} alt="" referrerPolicy="no-referrer" className="w-20 h-20 rounded-full object-cover flex-none bg-indigo" />
       ) : (
         <InitialsAvatar name={name} className="w-20 h-20 text-2xl" />
       )}
