@@ -158,12 +158,9 @@ test("raporHtml: escapes text, half segment, title is the file name", async () =
   assert.doesNotMatch(html, /Perlu dilatih/);
 });
 
-test("COACHING_SKILLS: 23 teknik + 16 in-game, unique keys, lookup by name", async () => {
-  const { COACHING_SKILLS, skillKeyByLabel } = await import("../src/lib/coachingSkills.ts");
+test("COACHING_SKILLS (default list): 23 teknik + 16 in-game, unique keys", async () => {
+  const { COACHING_SKILLS } = await import("../src/lib/coachingSkills.ts");
   assert.equal(COACHING_SKILLS.filter((s) => s.kind === "teknik").length, 23);
   assert.equal(COACHING_SKILLS.filter((s) => s.kind === "ingame").length, 16);
   assert.equal(new Set(COACHING_SKILLS.map((s) => s.key)).size, 39);
-  assert.equal(skillKeyByLabel(" volley fh "), "volley_fh");
-  assert.equal(skillKeyByLabel("Transisi nyerang ↔ bertahan"), "transition");
-  assert.equal(skillKeyByLabel("Tidak ada"), null);
 });

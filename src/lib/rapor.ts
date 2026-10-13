@@ -1,11 +1,9 @@
-import { averageLabel, averageScore, raporFileName, reportHighlights, scoreLabel, type CoachReport } from "@/lib/coachingRules";
-import { COACHING_SKILLS } from "@/lib/coachingSkills";
+import { averageLabel, averageScore, raporFileName, reportHighlights, scoreLabel, type CoachReport, type SkillDef } from "@/lib/coachingRules";
 import { raporHtml } from "@/lib/raporTemplate";
 
 /** D.6: one coaching report as the printable rapor page (opens the print dialog on load). */
-const SKILL_BY_KEY = new Map(COACHING_SKILLS.map((s) => [s.key, s]));
-
-export function raporResponse(name: string, report: CoachReport): Response {
+export function raporResponse(name: string, report: CoachReport, skills: SkillDef[]): Response {
+  const SKILL_BY_KEY = new Map(skills.map((s) => [s.key, s]));
   const rated = report.ratings
     .map((r) => ({ label: SKILL_BY_KEY.get(r.skill_key)?.label ?? r.skill_key, sort: SKILL_BY_KEY.get(r.skill_key)?.sort ?? 999, score: r.score }))
     .sort((a, b) => a.sort - b.sort);

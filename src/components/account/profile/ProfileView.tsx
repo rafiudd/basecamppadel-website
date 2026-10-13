@@ -12,8 +12,8 @@ import {
   type CoachReport,
   type EventRow,
   type HistoryRow,
+  type SkillDef,
 } from "@/lib/coachingRules";
-import { COACHING_SKILLS } from "@/lib/coachingSkills";
 import { StatsTab } from "./StatsTab";
 import { NotesTab } from "./NotesTab";
 import { HistoryTab } from "./HistoryTab";
@@ -53,14 +53,22 @@ export function SignOutLabel() {
   );
 }
 
-/**
- * Level color next to the name (D.1). The color rule is not decided yet (pins vs players.level), so
- * nothing is passed and the badge stays hidden.
- */
-function LevelBadge({ color, label }: { color: string | null; label: string }) {
-  if (!color) return null;
-  return <span role="img" aria-label={label} title={label} className="w-5 h-5 rounded-full flex-none shadow-[inset_0_0_0_2px_rgb(251_247_241/0.5)]" style={{ background: color }} />;
+/** D.1: the level's color next to the name, no level name on screen (it is the tooltip / screen-reader label). */
+function LevelBadge({ level }: { level: ProfileLevel | null | undefined }) {
+  if (!level) return null;
+  return (
+    <span
+      role="img"
+      aria-label={`Level ${level.name}`}
+      title={`Level ${level.name}`}
+      className="w-5 h-5 md:w-6 md:h-6 rounded-full flex-none shadow-[inset_0_0_0_2px_rgb(251_247_241/0.5)]"
+      style={{ background: level.color }}
+    />
+  );
 }
+
+/** Level set by the coaching assessments (players.level / level_color). */
+export type ProfileLevel = { name: string; color: string };
 
 /** The player profile (D.1–D.5), shared by /akun (real data) and /akun-demo (sample data). */
 export function ProfileView({
@@ -70,7 +78,9 @@ export function ProfileView({
   year,
   tersambung,
   claimedName,
+  skills,
   reports,
+  level,
   history,
   wins,
   losses,
@@ -84,7 +94,9 @@ export function ProfileView({
   year?: string;
   tersambung?: boolean;
   claimedName?: string | null;
+  skills: SkillDef[];
   reports: CoachReport[];
+  level?: ProfileLevel | null;
   history: { history: HistoryRow[]; awards: AwardRow[]; events: EventRow[] };
   wins: number;
   losses: number;
@@ -93,7 +105,7 @@ export function ProfileView({
   /** "Keluar", next to "Edit profil" (a server-action form, or a plain link in the demo). */
   signOut: React.ReactNode;
 }) {
-  const boards = skillBoards(COACHING_SKILLS, reports);
+  const boards = skillBoards(skills, reports);
   const averages = sessionAverages(reports);
   const latest = filterReports(reports, {})[0] ?? null;
   const events = eventHistory(history.history, history.awards, history.events);
@@ -128,7 +140,7 @@ export function ProfileView({
               <div className="text-caption tracking-[0.12em] font-bold text-volt">PROFIL SAYA</div>
               <div className="flex items-center gap-3 min-w-0">
                 <h1 className="font-display font-bold text-[28px] md:text-5xl leading-none m-0 truncate">{displayName}</h1>
-                <LevelBadge color={null} label="Level" />
+                <LevelBadge level={level} />
               </div>
             </div>
             <Link href={`${basePath}/edit`} className={`${headerButton} hidden! md:inline-flex!`}>
@@ -195,7 +207,7 @@ export function ProfileView({
             <NotesTab
               shown={filterReports(reports, { coach, year })}
               newestId={latest?.id ?? null}
-              summaries={reportSummaries(COACHING_SKILLS, reports)}
+              summaries={reportSummaries(skills, reports)}
               {...reportFilterOptions(reports)}
               coach={coach}
               year={year}

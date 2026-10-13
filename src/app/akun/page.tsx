@@ -1,11 +1,25 @@
 import type { Metadata } from "next";
 import { ActionForm } from "@/components/admin/ActionForm";
-import { ProfileView, SignOutLabel, parseTab, signOutButton } from "@/components/account/profile/ProfileView";
+import { ProfileView, SignOutLabel, parseTab, signOutButton, type ProfileLevel } from "@/components/account/profile/ProfileView";
 import { signOut } from "@/app/akun/actions";
 import { requireAccount } from "@/lib/account";
+import { LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
 import { loadCoaching, loadEventHistory } from "@/lib/profileData";
 
 export const metadata: Metadata = { title: "Profil saya — Basecamp Padel", robots: { index: false } };
+
+/**
+ * The coaching level for the header badge: shown once the player has a published assessment (or an
+ * admin set it). The color follows the level definition; the stored level_color is only a fallback.
+ */
+function profileLevel(
+  player: { level: string; level_color?: string; level_overridden?: boolean } | null,
+  assessed: boolean,
+): ProfileLevel | null {
+  if (!player?.level || !(assessed || player.level_overridden)) return null;
+  const color = LEVEL_DEFINITIONS[player.level as PlayerLevelName]?.color ?? player.level_color;
+  return color ? { name: player.level, color } : null;
+}
 
 export default async function AkunPage({
   searchParams,
@@ -15,9 +29,9 @@ export default async function AkunPage({
   const params = await searchParams;
   const { supabase, profile } = await requireAccount("/akun");
 
-  const [{ data: player }, { data: claimed }, reports, history] = await Promise.all([
+  const [{ data: player }, { data: claimed }, { skills, reports }, history] = await Promise.all([
     profile.player_id
-      ? supabase.from("players").select("wins, losses").eq("id", profile.player_id).maybeSingle()
+      ? supabase.from("players").select("wins, losses, level, level_color, level_overridden").eq("id", profile.player_id).maybeSingle()
       : Promise.resolve({ data: null }),
     profile.claim_player_id
       ? supabase.from("players").select("name").eq("id", profile.claim_player_id).maybeSingle()
@@ -34,7 +48,9 @@ export default async function AkunPage({
       year={params.year}
       tersambung={!!params.tersambung}
       claimedName={claimed?.name}
+      skills={skills}
       reports={reports}
+      level={profileLevel(player, reports.length > 0)}
       history={history}
       wins={player?.wins ?? 0}
       losses={player?.losses ?? 0}

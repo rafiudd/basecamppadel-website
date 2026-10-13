@@ -12,8 +12,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { supabase, user, profile } = await getAccount();
   if (!user) return NextResponse.redirect(new URL(`/masuk?next=${encodeURIComponent("/akun?tab=catatan")}`, request.url));
 
-  const reports = await loadCoaching(supabase, profile?.player_id ?? null);
+  const { skills, reports } = await loadCoaching(supabase, profile?.player_id ?? null);
   const report = reports.find((r) => r.id === id);
   if (!profile || !report) return new NextResponse("Rapor tidak ditemukan.", { status: 404 });
-  return raporResponse(profile.nickname, report);
+  return raporResponse(profile.nickname, report, skills);
 }

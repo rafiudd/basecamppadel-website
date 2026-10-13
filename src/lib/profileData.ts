@@ -1,27 +1,29 @@
 import type { Supa } from "@/lib/server/action";
-import { splitNotes, type AwardRow, type CoachReport, type EventRow, type HistoryRow } from "@/lib/coachingRules";
-import { COACHING_SKILLS, skillKeyByLabel } from "@/lib/coachingSkills";
-
-const SKILL_KEYS = new Set(COACHING_SKILLS.map((s) => s.key));
+import { splitNotes, type AwardRow, type CoachReport, type EventRow, type HistoryRow, type SkillDef } from "@/lib/coachingRules";
+import { COACHING_SKILLS } from "@/lib/coachingSkills";
 
 /**
- * The admin coaching tables key `scores` by their own skill row id (a uuid per database), so ids are
- * translated to our hardcoded keys by skill name. Scores already keyed by our keys pass through;
- * once the admin side stores those, this lookup can go.
+ * The skill list as the admin keeps it in Master Teknik (active ones, in their order); scores are
+ * keyed by these row ids. Falls back to the default list when the table is empty.
  */
-async function skillKeyResolver(supabase: Supa): Promise<(id: string) => string | null> {
-  const { data } = await supabase.from("coaching_skills").select("id, name");
-  const byId = new Map((data ?? []).map((s) => [s.id, skillKeyByLabel(s.name)]));
-  return (id) => (SKILL_KEYS.has(id) ? id : (byId.get(id) ?? null));
+async function loadSkills(supabase: Supa): Promise<SkillDef[]> {
+  const { data } = await supabase
+    .from("coaching_skills")
+    .select("id, type, category, name, sort_order")
+    .eq("active", true)
+    .order("sort_order");
+  if (!data?.length) return COACHING_SKILLS;
+  return data.map((s) => ({ key: s.id, kind: s.type === "in_game" ? "ingame" : "teknik", group_label: s.category, label: s.name, sort: s.sort_order }));
 }
 
 /**
- * The player's submitted, published coaching assessments (oldest-first order is up to the rules).
- * Filters on player_id explicitly: the assessments read policy only checks `published_to_player`,
- * not whose assessment it is.
+ * The skill list plus the player's submitted, published coaching assessments (oldest-first order
+ * is up to the rules). RLS already limits a player to their own sent ones (0014); the explicit
+ * filters keep an admin or coach who is also a player from seeing everyone's here.
  */
-export async function loadCoaching(supabase: Supa, playerId: string | null): Promise<CoachReport[]> {
-  if (!playerId) return [];
+export async function loadCoaching(supabase: Supa, playerId: string | null): Promise<{ skills: SkillDef[]; reports: CoachReport[] }> {
+  const skills = await loadSkills(supabase);
+  if (!playerId) return { skills, reports: [] };
 
   const { data: rows } = await supabase
     .from("coaching_assessments")
@@ -29,18 +31,18 @@ export async function loadCoaching(supabase: Supa, playerId: string | null): Pro
     .eq("player_id", playerId)
     .eq("status", "submitted")
     .eq("published_to_player", true);
-  if (!rows?.length) return [];
+  if (!rows?.length) return { skills, reports: [] };
 
   const coachIds = [...new Set(rows.map((r) => r.coach_id).filter((id): id is string => !!id))];
-  const [{ data: sessions }, { data: coaches }, skillKey] = await Promise.all([
+  const [{ data: sessions }, { data: coaches }] = await Promise.all([
     supabase.from("coaching_sessions").select("id, title, session_date, venue_name").in("id", [...new Set(rows.map((r) => r.session_id))]),
     coachIds.length ? supabase.from("coaches").select("id, name").in("id", coachIds) : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-    skillKeyResolver(supabase),
   ]);
+  const known = new Set(skills.map((s) => s.key));
   const sessionById = new Map((sessions ?? []).map((s) => [s.id, s]));
   const coachById = new Map((coaches ?? []).map((c) => [c.id, c.name]));
 
-  return rows.flatMap((r) => {
+  const reports = rows.flatMap((r) => {
     const session = sessionById.get(r.session_id);
     if (!session) return [];
     return [{
@@ -54,13 +56,14 @@ export async function loadCoaching(supabase: Supa, playerId: string | null): Pro
       },
       evaluation: splitNotes(r.evaluation),
       next_practice: splitNotes(r.next_practice),
-      // only skills that got a score count as rated (picked-but-empty ones stay "belum dinilai")
-      ratings: Object.entries(r.scores ?? {}).flatMap(([id, score]) => {
-        const skill_key = skillKey(id);
-        return skill_key && Number(score) > 0 ? [{ skill_key, score: Number(score) }] : [];
-      }),
+      // only skills that got a score count as rated (picked-but-empty ones stay "belum dinilai");
+      // scores of skills the admin has since turned off are left out
+      ratings: Object.entries(r.scores ?? {}).flatMap(([skill_key, score]) =>
+        known.has(skill_key) && Number(score) > 0 ? [{ skill_key, score: Number(score) }] : [],
+      ),
     }];
   });
+  return { skills, reports };
 }
 
 /** Everything the "Riwayat event" tab groups: match history with its match, awards, and events. */

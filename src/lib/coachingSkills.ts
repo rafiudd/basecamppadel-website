@@ -1,6 +1,7 @@
 /**
- * The 39 coaching skills, hardcoded: the list is fixed by the curriculum and rarely changes. Pure
- * (no imports) so the rules and tests can use it. The admin coaching task can key scores by `key`.
+ * The default 39 coaching skills (same as the admin's initial Master Teknik seed). The real list
+ * lives in `coaching_skills`, which the admin can edit; this one serves the demo and is the fallback
+ * when that table is empty. Pure (type import only).
  */
 
 import type { SkillDef } from "./coachingRules";
@@ -48,10 +49,3 @@ const LIST: [key: string, kind: SkillDef["kind"], group: string, label: string][
 ];
 
 export const COACHING_SKILLS: SkillDef[] = LIST.map(([key, kind, group_label, label], i) => ({ key, kind, group_label, label, sort: i + 1 }));
-
-const KEY_BY_LABEL = new Map(COACHING_SKILLS.map((s) => [s.label.toLowerCase(), s.key]));
-
-/** A skill name as stored by the admin coaching tables → our key (null when it is not in the list). */
-export function skillKeyByLabel(label: string): string | null {
-  return KEY_BY_LABEL.get(label.trim().toLowerCase()) ?? null;
-}
