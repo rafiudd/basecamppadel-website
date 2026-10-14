@@ -17,6 +17,11 @@ export async function demoChoosePlayer(_: ActionState, fd: FormData): Promise<Ac
   redirect(str(fd, "player_id") ? "/akun-demo?klaim=1" : "/akun-demo");
 }
 
+/** Demo "Keluar": back to the sign-in page. */
+export async function demoSignOut(): Promise<ActionState> {
+  redirect("/masuk");
+}
+
 export async function demoDeleteAccount(): Promise<ActionState> {
   return { error: "Mode demo: akun contoh tidak bisa dihapus." };
 }

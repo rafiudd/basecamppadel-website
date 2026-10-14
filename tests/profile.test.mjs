@@ -164,3 +164,40 @@ test("COACHING_SKILLS (default list): 23 teknik + 16 in-game, unique keys", asyn
   assert.equal(COACHING_SKILLS.filter((s) => s.kind === "ingame").length, 16);
   assert.equal(new Set(COACHING_SKILLS.map((s) => s.key)).size, 39);
 });
+
+test("partnerOf: teammate from the team name, whole team when the player isn't in it", async () => {
+  const { partnerOf } = await import("../src/lib/coachingRules.ts");
+  assert.equal(partnerOf("Nadia / Salsa", "Nadia Putri"), "Salsa");
+  assert.equal(partnerOf("Salsa / nadia", "Nadia"), "Salsa");
+  assert.equal(partnerOf("Dinda / Kirana", "Nadia"), "Dinda / Kirana");
+});
+
+test("eventHistory: coaching sessions become entries, same-title sessions stay separate; matchHistory labels", async () => {
+  const { eventHistory, matchHistory } = await import("../src/lib/coachingRules.ts");
+  const coach = (id, title, date, event_id = null) => ({ id, session: { id: `s-${id}`, title, session_date: date, venue: "", coach_name: "", event_id } });
+  const history = [
+    { id: "h1", created_at: "2026-09-28T10:00:00Z", result: "W", opponent_label: "Dinda / Kirana", session_label: "Battle", points_delta: 0,
+      match: { event_id: "e1", team_a_name: "Nadia / Salsa", team_b_name: "Dinda / Kirana", team_a_games: 6, team_b_games: 3, section: "Grup B" } },
+  ];
+  const events = [{ id: "e1", title: "Basecamp Battle #01", type: "kompetisi", event_date: "2026-09-28" }];
+  const list = eventHistory(history, [], events, {
+    ownName: "Nadia Putri",
+    coaching: [coach("r1", "Mabar with Coach", "2026-09-21"), coach("r2", "Mabar with Coach", "2026-10-05"), coach("r3", "Battle clinic", "2026-09-28", "e1")],
+  });
+  assert.deepEqual(list.map((e) => [e.title, e.kind, e.reportId]), [
+    ["Mabar with Coach", "coaching", "r2"],
+    ["Basecamp Battle #01", "coaching", "r3"], // a session inside an event marks that event
+    ["Mabar with Coach", "coaching", "r1"],
+  ]);
+  const [m] = matchHistory(list);
+  assert.deepEqual([m.label, m.partner, m.score], ["Basecamp Battle #01 · Grup B", "Salsa", "6–3"]);
+});
+
+test("eventHistory: an award whose event can't be read still has a title and the award's date", async () => {
+  const { eventHistory } = await import("../src/lib/coachingRules.ts");
+  const [e] = eventHistory([], [{ event_id: "e9", stage: "mabar", rank: 2, points: 20, created_at: "2026-10-13T17:00:00Z" }], []);
+  assert.deepEqual([e.title, e.date, e.points], ["Event", "2026-10-13", 20]);
+  const { formatDayMonthYear } = await import("../src/lib/format.ts");
+  assert.equal(formatDayMonthYear(""), "");
+  assert.equal(formatDayMonthYear("2026-10-05"), "5 Okt 2026");
+});

@@ -32,9 +32,9 @@ export function initials(name: string): string {
 }
 
 /** "2026-10-05" (or a timestamp) -> "5 Okt 2026" */
-export function formatDayMonthYear(isoDate: string): string {
-  const [y, m, d] = isoDate.slice(0, 10).split("-").map(Number);
-  return `${d} ${MONTHS[m - 1]} ${y}`;
+export function formatDayMonthYear(isoDate: string | null | undefined): string {
+  const [y, m, d] = (isoDate ?? "").slice(0, 10).split("-").map(Number);
+  return y && MONTHS[m - 1] && d ? `${d} ${MONTHS[m - 1]} ${y}` : "";
 }
 
 export function formatPointsDelta(n: number): string {

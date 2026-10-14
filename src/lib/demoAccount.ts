@@ -82,7 +82,7 @@ const battle = (id: string, at: string, result: "W" | "L", a: string, b: string,
   opponent_label: b === "Nadia / Salsa" ? a : b,
   session_label: "Basecamp Battle #01",
   points_delta: 0,
-  match: { event_id: "e-battle", team_a_name: a, team_b_name: b, team_a_games: ga, team_b_games: gb },
+  match: { event_id: "e-battle", team_a_name: a, team_b_name: b, team_a_games: ga, team_b_games: gb, section: "Grup B" },
 });
 
 export const demoHistory: { history: HistoryRow[]; awards: AwardRow[]; events: EventRow[] } = {
@@ -101,7 +101,7 @@ export const demoHistory: { history: HistoryRow[]; awards: AwardRow[]; events: E
   ],
 };
 
-export const demoRecord = { wins: 2, losses: 1 };
+export const demoRecord = { points: 45, wins: 2, losses: 1 };
 
 export const demoCandidates: Pick<Player, "id" | "name" | "gender" | "region" | "points" | "photo_url">[] = [
   { id: "demo-legacy", name: "Nadia Putri", gender: "F", region: "Purwokerto", points: 45, photo_url: null },

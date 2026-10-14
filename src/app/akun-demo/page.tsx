@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DemoBanner } from "@/components/account/DemoBanner";
-import { ProfileView, SignOutLabel, parseTab, signOutButton } from "@/components/account/profile/ProfileView";
+import { ProfileView, parseTab } from "@/components/account/profile/ProfileView";
+import { demoSignOut } from "./actions";
 import { ACCOUNT_DEMO } from "@/lib/config";
 import { COACHING_SKILLS } from "@/lib/coachingSkills";
 import { LEVEL_DEFINITIONS } from "@/lib/coaching";
@@ -32,6 +33,8 @@ export default async function AkunDemoPage({
       reports={empty ? [] : demoReports}
       level={empty ? null : { name: "Low Bronze", color: LEVEL_DEFINITIONS["Low Bronze"].color }}
       history={empty ? { history: [], awards: [], events: [] } : demoHistory}
+      points={empty ? 0 : demoRecord.points}
+      playerName="Nadia"
       wins={empty ? 0 : demoRecord.wins}
       losses={empty ? 0 : demoRecord.losses}
       basePath="/akun-demo"
@@ -47,11 +50,7 @@ export default async function AkunDemoPage({
           </Link>
         </DemoBanner>
       }
-      signOut={
-        <Link href="/masuk" className={signOutButton}>
-          <SignOutLabel />
-        </Link>
-      }
+      signOutAction={demoSignOut}
     />
   );
 }

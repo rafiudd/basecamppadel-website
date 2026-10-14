@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { ActionForm } from "@/components/admin/ActionForm";
-import { ProfileView, SignOutLabel, parseTab, signOutButton, type ProfileLevel } from "@/components/account/profile/ProfileView";
+import { ProfileView, parseTab, type ProfileLevel } from "@/components/account/profile/ProfileView";
 import { signOut } from "@/app/akun/actions";
 import { requireAccount } from "@/lib/account";
 import { googleIdentity } from "@/lib/accountRules";
@@ -33,7 +32,7 @@ export default async function AkunPage({
 
   const [{ data: player }, { data: claimed }, { skills, reports }, history] = await Promise.all([
     profile.player_id
-      ? supabase.from("players").select("wins, losses, level, level_color, level_overridden").eq("id", profile.player_id).maybeSingle()
+      ? supabase.from("players").select("name, points, wins, losses, level, level_color, level_overridden").eq("id", profile.player_id).maybeSingle()
       : Promise.resolve({ data: null }),
     profile.claim_player_id
       ? supabase.from("players").select("name").eq("id", profile.claim_player_id).maybeSingle()
@@ -55,17 +54,12 @@ export default async function AkunPage({
       reports={reports}
       level={profileLevel(player, reports.length > 0)}
       history={history}
+      points={player?.points ?? 0}
+      playerName={player?.name}
       wins={player?.wins ?? 0}
       losses={player?.losses ?? 0}
       basePath="/akun"
-      signOut={
-        // A.5: sign out sits in the header; deleting the account lives on Edit profil
-        <ActionForm action={signOut} successText={false}>
-          <button type="submit" className={signOutButton}>
-            <SignOutLabel />
-          </button>
-        </ActionForm>
-      }
+      signOutAction={signOut}
     />
   );
 }

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { PublicShell } from "@/components/PublicShell";
+import { ActionForm } from "@/components/admin/ActionForm";
+import type { ActionState } from "@/lib/actionState";
 import type { Profile } from "@/lib/database.types";
 import { profilePhoto } from "@/lib/accountRules";
 import {
@@ -38,10 +40,10 @@ const headerButton =
   "inline-flex w-full md:w-auto items-center justify-center gap-2 min-h-11 px-4 rounded-full border border-snow/35 bg-transparent text-snow font-semibold text-sm no-underline whitespace-nowrap hover:border-volt hover:text-volt";
 
 /** Quiet "Keluar" in the header's bottom-right corner. */
-export const signOutButton =
+const signOutButton =
   "inline-flex items-center gap-1.5 min-h-10 px-1 bg-transparent border-none text-snow/70 font-semibold text-sm no-underline whitespace-nowrap hover:text-volt";
 
-export function SignOutLabel() {
+function SignOutLabel() {
   return (
     <>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -84,11 +86,13 @@ export function ProfileView({
   reports,
   level,
   history,
+  points,
   wins,
   losses,
+  playerName,
   basePath,
   banner,
-  signOut,
+  signOutAction,
 }: {
   profile: Pick<Profile, "nickname" | "full_name" | "gender" | "region" | "dominant_hand" | "position" | "photo_url" | "photo_source" | "player_id" | "claim_player_id">;
   /** Google account picture: shown while no photo is saved, unless the player chose no photo (profilePhoto). */
@@ -102,17 +106,25 @@ export function ProfileView({
   reports: CoachReport[];
   level?: ProfileLevel | null;
   history: { history: HistoryRow[]; awards: AwardRow[]; events: EventRow[] };
+  /** The leaderboard's numbers (players.points / wins / losses). */
+  points: number;
   wins: number;
   losses: number;
+  /** players.name, to tell the player's teammate apart in team names ("Nadia / Salsa"). */
+  playerName?: string | null;
   basePath: string;
   banner?: React.ReactNode;
   /** "Keluar", next to "Edit profil" (a server-action form, or a plain link in the demo). */
-  signOut: React.ReactNode;
+  /** Signs the player out ("Keluar" asks to confirm first); the demo passes a stand-in. */
+  signOutAction: (state: ActionState, fd: FormData) => Promise<ActionState>;
 }) {
   const boards = skillBoards(skills, reports);
   const averages = sessionAverages(reports);
   const latest = filterReports(reports, {})[0] ?? null;
-  const events = eventHistory(history.history, history.awards, history.events);
+  const events = eventHistory(history.history, history.awards, history.events, {
+    ownName: playerName ?? profile.nickname,
+    coaching: reports,
+  });
 
   const displayName = profile.full_name || profile.nickname; // the design's header shows the full name
   const chips = [
@@ -168,7 +180,17 @@ export function ProfileView({
               Edit profil
             </Link>
             {/* bottom-right corner of the header */}
-            <div className="self-end flex-none">{signOut}</div>
+            <ActionForm
+              action={signOutAction}
+              successText={false}
+              confirmText="Yakin mau keluar dari akun Basecamp Padel?"
+              confirmLabel="Ya, keluar"
+              className="self-end flex-none"
+            >
+              <button type="submit" className={signOutButton}>
+                <SignOutLabel />
+              </button>
+            </ActionForm>
           </div>
         </div>
       </section>
@@ -217,7 +239,9 @@ export function ProfileView({
               basePath={basePath}
             />
           )}
-          {tab === "riwayat" && <HistoryTab entries={events} wins={wins} losses={losses} />}
+          {tab === "riwayat" && (
+            <HistoryTab entries={events} points={points} wins={wins} losses={losses} coachingSessions={reports.length} basePath={basePath} />
+          )}
 
         </div>
       </div>

@@ -9,7 +9,7 @@ export type SkillDef = { key: string; kind: SkillKind; group_label: string; labe
 
 export type CoachReport = {
   id: string;
-  session: { id: string; title: string; session_date: string; venue: string; coach_name: string };
+  session: { id: string; title: string; session_date: string; venue: string; coach_name: string; event_id?: string | null };
   evaluation: string[];
   next_practice: string[];
   ratings: { skill_key: string; score: number }[];
@@ -177,42 +177,75 @@ export type HistoryRow = {
     team_b_name: string;
     team_a_games: number;
     team_b_games: number;
+    section: string | null; // "Grup B", "Semifinal · SF1", "Ronde 2"
   } | null;
 };
-export type AwardRow = { event_id: string; stage: string; rank: number | null; points: number };
+export type AwardRow = { event_id: string; stage: string; rank: number | null; points: number; created_at?: string };
 export type EventRow = { id: string; title: string; type: string; event_date: string | null };
 
-export type EventMatch = { id: string; team: string; opponent: string; score: string | null; result: "W" | "L" };
+export type EventMatch = {
+  id: string;
+  date: string; // created_at
+  team: string;
+  partner: string; // the player's teammate(s), "" when unknown
+  opponent: string;
+  section: string | null;
+  score: string | null;
+  result: "W" | "L";
+};
+export type EventKind = "mabar" | "kompetisi" | "coaching" | null;
 export type EventEntry = {
   key: string;
   eventId: string | null;
   title: string;
-  type: string | null;
+  kind: EventKind;
   date: string; // yyyy-mm-dd
   points: number;
   award: { stage: string; rank: number | null } | null;
+  reportId: string | null; // a coaching session with a sent rapor
   wins: number;
   losses: number;
   matches: EventMatch[];
 };
 
-/** One entry per event the player took part in (matches and/or a final award), newest first. */
-export function eventHistory(history: HistoryRow[], awards: AwardRow[], events: EventRow[]): EventEntry[] {
+/**
+ * Teammate(s) from a team name like "Nadia / Salsa": every name that isn't the player's (matched on
+ * the full name or its first word, case-insensitive). The whole team name when the player isn't in it.
+ */
+export function partnerOf(team: string, ownName: string): string {
+  const names = team.split("/").map((n) => n.trim()).filter(Boolean);
+  const own = ownName.trim().toLowerCase();
+  const first = own.split(/\s+/)[0];
+  const others = names.filter((n) => n.toLowerCase() !== own && n.toLowerCase() !== first);
+  return others.length < names.length ? others.join(" / ") : team;
+}
+
+/**
+ * One entry per event the player took part in (matches and/or a final award), plus each sent
+ * coaching session (merged into its event when it belongs to one), newest first.
+ */
+export function eventHistory(
+  history: HistoryRow[],
+  awards: AwardRow[],
+  events: EventRow[],
+  opts: { ownName?: string; coaching?: Pick<CoachReport, "id" | "session">[] } = {},
+): EventEntry[] {
   const eventById = new Map(events.map((e) => [e.id, e]));
   const entries = new Map<string, EventEntry>();
-  const entryFor = (eventId: string | null, label: string, createdAt: string) => {
-    const key = eventId ?? `label:${label}`;
+  const entryFor = (eventId: string | null, label: string, date: string, key = eventId ?? `label:${label}`) => {
     let e = entries.get(key);
     if (!e) {
       const ev = eventId ? eventById.get(eventId) : undefined;
       e = {
         key,
         eventId,
-        title: ev?.title ?? (label || "Match"),
-        type: ev?.type ?? null,
-        date: ev?.event_date ?? createdAt.slice(0, 10),
+        // an event the player can no longer read still reads as one, not as a match
+        title: ev?.title ?? (label || (eventId ? "Event" : "Match")),
+        kind: ev?.type === "mabar" || ev?.type === "kompetisi" ? ev.type : null,
+        date: ev?.event_date ?? date.slice(0, 10),
         points: 0,
         award: null,
+        reportId: null,
         wins: 0,
         losses: 0,
         matches: [],
@@ -230,18 +263,37 @@ export function eventHistory(history: HistoryRow[], awards: AwardRow[], events: 
     const m = h.match;
     const onA = m ? m.team_b_name === h.opponent_label : true;
     const games = m && m.team_a_games + m.team_b_games > 0 ? (onA ? [m.team_a_games, m.team_b_games] : [m.team_b_games, m.team_a_games]) : null;
+    const team = m ? (onA ? m.team_a_name : m.team_b_name) : "";
     e.matches.push({
       id: h.id,
-      team: m ? (onA ? m.team_a_name : m.team_b_name) : "",
+      date: h.created_at,
+      team,
+      partner: team && opts.ownName ? partnerOf(team, opts.ownName) : "",
       opponent: h.opponent_label,
+      section: m?.section ?? null,
       score: games ? `${games[0]}–${games[1]}` : null,
       result: h.result,
     });
   }
   for (const a of awards) {
-    const e = entryFor(a.event_id, "", eventById.get(a.event_id)?.event_date ?? "");
+    const e = entryFor(a.event_id, "", eventById.get(a.event_id)?.event_date ?? a.created_at ?? "");
     e.points += a.points;
     e.award = { stage: a.stage, rank: a.rank };
   }
+  for (const r of opts.coaching ?? []) {
+    const eventId = r.session.event_id ?? null;
+    // a session outside any event is its own entry (two "Mabar with Coach" sessions stay separate)
+    const e = entryFor(eventId, r.session.title, r.session.session_date, eventId ?? `coaching:${r.id}`);
+    e.kind = "coaching";
+    e.reportId = r.id;
+  }
   return [...entries.values()].sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/**
+ * Every match, labelled with its event ("Battle #01 · Grup B"): newest event first, and within an
+ * event in the order they were played (as in the design).
+ */
+export function matchHistory(entries: EventEntry[]): (EventMatch & { label: string })[] {
+  return entries.flatMap((e) => e.matches.map((m) => ({ ...m, label: [e.title, m.section].filter(Boolean).join(" · ") })));
 }

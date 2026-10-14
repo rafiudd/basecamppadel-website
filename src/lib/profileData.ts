@@ -1,6 +1,7 @@
 import type { Supa } from "@/lib/server/action";
 import { splitNotes, type AwardRow, type CoachReport, type EventRow, type HistoryRow, type SkillDef } from "@/lib/coachingRules";
 import { COACHING_SKILLS } from "@/lib/coachingSkills";
+import { matchSection } from "@/lib/compLabels";
 
 /**
  * The skill list as the admin keeps it in Master Teknik (active ones, in their order); scores are
@@ -35,7 +36,7 @@ export async function loadCoaching(supabase: Supa, playerId: string | null): Pro
 
   const coachIds = [...new Set(rows.map((r) => r.coach_id).filter((id): id is string => !!id))];
   const [{ data: sessions }, { data: coaches }] = await Promise.all([
-    supabase.from("coaching_sessions").select("id, title, session_date, venue_name").in("id", [...new Set(rows.map((r) => r.session_id))]),
+    supabase.from("coaching_sessions").select("id, title, session_date, venue_name, event_id").in("id", [...new Set(rows.map((r) => r.session_id))]),
     coachIds.length ? supabase.from("coaches").select("id, name").in("id", coachIds) : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ]);
   const known = new Set(skills.map((s) => s.key));
@@ -53,6 +54,7 @@ export async function loadCoaching(supabase: Supa, playerId: string | null): Pro
         session_date: session.session_date,
         venue: session.venue_name,
         coach_name: (r.coach_id && coachById.get(r.coach_id)) || "",
+        event_id: session.event_id,
       },
       evaluation: splitNotes(r.evaluation),
       next_practice: splitNotes(r.next_practice),
@@ -74,12 +76,12 @@ export async function loadEventHistory(supabase: Supa, playerId: string | null):
       .from("match_history")
       .select("id, created_at, result, opponent_label, session_label, points_delta, match_id")
       .eq("player_id", playerId),
-    supabase.from("player_awards").select("event_id, stage, rank, points").eq("player_id", playerId),
+    supabase.from("player_awards").select("event_id, stage, rank, points, created_at").eq("player_id", playerId),
   ]);
 
   const matchIds = [...new Set((rows ?? []).map((r) => r.match_id).filter((id): id is string => !!id))];
   const { data: matches } = matchIds.length
-    ? await supabase.from("matches").select("id, event_id, team_a_name, team_b_name, team_a_games, team_b_games").in("id", matchIds)
+    ? await supabase.from("matches").select("id, event_id, team_a_name, team_b_name, team_a_games, team_b_games, stage, group_label, bracket_pos, set_label").in("id", matchIds)
     : { data: [] };
   const matchById = new Map((matches ?? []).map((m) => [m.id, m]));
 
@@ -99,11 +101,18 @@ export async function loadEventHistory(supabase: Supa, playerId: string | null):
         session_label: r.session_label,
         points_delta: r.points_delta,
         match: m
-          ? { event_id: m.event_id ?? null, team_a_name: m.team_a_name, team_b_name: m.team_b_name, team_a_games: m.team_a_games ?? 0, team_b_games: m.team_b_games ?? 0 }
+          ? {
+              event_id: m.event_id ?? null,
+              team_a_name: m.team_a_name,
+              team_b_name: m.team_b_name,
+              team_a_games: m.team_a_games ?? 0,
+              team_b_games: m.team_b_games ?? 0,
+              section: matchSection(m) || null,
+            }
           : null,
       };
     }),
-    awards: (awards ?? []).map((a) => ({ event_id: a.event_id, stage: a.stage, rank: a.rank, points: a.points })),
+    awards: (awards ?? []).map((a) => ({ event_id: a.event_id, stage: a.stage, rank: a.rank, points: a.points, created_at: a.created_at })),
     events: events ?? [],
   };
 }
