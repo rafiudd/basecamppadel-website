@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "@/components/ui/Toast";
 import { PHOTO_MAX_BYTES } from "@/lib/accountRules";
-import { GoogleMark } from "./GoogleMark";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { secondaryButton } from "./styles";
 
@@ -69,13 +68,6 @@ export function PhotoField({ name, current, googleAvatar = null }: { name: strin
     setUseGoogle(false);
   }
 
-  function pickGoogle() {
-    if (posted.current) posted.current.files = new DataTransfer().files;
-    setPreview(null);
-    setRemoved(false);
-    setUseGoogle(true);
-  }
-
   const shown = useGoogle ? googleAvatar : (preview ?? (removed ? null : current));
 
   return (
@@ -86,17 +78,6 @@ export function PhotoField({ name, current, googleAvatar = null }: { name: strin
           <button type="button" className={`${secondaryButton} min-h-10 px-4`} onClick={() => picker.current?.click()} disabled={busy} data-loading={busy || undefined}>
             {shown ? "Ganti foto" : "Pilih foto"}
           </button>
-          {googleAvatar && shown !== googleAvatar && (
-            <button type="button" className={`${secondaryButton} min-h-10 px-4`} onClick={pickGoogle} disabled={busy}>
-              <GoogleMark size={16} />
-              Pakai foto Google
-            </button>
-          )}
-          {shown && (
-            <button type="button" className="min-h-10 px-3 bg-transparent border-none text-sm font-semibold text-loss" onClick={clear}>
-              Hapus
-            </button>
-          )}
         </div>
         <div className="text-xs text-ink/60">JPG/PNG, maks 2 MB. Otomatis dipotong persegi.</div>
       </div>
