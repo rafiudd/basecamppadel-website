@@ -20,12 +20,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 }
 
 async function AdminContent({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin } = await getAdminUser();
+  const { user, isCoach } = await getAdminUser();
 
   // /admin/login renders without the shell (proxy.ts already redirects anon users elsewhere)
   if (!user) return <>{children}</>;
 
-  if (!isAdmin) {
+  // admins and coaches (isCoach includes admins); admin-only actions still check requireAdmin() + RLS
+  if (!isCoach) {
     return (
       <div className="min-h-screen bg-ink text-snow font-sans flex items-center justify-center p-6">
         <div className="max-w-110 bg-indigo rounded-2xl p-8 flex flex-col gap-4">

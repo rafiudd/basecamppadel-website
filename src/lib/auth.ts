@@ -14,9 +14,11 @@ export async function getAdminUser() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const role: "admin" | "coach" | null = (adminRow?.role as "admin" | "coach") ?? (isAdminRpc ? "admin" : isCoachRpc ? "coach" : "admin");
-  const isAdmin = !!isAdminRpc || role === "admin";
-  const isCoach = true; // akun admin sementara otomatis punya akses coach
+  // Access follows the database (is_admin / is_coach read admin_users), the same check RLS uses.
+  // A signed-in player without an admin_users row is neither; an admin also gets coach access.
+  const role = (adminRow?.role as "admin" | "coach" | undefined) ?? null;
+  const isAdmin = !!isAdminRpc;
+  const isCoach = !!isCoachRpc || isAdmin;
   return { user, isAdmin, isCoach, role, coachId: adminRow?.coach_id ?? null };
 }
 
