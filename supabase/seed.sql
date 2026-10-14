@@ -1,15 +1,15 @@
 -- Demo data mirroring the design prototypes. Optional.
 insert into public.players (name, gender, level, region, points_adjustment) values
-  ('Rayhan',   'M', 'Intermediate',   'Purwokerto',   210),
-  ('Andra',    'M', 'Intermediate',   'Cilacap',      195),
-  ('Pao',      'M', 'Intermediate',   'Banjarnegara', 180),
-  ('Yonathan', 'M', 'Upper Beginner', 'Purbalingga',  165),
-  ('Dimas',    'M', 'Beginner',       'Banyumas',     120),
-  ('Fikri',    'M', 'Beginner',       'Kebumen',      100),
-  ('Sari',     'F', 'Intermediate',   'Purwokerto',   200),
-  ('Nadia',    'F', 'Intermediate',   'Cilacap',      170),
-  ('Rina',     'F', 'Upper Beginner', 'Banjarnegara', 145),
-  ('Tasya',    'F', 'Beginner',       'Purbalingga',  110);
+  ('Rayhan',   'M', 'Low Bronze', 'Purwokerto',   210),
+  ('Andra',    'M', 'Low Bronze', 'Cilacap',      195),
+  ('Pao',      'M', 'Low Bronze', 'Banjarnegara', 180),
+  ('Yonathan', 'M', 'Beginner',   'Purbalingga',  165),
+  ('Dimas',    'M', 'Beginner',   'Banyumas',     120),
+  ('Fikri',    'M', 'Beginner',   'Kebumen',      100),
+  ('Sari',     'F', 'Low Bronze', 'Purwokerto',   200),
+  ('Nadia',    'F', 'Low Bronze', 'Cilacap',      170),
+  ('Rina',     'F', 'Beginner',   'Banjarnegara', 145),
+  ('Tasya',    'F', 'Beginner',   'Purbalingga',  110);
 
 update public.players set points = points_adjustment;
 

@@ -1,6 +1,14 @@
 # Kendala: level pemain punya 3 daftar yang berbeda
 
-Status: **butuh keputusan**. Ditulis 13 Okt 2026, saat menyambungkan badge warna level di profil pemain (DEV-549, D.1) dengan admin coaching (DEV-546/548).
+Status: **selesai untuk daftar 1 dan 2 (opsi A, 14 Okt 2026)**. Ditulis 13 Okt 2026, saat menyambungkan badge warna level di profil pemain (DEV-549, D.1) dengan admin coaching (DEV-546/548).
+
+> **Yang sudah dikerjakan:**
+> - `LEVELS` di `src/lib/config.ts` sekarang sama dengan `LEVEL_NAMES` (Rookie, Beginner, Low Bronze, Bronze, Silver). Dipakai di form dan filter Admin → Pemain serta filter pemain di sesi coaching.
+> - Migrasi `0015_player_levels.sql` memetakan data lama sesuai tabel opsi A di bawah. Hasilnya: Andra, Pao Pao, Rayhan, Sari → Low Bronze; Yonathan → Beginner.
+> - Constraint `players_level_check` sekarang hanya mengizinkan 5 level tersebut.
+> - `supabase/seed.sql` ikut diperbarui.
+>
+> **Masih terbuka:** keputusan 2 (nama level tampil ke publik atau tidak), dan apakah perubahan level manual di form admin perlu dianggap override. Daftar 3 (perkiraan sendiri) sengaja tidak diubah.
 
 ## Ringkasan
 

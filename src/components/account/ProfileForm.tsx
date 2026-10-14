@@ -7,7 +7,8 @@ import { saveProfile } from "@/app/akun/actions";
 import { normalizeInstagram, normalizeWhatsapp, PLAY_DURATIONS, SELF_LEVELS, type PlayDuration, type SelfLevel } from "@/lib/accountRules";
 import type { ActionState } from "@/lib/actionState";
 import type { CourtPosition, DominantHand, Gender } from "@/lib/database.types";
-import { InitialsAvatar } from "./InitialsAvatar";
+import { GoogleMark } from "./GoogleMark";
+import { ProfileAvatar } from "./ProfileAvatar";
 import { PhotoField } from "./PhotoField";
 import { lightCard, lightHint, lightInput, lightLabel, primaryButton, sectionHeading } from "./styles";
 
@@ -85,29 +86,15 @@ function Choice({ label, hint, children }: { label: string; hint?: string; child
   );
 }
 
-const GoogleG = () => (
-  <svg width="14" height="14" viewBox="0 0 48 48" aria-hidden="true" className="flex-none">
-    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z" />
-    <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z" />
-    <path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 14.2 0 24s1 7.4 2.7 10.7l7.9-6.1z" />
-    <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.2 1.5-5 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z" />
-  </svg>
-);
-
 /** The Google account a profile belongs to: its picture (or initials), name, email, "Terhubung". */
 export function GoogleAccount({ name, email, photoUrl }: { name: string; email: string; photoUrl?: string | null }) {
   return (
     <div className="flex items-center gap-3 bg-[#F1EFF7] rounded-xl px-3.5 py-3">
-      {photoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- Google account picture
-        <img src={photoUrl} alt="" referrerPolicy="no-referrer" className="w-11 h-11 rounded-full object-cover flex-none bg-volt" />
-      ) : (
-        <InitialsAvatar name={name || email} className="w-11 h-11 text-base" />
-      )}
+      <ProfileAvatar name={name || email} photoUrl={photoUrl} className="w-11 h-11 text-base" />
       <div className="min-w-0 flex-1">
         <div className="font-bold text-input truncate">{name || email}</div>
         <div className="text-caption text-ink/65 flex items-center gap-1.5 min-w-0">
-          <GoogleG />
+          <GoogleMark size={14} />
           <span className="truncate">{email}</span>
         </div>
       </div>
@@ -190,7 +177,7 @@ export function ProfileForm({
 
           <h2 className={sectionHeading}>Data diri</h2>
 
-          <PhotoField name={fullName || nickname} current={defaults.photoUrl} />
+          <PhotoField name={fullName || nickname} current={defaults.photoUrl} googleAvatar={googleAvatar} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4.5">
             <Text label="Nama lengkap" hint="Dari akun Google, bisa diubah">

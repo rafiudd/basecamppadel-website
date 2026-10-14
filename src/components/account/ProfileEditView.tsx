@@ -31,6 +31,7 @@ export function ProfileEditView({
         next={backHref}
         email={email}
         googleName={profile.full_name}
+        googleAvatar={googleAvatar}
         categoryLocked={categoryLocked}
         defaults={profileDefaults(profile, googleAvatar)}
         action={saveAction}

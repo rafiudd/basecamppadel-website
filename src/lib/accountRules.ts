@@ -86,3 +86,15 @@ export function googleIdentity(meta: Record<string, unknown> | null | undefined)
 export function largeGoogleAvatar(url: string, size = 512): string {
   return /=s\d+(-c)?$/.test(url) ? url.replace(/=s\d+(-c)?$/, `=s${size}-c`) : url;
 }
+
+/** Where the profile photo came from; "none" = the player removed it on purpose (no Google fallback). */
+export type PhotoSource = "google" | "upload" | "none";
+
+/**
+ * The photo to show for a profile: the saved one; nothing when the player chose no photo; otherwise
+ * (not saved yet, e.g. the Google copy failed) the Google picture.
+ */
+export function profilePhoto(p: { photo_url: string | null; photo_source?: PhotoSource | null }, googleAvatar: string | null): string | null {
+  if (p.photo_url) return p.photo_url;
+  return p.photo_source === "none" ? null : googleAvatar;
+}

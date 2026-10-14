@@ -3,6 +3,7 @@ import { ActionForm } from "@/components/admin/ActionForm";
 import { ProfileView, SignOutLabel, parseTab, signOutButton, type ProfileLevel } from "@/components/account/profile/ProfileView";
 import { signOut } from "@/app/akun/actions";
 import { requireAccount } from "@/lib/account";
+import { googleIdentity } from "@/lib/accountRules";
 import { LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
 import { loadCoaching, loadEventHistory } from "@/lib/profileData";
 
@@ -27,7 +28,8 @@ export default async function AkunPage({
   searchParams: Promise<{ tab?: string; coach?: string; year?: string; tersambung?: string }>;
 }) {
   const params = await searchParams;
-  const { supabase, profile } = await requireAccount("/akun");
+  const { supabase, user, profile } = await requireAccount("/akun");
+  const googleAvatar = googleIdentity(user.user_metadata).avatarUrl;
 
   const [{ data: player }, { data: claimed }, { skills, reports }, history] = await Promise.all([
     profile.player_id
@@ -43,6 +45,7 @@ export default async function AkunPage({
   return (
     <ProfileView
       profile={profile}
+      googleAvatar={googleAvatar}
       tab={parseTab(params.tab)}
       coach={params.coach}
       year={params.year}

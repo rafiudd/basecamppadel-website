@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PublicShell } from "@/components/PublicShell";
 import type { Profile } from "@/lib/database.types";
+import { profilePhoto } from "@/lib/accountRules";
 import {
   eventHistory,
   filterReports,
@@ -17,7 +18,7 @@ import {
 import { StatsTab } from "./StatsTab";
 import { NotesTab } from "./NotesTab";
 import { HistoryTab } from "./HistoryTab";
-import { InitialsAvatar } from "../InitialsAvatar";
+import { ProfileAvatar } from "../ProfileAvatar";
 
 const HAND = { R: "Tangan kanan", L: "Tangan kiri" } as const;
 const POSITION = { right: "Posisi kanan", left: "Posisi kiri", both: "Posisi bebas" } as const;
@@ -73,6 +74,7 @@ export type ProfileLevel = { name: string; color: string };
 /** The player profile (D.1–D.5), shared by /akun (real data) and /akun-demo (sample data). */
 export function ProfileView({
   profile,
+  googleAvatar,
   tab,
   coach,
   year,
@@ -88,7 +90,9 @@ export function ProfileView({
   banner,
   signOut,
 }: {
-  profile: Pick<Profile, "nickname" | "full_name" | "gender" | "region" | "dominant_hand" | "position" | "photo_url" | "player_id" | "claim_player_id">;
+  profile: Pick<Profile, "nickname" | "full_name" | "gender" | "region" | "dominant_hand" | "position" | "photo_url" | "photo_source" | "player_id" | "claim_player_id">;
+  /** Google account picture: shown while no photo is saved, unless the player chose no photo (profilePhoto). */
+  googleAvatar?: string | null;
   tab: ProfileTab;
   coach?: string;
   year?: string;
@@ -130,12 +134,11 @@ export function ProfileView({
       <section className="bg-indigo text-snow px-4 md:px-12 py-7 md:py-10">
         <div className="max-w-276 mx-auto flex flex-col gap-4 md:gap-4.5">
           <div className="flex items-center gap-4 md:gap-6">
-            {profile.photo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element -- avatar from Supabase Storage
-              <img src={profile.photo_url} alt="" className="w-18 h-18 md:w-24 md:h-24 rounded-full object-cover flex-none bg-volt border-4 border-snow/20" />
-            ) : (
-              <InitialsAvatar name={displayName} className="w-18 h-18 md:w-24 md:h-24 text-2xl md:text-[34px] border-4 border-snow/20" />
-            )}
+            <ProfileAvatar
+              name={displayName}
+              photoUrl={profilePhoto(profile, googleAvatar ?? null)}
+              className="w-18 h-18 md:w-24 md:h-24 text-2xl md:text-[34px] border-4 border-snow/20"
+            />
             <div className="min-w-0 flex-1 flex flex-col gap-1.5">
               <div className="text-caption tracking-[0.12em] font-bold text-volt">PROFIL SAYA</div>
               <div className="flex items-center gap-3 min-w-0">

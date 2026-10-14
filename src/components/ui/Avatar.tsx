@@ -4,7 +4,7 @@ import { initials } from "@/lib/format";
 export function Avatar({ name, photoUrl, size = 32 }: { name: string; photoUrl?: string | null; size?: number }) {
   if (photoUrl) {
     // eslint-disable-next-line @next/next/no-img-element -- tiny avatar from Supabase Storage
-    return <img src={photoUrl} alt="" style={{ width: size, height: size }} className="rounded-full object-cover object-top bg-indigo flex-none" />;
+    return <img src={photoUrl} alt="" referrerPolicy="no-referrer" style={{ width: size, height: size }} className="rounded-full object-cover object-top bg-indigo flex-none" />;
   }
   return (
     <span

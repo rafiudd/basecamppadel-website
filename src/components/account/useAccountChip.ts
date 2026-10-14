@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { googleIdentity, profilePhoto } from "@/lib/accountRules";
 
 export type AccountChip = { name: string; photoUrl: string | null };
 
@@ -20,11 +21,13 @@ export function useAccountChip(): AccountChip | null | undefined {
       if (!user) return void setChip(null);
       // supabase calls inside this callback would deadlock the auth lock, so defer them
       setTimeout(async () => {
-        const { data: profile } = await supabase.from("profiles").select("nickname, photo_url").eq("user_id", user.id).maybeSingle();
+        const { data: profile } = await supabase.from("profiles").select("nickname, photo_url, photo_source").eq("user_id", user.id).maybeSingle();
         if (!alive) return;
+        const google = googleIdentity(user.user_metadata);
         setChip({
-          name: profile?.nickname ?? String(user.user_metadata?.full_name ?? user.email ?? "Akun").split(/\s+/)[0],
-          photoUrl: profile?.photo_url ?? null,
+          name: profile?.nickname ?? (google.name || user.email || "Akun").split(/\s+/)[0],
+          // same rule as the profile header: saved photo, none if removed on purpose, else the Google picture
+          photoUrl: profile ? profilePhoto(profile, google.avatarUrl) : google.avatarUrl,
         });
       }, 0);
     });

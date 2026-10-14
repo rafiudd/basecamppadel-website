@@ -2,7 +2,7 @@
 // Regenerate with `supabase gen types typescript` once the project is linked.
 
 import type { FinalStage, KoStage, Stage } from "@/lib/competition";
-import type { PlayDuration, SelfLevel } from "@/lib/accountRules";
+import type { PhotoSource, PlayDuration, SelfLevel } from "@/lib/accountRules";
 
 export type Gender = "M" | "F";
 export type Serve = "A" | "B";
@@ -46,6 +46,7 @@ export type Profile = {
   instagram: string; // handle without "@"
   play_duration: PlayDuration | null;
   self_level: SelfLevel | null;
+  photo_source: PhotoSource | null; // null = set before 0017
   player_id: string | null;
   claim_player_id: string | null;
   created_at: string;
@@ -534,6 +535,7 @@ export type Database = {
           p_instagram?: string;
           p_play_duration?: PlayDuration | "";
           p_self_level?: SelfLevel | "";
+          p_photo_source?: "google" | "upload" | "";
         };
         Returns: "linked" | "choose" | "created" | "saved";
       };
@@ -543,6 +545,7 @@ export type Database = {
       };
       account_choose_player: { Args: { p_player: string | null }; Returns: undefined };
       account_delete: { Args: { p_confirm: string }; Returns: undefined };
+      account_set_default_photo: { Args: { p_photo_url: string }; Returns: undefined };
       account_resolve_claim: { Args: { p_uid: string; p_approve: boolean }; Returns: undefined };
       comp_finish_event: {
         Args: { p_event_id: string; p_stages: { team_id: string; stage: FinalStage }[] };

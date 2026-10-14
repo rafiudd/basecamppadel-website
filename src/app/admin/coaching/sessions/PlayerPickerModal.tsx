@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Player } from "@/lib/database.types";
+import { LEVEL_NAMES } from "@/lib/coaching";
 import { Avatar } from "@/components/ui/Avatar";
 import { GenderBadge } from "@/components/ui/Badge";
 import { SearchIcon } from "@/components/ui/icons";
@@ -65,7 +66,7 @@ export function PlayerPickerModal({
         {/* Level filter pills & stats */}
         <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
           <div className="flex items-center gap-1.5 flex-wrap">
-            {["all", "Beginner", "Intermediate", "Upper Intermediate", "Advanced"].map((lvl) => (
+            {["all", ...LEVEL_NAMES].map((lvl) => (
               <button
                 key={lvl}
                 type="button"

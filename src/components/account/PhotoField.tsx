@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "@/components/ui/Toast";
 import { PHOTO_MAX_BYTES } from "@/lib/accountRules";
-import { InitialsAvatar } from "./InitialsAvatar";
+import { GoogleMark } from "./GoogleMark";
+import { ProfileAvatar } from "./ProfileAvatar";
 import { secondaryButton } from "./styles";
 
 const SIZE = 512;
@@ -25,13 +26,16 @@ async function cropSquare(file: File): Promise<File> {
 
 /**
  * Profile photo: max 2 MB, cropped square in the browser. The cropped file goes into a hidden
- * `name="photo"` input, so the form posts it like any file field; `remove_photo` clears it.
+ * `name="photo"` input, so the form posts it like any file field; `remove_photo` clears it, and
+ * `use_google_photo` asks the server to copy the Google account picture (it reads that from the
+ * signed-in user, not from the form).
  */
-export function PhotoField({ name, current }: { name: string; current: string | null }) {
+export function PhotoField({ name, current, googleAvatar = null }: { name: string; current: string | null; googleAvatar?: string | null }) {
   const picker = useRef<HTMLInputElement>(null);
   const posted = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [removed, setRemoved] = useState(false);
+  const [useGoogle, setUseGoogle] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
@@ -50,6 +54,7 @@ export function PhotoField({ name, current }: { name: string; current: string | 
       posted.current!.files = dt.files;
       setPreview(URL.createObjectURL(cropped));
       setRemoved(false);
+      setUseGoogle(false);
     } catch {
       toast.error("Foto ini tidak bisa dibaca. Coba foto lain (JPG/PNG).");
     } finally {
@@ -61,23 +66,32 @@ export function PhotoField({ name, current }: { name: string; current: string | 
     if (posted.current) posted.current.files = new DataTransfer().files;
     setPreview(null);
     setRemoved(true);
+    setUseGoogle(false);
   }
 
-  const shown = preview ?? (removed ? null : current);
+  function pickGoogle() {
+    if (posted.current) posted.current.files = new DataTransfer().files;
+    setPreview(null);
+    setRemoved(false);
+    setUseGoogle(true);
+  }
+
+  const shown = useGoogle ? googleAvatar : (preview ?? (removed ? null : current));
 
   return (
     <div className="flex items-center gap-4">
-      {shown ? (
-        // eslint-disable-next-line @next/next/no-img-element -- local preview / Supabase Storage avatar
-        <img src={shown} alt="" referrerPolicy="no-referrer" className="w-20 h-20 rounded-full object-cover flex-none bg-indigo" />
-      ) : (
-        <InitialsAvatar name={name} className="w-20 h-20 text-2xl" />
-      )}
+      <ProfileAvatar name={name} photoUrl={shown} className="w-20 h-20 text-2xl" />
       <div className="flex flex-col gap-2 items-start">
         <div className="flex gap-2 flex-wrap">
           <button type="button" className={`${secondaryButton} min-h-10 px-4`} onClick={() => picker.current?.click()} disabled={busy} data-loading={busy || undefined}>
             {shown ? "Ganti foto" : "Pilih foto"}
           </button>
+          {googleAvatar && shown !== googleAvatar && (
+            <button type="button" className={`${secondaryButton} min-h-10 px-4`} onClick={pickGoogle} disabled={busy}>
+              <GoogleMark size={16} />
+              Pakai foto Google
+            </button>
+          )}
           {shown && (
             <button type="button" className="min-h-10 px-3 bg-transparent border-none text-sm font-semibold text-loss" onClick={clear}>
               Hapus
@@ -89,6 +103,7 @@ export function PhotoField({ name, current }: { name: string; current: string | 
       <input ref={picker} type="file" accept="image/*" className="hidden" onChange={onPick} aria-label="Pilih foto profil" />
       <input ref={posted} type="file" name="photo" className="hidden" tabIndex={-1} aria-hidden />
       {removed && <input type="hidden" name="remove_photo" value="on" />}
+      {useGoogle && <input type="hidden" name="use_google_photo" value="on" />}
     </div>
   );
 }

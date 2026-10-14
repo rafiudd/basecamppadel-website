@@ -18,6 +18,7 @@ export const demoProfile: Pick<
   | "dominant_hand"
   | "position"
   | "photo_url"
+  | "photo_source"
   | "instagram"
   | "play_duration"
   | "self_level"
@@ -33,6 +34,7 @@ export const demoProfile: Pick<
   dominant_hand: "R",
   position: "both",
   photo_url: null,
+  photo_source: null,
   instagram: "nadia.putri",
   play_duration: "3to6m",
   self_level: "Beginner",

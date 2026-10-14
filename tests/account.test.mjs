@@ -68,3 +68,12 @@ test("googleIdentity: name and https picture from user_metadata", async () => {
   assert.equal(largeGoogleAvatar("https://lh3.googleusercontent.com/a/x=s96-c"), "https://lh3.googleusercontent.com/a/x=s512-c");
   assert.equal(largeGoogleAvatar("https://lh3.googleusercontent.com/a/y"), "https://lh3.googleusercontent.com/a/y");
 });
+
+test("profilePhoto: saved photo, then chosen-none, then the Google picture", async () => {
+  const { profilePhoto } = await import("../src/lib/accountRules.ts");
+  const g = "https://lh3.googleusercontent.com/a/x";
+  assert.equal(profilePhoto({ photo_url: "https://x.supabase.co/a.jpg", photo_source: "upload" }, g), "https://x.supabase.co/a.jpg");
+  assert.equal(profilePhoto({ photo_url: null, photo_source: "none" }, g), null);
+  assert.equal(profilePhoto({ photo_url: null, photo_source: null }, g), g);
+  assert.equal(profilePhoto({ photo_url: null }, null), null);
+});

@@ -1,10 +1,13 @@
+import { LEVEL_NAMES } from "@/lib/coaching";
+
 /** Contact for players (privacy & terms pages); also the consent screen's support email. */
 export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "padellensid@gmail.com";
 export const WHATSAPP_URL = process.env.NEXT_PUBLIC_WHATSAPP_URL ?? "https://wa.me/";
 export const YOUTUBE_URL =
   process.env.NEXT_PUBLIC_YOUTUBE_URL ?? "https://youtube.com/@basecamppadel/live";
 export const POINT_OPTIONS = ["0", "15", "30", "40", "AD"] as const;
-export const LEVELS = ["Beginner", "Upper Beginner", "Intermediate", "Upper Intermediate", "Advanced"];
+/** Player levels (admin player form & filters): the coaching levels, lowest first. */
+export const LEVELS: readonly string[] = LEVEL_NAMES;
 
 /** Main sponsor logos shown on the OBS overlay (Starting Soon screen + live lower-third). */
 export const SPONSOR_LOGOS = [
