@@ -7,14 +7,18 @@ import { ADMIN_NAV, isActive } from "./nav";
 const MOBILE_NAV = [...ADMIN_NAV].sort((a, b) => a.mobileOrder - b.mobileOrder);
 
 /** Phone tab bar, fixed to the bottom (hidden from md up, where the header menu shows). */
-export function AdminBottomNav() {
+export function AdminBottomNav({ isCoachOnly }: { isCoachOnly?: boolean }) {
   const pathname = usePathname();
+  const navItems = isCoachOnly
+    ? MOBILE_NAV.filter((l) => l.href.startsWith("/admin/coaching"))
+    : MOBILE_NAV;
+
   return (
     <nav
       className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-indigo border-t border-snow/10 flex items-stretch"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      {MOBILE_NAV.map((l) => {
+      {navItems.map((l) => {
         const on = isActive(pathname, l.href);
         return (
           <Link

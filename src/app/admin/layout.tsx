@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { MountainMark } from "@/components/Logo";
 import { getAdminUser } from "@/lib/auth";
 import { AdminNavLinks } from "@/components/admin/shell/AdminNavLinks";
@@ -20,40 +22,42 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 }
 
 async function AdminContent({ children }: { children: React.ReactNode }) {
-  const { user, isCoach } = await getAdminUser();
+  const { user, isAdmin, isCoach } = await getAdminUser();
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "";
 
-  // /admin/login renders without the shell (proxy.ts already redirects anon users elsewhere)
-  if (!user) return <>{children}</>;
+  // /admin/login renders without the shell
+  if (!user) {
+    if (pathname && !pathname.startsWith("/admin/login")) {
+      redirect(`/admin/login?next=${encodeURIComponent(pathname)}`);
+    }
+    return <>{children}</>;
+  }
 
-  // admins and coaches (isCoach includes admins); admin-only actions still check requireAdmin() + RLS
-  if (!isCoach) {
-    return (
-      <div className="min-h-screen bg-ink text-snow font-sans flex items-center justify-center p-6">
-        <div className="max-w-110 bg-indigo rounded-2xl p-8 flex flex-col gap-4">
-          <div className="font-display font-bold text-xl">Akun belum jadi admin</div>
-          <p className="text-sm text-snow/70">
-            Kamu login sebagai <b>{user.email}</b>, tapi akun ini belum ada di tabel <code>admin_users</code>.
-            Jalankan di SQL editor Supabase:
-          </p>
-          <pre className="text-xs bg-ink rounded-lg p-3 overflow-x-auto">{`insert into public.admin_users (user_id)\nselect id from auth.users where email = '${user.email}';`}</pre>
-          <SignOutForm className="btn" />
-        </div>
-      </div>
-    );
+  // User biasa: dilarang masuk area admin sama sekali
+  if (!isAdmin && !isCoach) {
+    redirect("/");
+  }
+
+  const isCoachOnly = !isAdmin && isCoach;
+
+  // Coach hanya boleh mengakses area coaching
+  if (isCoachOnly && pathname && !pathname.startsWith("/admin/coaching")) {
+    redirect("/admin/coaching");
   }
 
   return (
     <div className="min-h-screen bg-ink text-snow font-sans flex flex-col">
       <header className="flex-none flex items-center justify-between gap-3 md:gap-4 h-14 md:h-auto pl-4 pr-2 py-1.5 md:px-6 md:py-3 border-b border-snow/10">
-        <Link href="/admin/events" className="flex items-center gap-2.5 no-underline text-snow">
+        <Link href={isCoachOnly ? "/admin/coaching" : "/admin/events"} className="flex items-center gap-2.5 no-underline text-snow">
           <MountainMark size={28} />
           <div className="font-display font-bold text-base leading-none whitespace-nowrap">
             BASECAMP <span className="text-coral">PADEL</span>
-            <span className="font-sans font-medium text-xs text-snow/65 ml-2">Admin</span>
+            <span className="font-sans font-medium text-xs text-snow/65 ml-2">{isCoachOnly ? "Coach" : "Admin"}</span>
           </div>
         </Link>
         <div className="hidden md:block min-w-0">
-          <AdminNavLinks />
+          <AdminNavLinks isCoachOnly={isCoachOnly} />
         </div>
         <div className="hidden md:flex items-center gap-3 text-caption text-snow/65">
           <span className="hidden lg:inline">{user.email}</span>
@@ -65,7 +69,7 @@ async function AdminContent({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main className="flex-1 px-4 pt-5 pb-24 md:px-8 md:pt-8 md:pb-12 max-w-360 w-full box-border mx-auto">{children}</main>
-      <AdminBottomNav />
+      <AdminBottomNav isCoachOnly={isCoachOnly} />
     </div>
   );
 }

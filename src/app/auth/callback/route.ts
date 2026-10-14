@@ -26,7 +26,30 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (error || !data.user) return fail("Login gagal. Coba lagi.");
-  if (isAdmin) return NextResponse.redirect(`${origin}${next}`);
+
+  if (isAdmin) {
+    const { data: adminRow } = await supabase
+      .from("admin_users")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+
+    if (adminRow?.role === "admin") {
+      return NextResponse.redirect(`${origin}${next}`);
+    }
+    if (adminRow?.role === "coach") {
+      return NextResponse.redirect(`${origin}/admin/coaching`);
+    }
+
+    // Akun bukan admin/coach -> arahkan ke akun pemain
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("player_id, claim_player_id, photo_url, photo_source")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+    if (profile) await ensureDefaultPhoto(supabase, data.user, profile);
+    return NextResponse.redirect(`${origin}${stepPath(accountStep(profile), "/akun")}`);
+  }
 
   // a new player fills in the profile (and answers "Ini saya?") first, then continues to `next`
   const { data: profile } = await supabase.from("profiles").select("player_id, claim_player_id, photo_url, photo_source").eq("user_id", data.user.id).maybeSingle();

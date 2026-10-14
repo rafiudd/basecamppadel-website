@@ -5,11 +5,15 @@ import { usePathname } from "next/navigation";
 import { ADMIN_NAV, isActive } from "./nav";
 
 /** Desktop header menu. */
-export function AdminNavLinks() {
+export function AdminNavLinks({ isCoachOnly }: { isCoachOnly?: boolean }) {
   const pathname = usePathname();
+  const navItems = isCoachOnly
+    ? ADMIN_NAV.filter((l) => l.href.startsWith("/admin/coaching"))
+    : ADMIN_NAV;
+
   return (
     <nav className="flex items-center gap-1 overflow-x-auto min-w-0 max-w-full">
-      {ADMIN_NAV.map((l) => {
+      {navItems.map((l) => {
         const on = isActive(pathname, l.href);
         return (
           <Link

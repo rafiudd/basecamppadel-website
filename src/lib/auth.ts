@@ -17,8 +17,8 @@ export async function getAdminUser() {
   // Access follows the database (is_admin / is_coach read admin_users), the same check RLS uses.
   // A signed-in player without an admin_users row is neither; an admin also gets coach access.
   const role = (adminRow?.role as "admin" | "coach" | undefined) ?? null;
-  const isAdmin = !!isAdminRpc;
-  const isCoach = !!isCoachRpc || isAdmin;
+  const isAdmin = !!isAdminRpc || role === "admin";
+  const isCoach = !!isCoachRpc || role === "coach" || isAdmin;
   return { user, isAdmin, isCoach, role, coachId: adminRow?.coach_id ?? null };
 }
 
