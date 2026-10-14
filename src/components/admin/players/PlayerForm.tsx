@@ -3,8 +3,10 @@ import Image from "next/image";
 import type { Player } from "@/lib/database.types";
 import { upsertPlayer } from "@/app/admin/actions";
 import { LEVELS } from "@/lib/config";
+import { formatWhatsapp } from "@/lib/accountRules";
 
-export function PlayerForm({ player }: { player?: Player }) {
+/** `accountEmail`: the player account linked to this player, if any. */
+export function PlayerForm({ player, accountEmail }: { player?: Player; accountEmail?: string | null }) {
   return (
     <ActionForm action={upsertPlayer} successText="Pemain tersimpan" className="bg-ink-2 rounded-2xl p-5 md:p-6 grid grid-cols-1 md:grid-photo-form gap-6">
       {player && <input type="hidden" name="id" value={player.id} />}
@@ -54,6 +56,24 @@ export function PlayerForm({ player }: { player?: Player }) {
         <div>
           <div className="label">Region</div>
           <input className="field" name="region" defaultValue={player?.region} placeholder="Purwokerto" />
+        </div>
+        <div>
+          <div className="label">No. WhatsApp</div>
+          <input
+            className="field"
+            name="whatsapp"
+            type="tel"
+            inputMode="tel"
+            defaultValue={player?.whatsapp ? formatWhatsapp(player.whatsapp) : ""}
+            placeholder="08xx-xxxx-xxxx"
+          />
+          <div className="text-2xs text-snow/40 mt-1">
+            {accountEmail ? (
+              <>Tersambung ke akun <b className="text-snow">{accountEmail}</b>.</>
+            ) : (
+              "Pemain yang daftar akun dengan nomor ini otomatis tersambung ke data ini."
+            )}
+          </div>
         </div>
         <div>
           <div className="label">Koreksi poin (manual)</div>

@@ -1,6 +1,7 @@
 import { Nav } from "./Nav";
 import { BottomNav } from "./BottomNav";
 import { Footer } from "./Footer";
+import { Toaster } from "./ui/Toast";
 
 export function PublicShell({ children }: { children: React.ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
       <main className="flex-1 pb-20 md:pb-0">{children}</main>
       <Footer />
       <BottomNav />
+      <Toaster />
     </div>
   );
 }

@@ -24,6 +24,19 @@ export function parseDateParts(isoDate: string) {
   };
 }
 
+/** "Rayhan / Andra" -> "RA", "Bob Hintama" -> "BH", "Nadia" -> "NA". */
+export function initials(name: string): string {
+  const parts = name.includes("/") ? name.split("/") : name.trim().split(/\s+/);
+  const letters = parts.map((s) => s.trim()[0] ?? "").join("");
+  return (letters.length >= 2 ? letters : name.replace(/\s+/g, "")).slice(0, 2).toUpperCase() || "?";
+}
+
+/** "2026-10-05" (or a timestamp) -> "5 Okt 2026" */
+export function formatDayMonthYear(isoDate: string | null | undefined): string {
+  const [y, m, d] = (isoDate ?? "").slice(0, 10).split("-").map(Number);
+  return y && MONTHS[m - 1] && d ? `${d} ${MONTHS[m - 1]} ${y}` : "";
+}
+
 export function formatPointsDelta(n: number): string {
   return n > 0 ? `+${n}` : String(n);
 }

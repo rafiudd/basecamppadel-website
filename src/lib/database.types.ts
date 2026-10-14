@@ -2,6 +2,7 @@
 // Regenerate with `supabase gen types typescript` once the project is linked.
 
 import type { FinalStage, KoStage, Stage } from "@/lib/competition";
+import type { PhotoSource, PlayDuration, SelfLevel } from "@/lib/accountRules";
 
 export type Gender = "M" | "F";
 export type Serve = "A" | "B";
@@ -23,7 +24,33 @@ export type Player = {
   level_overridden?: boolean;
   level_override_reason?: string | null;
   active: boolean;
+  whatsapp: string | null; // normalized 628…, filled by admin so a new account can link to this player
   created_at: string;
+};
+
+export type DominantHand = "R" | "L";
+export type CourtPosition = "right" | "left" | "both";
+
+/** A player account (Google login), see 0012_player_accounts.sql. */
+export type Profile = {
+  user_id: string;
+  email: string;
+  full_name: string;
+  nickname: string;
+  gender: Gender;
+  whatsapp: string;
+  region: string;
+  dominant_hand: DominantHand | null;
+  position: CourtPosition | null;
+  photo_url: string | null;
+  instagram: string; // handle without "@"
+  play_duration: PlayDuration | null;
+  self_level: SelfLevel | null;
+  photo_source: PhotoSource | null; // null = set before 0017
+  player_id: string | null;
+  claim_player_id: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Session = {
@@ -355,6 +382,12 @@ export type Database = {
         Update: Partial<MatchHistory>;
         Relationships: [];
       };
+      profiles: {
+        Row: Profile;
+        Insert: Insert<Profile, "user_id" | "nickname" | "gender" | "whatsapp">;
+        Update: Partial<Profile>;
+        Relationships: [];
+      };
       admin_users: {
         Row: { user_id: string; created_at: string; role?: string; coach_id?: string | null };
         Insert: { user_id: string; created_at?: string; role?: string; coach_id?: string | null };
@@ -488,6 +521,32 @@ export type Database = {
         Args: { p_match_id: string; p_games_a: number; p_games_b: number; p_wo?: Serve | null };
         Returns: undefined;
       };
+      account_save_profile: {
+        Args: {
+          p_nickname: string;
+          p_gender: Gender;
+          p_whatsapp: string;
+          p_region: string;
+          p_hand: DominantHand | "";
+          p_position: CourtPosition | "";
+          p_photo_url: string | null;
+          p_remove_photo?: boolean;
+          p_full_name?: string;
+          p_instagram?: string;
+          p_play_duration?: PlayDuration | "";
+          p_self_level?: SelfLevel | "";
+          p_photo_source?: "google" | "upload" | "";
+        };
+        Returns: "linked" | "choose" | "created" | "saved";
+      };
+      account_name_candidates: {
+        Args: Record<string, never>;
+        Returns: Pick<Player, "id" | "name" | "gender" | "region" | "points" | "photo_url">[];
+      };
+      account_choose_player: { Args: { p_player: string | null }; Returns: undefined };
+      account_delete: { Args: { p_confirm: string }; Returns: undefined };
+      account_set_default_photo: { Args: { p_photo_url: string }; Returns: undefined };
+      account_resolve_claim: { Args: { p_uid: string; p_approve: boolean }; Returns: undefined };
       comp_finish_event: {
         Args: { p_event_id: string; p_stages: { team_id: string; stage: FinalStage }[] };
         Returns: undefined;

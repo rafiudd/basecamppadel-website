@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import type { Gender, Player } from "@/lib/database.types";
+import { normalizeWhatsapp } from "@/lib/accountRules";
 
 function revalidatePublic() {
   revalidatePath("/");
@@ -135,6 +136,9 @@ export async function upsertPlayer(_: ActionState, fd: FormData): Promise<Action
     await requireAdmin();
     const supabase = await createClient();
     const id = str(fd, "id");
+    const rawWa = str(fd, "whatsapp");
+    const whatsapp = rawWa ? normalizeWhatsapp(rawWa) : null;
+    if (rawWa && !whatsapp) throw new Error("Nomor WA tidak valid. Contoh: 0812-3456-7890.");
     const photo = await uploadPhoto(fd.get("photo") as File | null);
     const row: Partial<Player> & { name: string; gender: Gender } = {
       name: str(fd, "name"),
@@ -143,6 +147,7 @@ export async function upsertPlayer(_: ActionState, fd: FormData): Promise<Action
       region: str(fd, "region"),
       points_adjustment: Number(str(fd, "points_adjustment") || 0),
       active: fd.get("active") === "on",
+      whatsapp,
     };
     if (photo) row.photo_url = photo;
     else if (fd.get("remove_photo") === "on") row.photo_url = null;
@@ -152,9 +157,28 @@ export async function upsertPlayer(_: ActionState, fd: FormData): Promise<Action
       : supabase.from("players").insert(row);
     const { error } = await q;
     if (error) throw new Error(error.message);
+    // a linked account shows the same name and gender (the admin is the one who may change gender)
+    if (id) {
+      const { error: syncError } = await supabase.from("profiles").update({ nickname: row.name, gender: row.gender }).eq("player_id", id);
+      if (syncError) throw new Error(syncError.message);
+    }
     revalidatePath("/admin/players");
+    revalidatePath("/akun", "layout");
     revalidatePublic();
     redirect("/admin/players");
+  });
+}
+
+/** "Ini saya" claim: approve links the account to that player, reject gives it a new player. */
+export async function resolveClaim(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    await requireAdmin();
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("account_resolve_claim", { p_uid: str(fd, "user_id"), p_approve: str(fd, "approve") === "1" });
+    if (error) throw new Error(error.message);
+    revalidatePath("/admin/players");
+    revalidatePath("/akun", "layout");
+    revalidatePublic();
   });
 }
 

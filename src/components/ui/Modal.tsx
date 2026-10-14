@@ -22,7 +22,7 @@ export function Modal({
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
         style={{ width: `min(100%, ${width}px)` }}
-        className="bg-ink-3 rounded-2xl p-6 max-h-modal overflow-y-auto border border-snow/10 shadow-2xl flex flex-col gap-4"
+        className="bg-ink-3 text-snow rounded-2xl p-6 max-h-modal overflow-y-auto border border-snow/10 shadow-2xl flex flex-col gap-4"
       >
         <div className="flex items-center justify-between gap-2">
           <div className="font-display font-bold text-xl">{title}</div>

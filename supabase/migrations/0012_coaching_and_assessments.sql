@@ -177,25 +177,37 @@ alter table public.coaching_groups enable row level security;
 alter table public.coaching_session_players enable row level security;
 alter table public.coaching_assessments enable row level security;
 
--- Policies
+-- Policies (dropped first so `npm run db:migrate` can run this file again)
+drop policy if exists "coaches_read" on public.coaches;
 create policy "coaches_read" on public.coaches for select using (true);
+drop policy if exists "coaches_admin_write" on public.coaches;
 create policy "coaches_admin_write" on public.coaches for all using (public.is_admin());
 
+drop policy if exists "skills_read" on public.coaching_skills;
 create policy "skills_read" on public.coaching_skills for select using (true);
+drop policy if exists "skills_admin_write" on public.coaching_skills;
 create policy "skills_admin_write" on public.coaching_skills for all using (public.is_admin());
 
+drop policy if exists "sessions_read" on public.coaching_sessions;
 create policy "sessions_read" on public.coaching_sessions for select using (true);
+drop policy if exists "sessions_admin_write" on public.coaching_sessions;
 create policy "sessions_admin_write" on public.coaching_sessions for all using (public.is_admin());
 
+drop policy if exists "groups_read" on public.coaching_groups;
 create policy "groups_read" on public.coaching_groups for select using (true);
+drop policy if exists "groups_admin_write" on public.coaching_groups;
 create policy "groups_admin_write" on public.coaching_groups for all using (public.is_admin());
 
+drop policy if exists "session_players_read" on public.coaching_session_players;
 create policy "session_players_read" on public.coaching_session_players for select using (true);
+drop policy if exists "session_players_admin_write" on public.coaching_session_players;
 create policy "session_players_admin_write" on public.coaching_session_players for all using (public.is_admin());
 
+drop policy if exists "assessments_read" on public.coaching_assessments;
 create policy "assessments_read" on public.coaching_assessments for select using (
   published_to_player = true or public.has_admin_access()
 );
+drop policy if exists "assessments_admin_write" on public.coaching_assessments;
 create policy "assessments_admin_write" on public.coaching_assessments for all using (
   public.has_admin_access()
 );
