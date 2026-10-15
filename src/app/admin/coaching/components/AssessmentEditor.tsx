@@ -139,14 +139,13 @@ export function AssessmentEditor({
             )}
             {/* D.6: the printable rapor in a new tab ("Save as PDF"); only once the assessment is submitted */}
             {currentPlayerItem.status === "submitted" && currentPlayerItem.assessment && (
-              <a
+              <Link
                 href={`/admin/coaching/rapor/${currentPlayerItem.assessment.id}`}
                 target="_blank"
-                rel="noopener"
-                className="text-xs bg-[#FFD43B]/15 hover:bg-[#FFD43B]/25 text-[#FFD43B] px-3 py-1.5 rounded-lg border border-[#FFD43B]/25 font-bold no-underline whitespace-nowrap"
+                className="text-sm text-[#FBF7F1]/80 hover:text-[#FFD43B] no-underline"
               >
-                Unduh rapor
-              </a>
+                Lihat rapor ↗
+              </Link>
             )}
             <Link
               href={`/leaderboard/${currentPlayerItem.player.id}`}
