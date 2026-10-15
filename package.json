@@ -11,11 +11,13 @@
     "db:seed": "node --env-file=.env.local scripts/db.mjs seed",
     "db:admin": "node --env-file=.env.local scripts/db.mjs admin",
     "db:setup": "node --env-file=.env.local scripts/db.mjs setup",
+    "photos:r2": "node --env-file=.env.local scripts/photos-to-r2.mjs",
     "test": "node --experimental-strip-types --no-warnings --test tests/*.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
+    "aws4fetch": "^1.0.20",
     "next": "16.3.4",
     "nextjs-toploader": "^3.9.17",
     "react": "19.2.8",

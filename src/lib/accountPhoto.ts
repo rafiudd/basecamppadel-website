@@ -1,18 +1,16 @@
 import type { Supa } from "@/lib/server/action";
+import { uploadImage } from "@/lib/server/storage";
 import { googleIdentity, largeGoogleAvatar, PHOTO_MAX_BYTES, type PhotoSource } from "@/lib/accountRules";
 
 type SignedInUser = { id: string; user_metadata?: Record<string, unknown> };
 
-/** A profile photo → public URL under players/avatars/<user id>/. */
-export async function uploadAvatar(supabase: Supa, userId: string, file: File | null): Promise<string | null> {
+/**
+ * A profile photo → R2 under avatars/<user id>/. `userId` must be the signed-in user's id (callers
+ * take it from supabase.auth.getUser()), which is what keeps players out of each other's folders.
+ */
+export async function uploadAvatar(userId: string, file: File | null): Promise<string | null> {
   if (!file || file.size === 0) return null;
-  if (!file.type.startsWith("image/")) throw new Error("File foto harus berupa gambar.");
-  if (file.size > PHOTO_MAX_BYTES) throw new Error("Foto maksimal 2 MB.");
-  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-  const path = `avatars/${userId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("players").upload(path, file, { contentType: file.type, upsert: false });
-  if (error) throw new Error(`Upload foto gagal: ${error.message}`);
-  return supabase.storage.from("players").getPublicUrl(path).data.publicUrl;
+  return uploadImage(`avatars/${userId}`, file, PHOTO_MAX_BYTES);
 }
 
 /**
@@ -20,16 +18,16 @@ export async function uploadAvatar(supabase: Supa, userId: string, file: File | 
  * into our storage so it doesn't depend on Google's link. Read from the signed-in user, never from a
  * form. Best effort: any failure just means no photo.
  */
-export async function importGoogleAvatar(supabase: Supa, user: SignedInUser): Promise<string | null> {
+export async function importGoogleAvatar(user: SignedInUser): Promise<string | null> {
   const { avatarUrl } = googleIdentity(user.user_metadata);
   if (!avatarUrl) return null;
   try {
     const res = await fetch(largeGoogleAvatar(avatarUrl), { signal: AbortSignal.timeout(5000) });
-    const type = res.headers.get("content-type") ?? "";
+    const type = (res.headers.get("content-type") ?? "").split(";")[0].trim();
     if (!res.ok || !type.startsWith("image/")) return null;
     const bytes = await res.arrayBuffer();
     if (bytes.byteLength === 0 || bytes.byteLength > PHOTO_MAX_BYTES) return null;
-    return await uploadAvatar(supabase, user.id, new File([bytes], "google", { type }));
+    return await uploadAvatar(user.id, new File([bytes], "google", { type }));
   } catch {
     return null;
   }
@@ -46,6 +44,6 @@ export async function ensureDefaultPhoto(
   profile: { photo_url: string | null; photo_source: PhotoSource | null },
 ): Promise<void> {
   if (profile.photo_url || profile.photo_source === "none") return;
-  const photo = await importGoogleAvatar(supabase, user);
+  const photo = await importGoogleAvatar(user);
   if (photo) await supabase.rpc("account_set_default_photo", { p_photo_url: photo });
 }

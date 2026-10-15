@@ -41,6 +41,21 @@ Next.js 16 (App Router) + Supabase. Public site, admin CMS, and OBS overlay untu
 Tanpa CLI: jalankan `supabase/migrations/0001_init.sql` lalu `supabase/seed.sql` di SQL Editor, bikin user di
 Authentication → Users, lalu `insert into public.admin_users (user_id) select id from auth.users where email = '...'`.
 
+## Foto (Cloudflare R2)
+
+Foto pemain (admin) dan foto profil disimpan di R2, di-upload dari server (`src/lib/server/storage.ts`).
+Isi di `.env.local` / env hosting:
+
+```
+R2_ACCOUNT_ID=…            # Cloudflare dashboard → R2 → Account ID
+R2_ACCESS_KEY_ID=…         # R2 → Manage API tokens → token "Object Read & Write" untuk bucket ini
+R2_SECRET_ACCESS_KEY=…
+R2_BUCKET=basecamppadel
+NEXT_PUBLIC_R2_PUBLIC_URL=https://img.basecamppadel.id   # custom domain bucket, atau URL r2.dev
+```
+
+Pindahkan foto lama dari Supabase Storage: `npm run photos:r2 -- --dry-run`, lalu `npm run photos:r2`.
+
 ## Login pemain (Google)
 
 Supabase → Authentication → Providers → **Google**: isi Client ID/Secret dari Google Cloud, lalu tambahkan

@@ -33,7 +33,7 @@ export function ProfileEditView({
         googleName={profile.full_name}
         googleAvatar={googleAvatar}
         categoryLocked={categoryLocked}
-        defaults={profileDefaults(profile, googleAvatar)}
+        defaults={profileDefaults(profile)}
         action={saveAction}
       />
       <AccountSettings name={profile.full_name || profile.nickname} email={email} photoUrl={googleAvatar} action={deleteAction} />
