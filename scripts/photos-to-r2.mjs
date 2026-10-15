@@ -7,11 +7,9 @@
  *   npm run photos:r2 -- --dry-run
  *   npm run photos:r2
  *
- * Env (.env.local): SUPABASE_DB_URL, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET,
- * NEXT_PUBLIC_R2_PUBLIC_URL
+ * Env (.env.local): SUPABASE_DB_URL, STORAGE_WORKER_URL, STORAGE_WORKER_SECRET, NEXT_PUBLIC_R2_PUBLIC_URL
  */
 import pg from "pg";
-import { AwsClient } from "aws4fetch";
 
 const dryRun = process.argv.includes("--dry-run");
 const need = (k) => {
@@ -23,13 +21,19 @@ const need = (k) => {
   return v;
 };
 
-const r2 = new AwsClient({ accessKeyId: need("R2_ACCESS_KEY_ID"), secretAccessKey: need("R2_SECRET_ACCESS_KEY"), service: "s3", region: "auto" });
-const bucketUrl = `https://${need("R2_ACCOUNT_ID")}.r2.cloudflarestorage.com/${need("R2_BUCKET")}`;
+const workerUrl = need("STORAGE_WORKER_URL").replace(/\/+$/, "");
+const workerSecret = need("STORAGE_WORKER_SECRET");
 const publicBase = need("NEXT_PUBLIC_R2_PUBLIC_URL").replace(/\/+$/, "");
 const SUPABASE_PATH = "/storage/v1/object/public/players/";
+const EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
-/** Supabase object path → R2 key: avatars/<uid>/… stays as is, admin cutouts move under players/. */
-const r2Key = (path) => (path.startsWith("avatars/") ? path : `players/${path}`);
+/**
+ * Supabase object path → R2 key in the worker's format: avatars/<uid>/<uuid>.<ext> stays as is,
+ * anything else (admin cutouts) becomes players/<new uuid>.<ext from the content type>.
+ */
+const r2Key = (path, type) =>
+  new RegExp(`^avatars/${UUID}/${UUID}\\.(jpe?g|png|webp|gif)$`).test(path) ? path : `players/${crypto.randomUUID()}.${EXT[type] ?? "jpg"}`;
 
 const db = new pg.Client({ connectionString: need("SUPABASE_DB_URL"), ssl: { rejectUnauthorized: false } });
 await db.connect();
@@ -45,10 +49,8 @@ console.log(`${rows.length} foto di Supabase Storage${dryRun ? " (dry run)" : ""
 let moved = 0;
 for (const { photo_url: oldUrl } of rows) {
   const path = decodeURIComponent(oldUrl.slice(oldUrl.indexOf(SUPABASE_PATH) + SUPABASE_PATH.length));
-  const key = r2Key(path);
-  const newUrl = `${publicBase}/${key}`;
   if (dryRun) {
-    console.log(`  ${path} → ${newUrl}`);
+    console.log(`  ${path}`);
     continue;
   }
   const src = await fetch(oldUrl);
@@ -56,19 +58,22 @@ for (const { photo_url: oldUrl } of rows) {
     console.log(`  ✗ ${path}: download ${src.status}, dilewati`);
     continue;
   }
-  const put = await r2.fetch(`${bucketUrl}/${key}`, {
+  const type = (src.headers.get("content-type") ?? "image/jpeg").split(";")[0].trim();
+  const key = r2Key(path, type);
+  const newUrl = `${publicBase}/${key}`;
+  const put = await fetch(`${workerUrl}/${key}`, {
     method: "PUT",
     body: await src.arrayBuffer(),
-    headers: { "content-type": src.headers.get("content-type") ?? "image/jpeg", "cache-control": "public, max-age=31536000, immutable" },
+    headers: { authorization: `Bearer ${workerSecret}`, "content-type": type },
   });
-  if (!put.ok) {
-    console.log(`  ✗ ${path}: upload R2 ${put.status}, dilewati`);
+  if (put.status !== 201) {
+    console.log(`  ✗ ${path}: upload ${put.status} ${await put.text()}, dilewati`);
     continue;
   }
   await db.query(`update public.players set photo_url = $1 where photo_url = $2`, [newUrl, oldUrl]);
   await db.query(`update public.profiles set photo_url = $1 where photo_url = $2`, [newUrl, oldUrl]);
   moved++;
-  console.log(`  ✓ ${path}`);
+  console.log(`  ✓ ${path} → ${newUrl}`);
 }
 
 await db.end();

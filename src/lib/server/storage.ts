@@ -1,12 +1,12 @@
 import "server-only";
-import { AwsClient } from "aws4fetch";
 
 /**
- * Image storage on Cloudflare R2 (S3 API). Server-only: the secret key never reaches the browser, so
- * every caller checks who is signed in and builds the object key itself (R2 has no row-level rules).
+ * Image storage: Cloudflare R2 behind our storage worker (workers/storage). Server-only: the worker
+ * secret never reaches the browser, and every caller checks who is signed in and builds the folder
+ * itself (R2 has no row-level rules; the worker only accepts players/ and avatars/<user id>/).
  *
- * Env: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, NEXT_PUBLIC_R2_PUBLIC_URL
- * (the bucket's public base URL: a custom domain like https://img.basecamppadel.id or the r2.dev URL).
+ * Env: STORAGE_WORKER_URL, STORAGE_WORKER_SECRET, NEXT_PUBLIC_R2_PUBLIC_URL (public base URL of the
+ * bucket: the worker URL, a custom domain, or the r2.dev URL).
  */
 
 const IMAGE_EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
@@ -17,21 +17,10 @@ function env(name: string): string {
   return v;
 }
 
-let client: AwsClient | null = null;
-function r2() {
-  client ??= new AwsClient({
-    accessKeyId: env("R2_ACCESS_KEY_ID"),
-    secretAccessKey: env("R2_SECRET_ACCESS_KEY"),
-    service: "s3",
-    region: "auto",
-  });
-  return client;
-}
-
-const objectUrl = (key: string) => `https://${env("R2_ACCOUNT_ID")}.r2.cloudflarestorage.com/${env("R2_BUCKET")}/${key}`;
+const trimSlash = (s: string) => s.replace(/\/+$/, "");
 
 /** Public URL of a stored object. */
-export const publicUrl = (key: string) => `${env("NEXT_PUBLIC_R2_PUBLIC_URL").replace(/\/+$/, "")}/${key}`;
+export const publicUrl = (key: string) => `${trimSlash(env("NEXT_PUBLIC_R2_PUBLIC_URL"))}/${key}`;
 
 /**
  * Stores an image under `<folder>/<random>.<ext>` and returns its public URL. Only jpg/png/webp/gif;
@@ -42,11 +31,13 @@ export async function uploadImage(folder: string, file: Blob, maxBytes: number):
   if (!ext) throw new Error("File foto harus berupa gambar (JPG, PNG, WebP).");
   if (file.size === 0 || file.size > maxBytes) throw new Error(`Foto maksimal ${Math.round(maxBytes / 1024 / 1024)} MB.`);
   const key = `${folder.replace(/^\/+|\/+$/g, "")}/${crypto.randomUUID()}.${ext}`;
-  const res = await r2().fetch(objectUrl(key), {
+  const res = await fetch(`${trimSlash(env("STORAGE_WORKER_URL"))}/${key}`, {
     method: "PUT",
     body: await file.arrayBuffer(),
-    headers: { "content-type": file.type, "cache-control": "public, max-age=31536000, immutable" },
+    headers: { authorization: `Bearer ${env("STORAGE_WORKER_SECRET")}`, "content-type": file.type },
   });
-  if (!res.ok) throw new Error(`Upload foto gagal (${res.status}).`);
+  // the worker answers 201 {"key"}; anything else (an old/undeployed worker answers 200) is a failure
+  const stored = res.status === 201 ? ((await res.json().catch(() => null)) as { key?: string } | null) : null;
+  if (stored?.key !== key) throw new Error(`Upload foto gagal (${res.status}).`);
   return publicUrl(key);
 }
