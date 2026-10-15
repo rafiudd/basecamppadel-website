@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useTransition, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
+import { useTopLoaderWhile } from "@/components/TopLoader";
 import type {
   Coach,
   CoachingSkill,
@@ -79,6 +80,9 @@ export function CoachingClient({
   const [isPending, startTransition] = useTransition();
   const [saveStatus, setSaveStatus] = useState<string>("Tersimpan otomatis");
   const [isPublishingAll, setIsPublishingAll] = useState(false);
+  /** Which footer button is running, so only that one shows the spinner. */
+  const [busyAction, setBusyAction] = useState<"draft" | "submit" | null>(null);
+  useTopLoaderWhile(isPending || busyAction !== null || isPublishingAll);
 
   // Filtered players list
   const filteredPlayers = useMemo(() => {
@@ -181,6 +185,7 @@ export function CoachingClient({
   // Manual Simpan Draft
   const handleSaveDraft = () => {
     if (!currentPlayerItem || !sessionData) return;
+    setBusyAction("draft");
     startTransition(async () => {
       setSaveStatus("Menyimpan draft...");
       try {
@@ -201,6 +206,8 @@ export function CoachingClient({
       } catch (err: any) {
         setSaveStatus("Gagal menyimpan draft");
         toast.error(err?.message || "Gagal menyimpan draft");
+      } finally {
+        setBusyAction(null);
       }
     });
   };
@@ -208,6 +215,7 @@ export function CoachingClient({
   // Simpan & Kirim (Submit) lalu lanjut ke pemain berikutnya
   const handleSubmitAndNext = () => {
     if (!currentPlayerItem || !sessionData) return;
+    setBusyAction("submit");
     startTransition(async () => {
       setSaveStatus("Mengirim...");
       try {
@@ -232,6 +240,8 @@ export function CoachingClient({
       } catch (err: any) {
         setSaveStatus("Gagal mengirim");
         toast.error(err?.message || "Gagal mengirim penilaian");
+      } finally {
+        setBusyAction(null);
       }
     });
   };
@@ -385,6 +395,7 @@ export function CoachingClient({
           publishedToPlayer={publishedToPlayer}
           saveStatus={saveStatus}
           isPending={isPending}
+          busyAction={busyAction}
           isAdmin={isAdmin}
           onScoreClick={handleScoreClick}
           onToggleSkillChip={handleToggleSkillChip}

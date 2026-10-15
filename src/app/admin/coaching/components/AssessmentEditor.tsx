@@ -21,6 +21,7 @@ export function AssessmentEditor({
   publishedToPlayer,
   saveStatus,
   isPending,
+  busyAction,
   isAdmin,
   onScoreClick,
   onToggleSkillChip,
@@ -45,6 +46,7 @@ export function AssessmentEditor({
   publishedToPlayer: boolean;
   saveStatus: string;
   isPending: boolean;
+  busyAction: "draft" | "submit" | null;
   isAdmin: boolean;
   onScoreClick: (skillId: string, val: number) => void;
   onToggleSkillChip: (skillId: string) => void;
@@ -329,6 +331,7 @@ export function AssessmentEditor({
                 type="button"
                 onClick={onSaveDraft}
                 disabled={isPending}
+                data-loading={busyAction === "draft" || undefined}
                 className="border-0 rounded-lg min-h-11 px-4.5 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FBF7F1]/12 text-[#FBF7F1] hover:bg-[#FBF7F1]/18 transition-all disabled:opacity-50 cursor-pointer"
               >
                 Simpan draft
@@ -337,6 +340,7 @@ export function AssessmentEditor({
                 type="button"
                 onClick={onSubmitAndNext}
                 disabled={isPending}
+                data-loading={busyAction === "submit" || undefined}
                 className="border-0 rounded-lg min-h-11 px-4.5 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FF5A3C] text-[#17151F] hover:bg-[#FF5A3C]/90 transition-all shadow-md disabled:opacity-50 cursor-pointer"
               >
                 Simpan &amp; kirim · lanjut pemain berikutnya →
@@ -352,6 +356,7 @@ export function AssessmentEditor({
           type="button"
           onClick={onSaveDraft}
           disabled={isPending}
+          data-loading={busyAction === "draft" || undefined}
           className="border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FBF7F1]/12 text-[#FBF7F1] disabled:opacity-50 cursor-pointer"
         >
           Draft
@@ -360,6 +365,7 @@ export function AssessmentEditor({
           type="button"
           onClick={onSubmitAndNext}
           disabled={isPending}
+          data-loading={busyAction === "submit" || undefined}
           className="border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 flex-grow bg-[#FF5A3C] text-[#17151F] disabled:opacity-50 shadow-md cursor-pointer"
         >
           Simpan &amp; lanjut →

@@ -23,6 +23,18 @@ export function MasterTeknikModal({
   const [isAdding, setIsAdding] = useState(false);
   const [formData, setFormData] = useState({ name: "", category: "", type: "teknik" as "teknik" | "in_game" });
   const [isPending, startTransition] = useTransition();
+  /** Which button's action is running, so only that button shows the spinner. */
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const run = (key: string, action: () => Promise<void>) => {
+    setBusyKey(key);
+    startTransition(async () => {
+      try {
+        await action();
+      } finally {
+        setBusyKey(null);
+      }
+    });
+  };
   const [message, setMessage] = useState<string | null>(null);
 
   const filteredSkills = skills.filter((s) => s.type === activeTab);
@@ -33,7 +45,7 @@ export function MasterTeknikModal({
     setSkills((prev) =>
       prev.map((s) => (s.id === skill.id ? { ...s, active: nextActive } : s))
     );
-    startTransition(async () => {
+    run(`toggle:${skill.id}`, async () => {
       try {
         await toggleSkillActiveAction(skill.id, nextActive);
         toast.success(nextActive ? `Teknik "${skill.name}" diaktifkan` : `Teknik "${skill.name}" dinonaktifkan`);
@@ -58,7 +70,7 @@ export function MasterTeknikModal({
     setSkills(updatedSkills);
 
     const orderedIds = updatedSkills.map((s) => s.id);
-    startTransition(async () => {
+    run(`move:${moved.id}:${dir}`, async () => {
       try {
         await reorderSkillsAction(orderedIds);
         toast.success("Urutan teknik berhasil diperbarui");
@@ -73,7 +85,7 @@ export function MasterTeknikModal({
     e.preventDefault();
     if (!formData.name.trim() || !formData.category.trim()) return;
 
-    startTransition(async () => {
+    run("save", async () => {
       try {
         if (editingSkill) {
           await upsertSkillAction({
@@ -202,6 +214,7 @@ export function MasterTeknikModal({
               <button
                 type="submit"
                 disabled={isPending}
+                data-loading={busyKey === "save" || undefined}
                 className="bg-volt text-ink font-bold text-xs px-4 py-1.5 rounded-lg hover:bg-volt/90 disabled:opacity-50"
               >
                 {isPending ? "Menyimpan..." : "Simpan"}
@@ -243,6 +256,7 @@ export function MasterTeknikModal({
                             type="button"
                             title="Pindah ke atas"
                             onClick={() => handleMove(filteredSkills.indexOf(skill), -1)}
+                            data-loading={busyKey === `move:${skill.id}:-1` || undefined}
                             className="text-snow/60 hover:text-snow text-xs px-1.5 py-0.5 bg-snow/5 rounded"
                           >
                             ▲
@@ -251,6 +265,7 @@ export function MasterTeknikModal({
                             type="button"
                             title="Pindah ke bawah"
                             onClick={() => handleMove(filteredSkills.indexOf(skill), 1)}
+                            data-loading={busyKey === `move:${skill.id}:1` || undefined}
                             className="text-snow/60 hover:text-snow text-xs px-1.5 py-0.5 bg-snow/5 rounded"
                           >
                             ▼
@@ -273,6 +288,7 @@ export function MasterTeknikModal({
                           <button
                             type="button"
                             onClick={() => handleToggle(skill)}
+                            data-loading={busyKey === `toggle:${skill.id}` || undefined}
                             className={`text-xs px-2.5 py-1 rounded font-medium transition-all ${
                               skill.active
                                 ? "bg-win/20 text-win-soft hover:bg-win/30"

@@ -1,5 +1,4 @@
 import { ActionForm } from "@/components/admin/ActionForm";
-import Image from "next/image";
 import type { Player } from "@/lib/database.types";
 import { upsertPlayer } from "@/app/admin/actions";
 import { LEVELS } from "@/lib/config";
@@ -13,20 +12,7 @@ export function PlayerForm({ player, accountEmail }: { player?: Player; accountE
       {player && <input type="hidden" name="id" value={player.id} />}
 
       <div className="flex flex-col gap-3">
-        <div className="relative w-40 h-50 rounded-xl bg-ink/40 overflow-hidden">
-          <Image
-            src={player?.photo_url || "/images/player-placeholder.svg"}
-            alt=""
-            fill
-            sizes="160px"
-            unoptimized={!player?.photo_url}
-            className="object-contain object-bottom"
-          />
-        </div>
-        <div>
-          <div className="label">Foto cutout (PNG/WebP)</div>
-          <PlayerPhotoInput />
-        </div>
+        <PlayerPhotoInput current={player?.photo_url ?? null} />
         {player?.photo_url && (
           <label className="flex items-center gap-2 text-xs text-snow/70">
             <input type="checkbox" name="remove_photo" /> Hapus foto

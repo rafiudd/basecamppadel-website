@@ -304,6 +304,7 @@ export function CreateSessionModal({
           <button
             type="submit"
             disabled={isPending}
+            data-loading={isPending || undefined}
             className="bg-coral text-ink font-bold text-xs px-5 py-2.5 rounded-lg hover:bg-coral/90 disabled:opacity-50"
           >
             {isPending ? "Membuat Sesi..." : "Buat Sesi Coaching"}

@@ -32,13 +32,15 @@ export function PlayerHeroCard({
       aria-label={`Detail ${player.name}`}
       className="group block relative w-full h-[224px] sm:h-[280px] mb-4 sm:mb-6 no-underline text-snow transition-transform hover:scale-[1.01]"
     >
-      {/* Background card base */}
-      <div
-        className="absolute left-0 right-0 bottom-0 h-[164px] sm:h-[200px] bg-indigo rounded-2xl transition-all"
-        style={{
-          boxShadow: isRank1 ? `inset 0 0 0 2px ${rank1Accent}` : "none",
-        }}
-      />
+      {/* Background card base; the card clips the coral circle into a half circle behind the photo
+          and a warm glow, like the header of the coaching rapor */}
+      <div className="absolute left-0 right-0 bottom-0 h-[164px] sm:h-[200px] bg-indigo rounded-2xl overflow-hidden">
+        <div className="absolute left-[27px] sm:left-[70px] -bottom-[80px] sm:-bottom-[110px] w-[160px] h-[160px] sm:w-[220px] sm:h-[220px] rounded-full bg-coral opacity-90 transition-transform duration-300 group-hover:scale-105" />
+        <div className="absolute left-0 sm:left-[20px] -bottom-[60px] w-[220px] h-[220px] sm:w-[300px] sm:h-[300px] rounded-full bg-[radial-gradient(circle,rgba(255,236,200,.45)_0%,rgba(255,212,59,.15)_45%,rgba(255,90,60,0)_70%)]" />
+        {isRank1 && (
+          <div className="absolute inset-0 rounded-2xl" style={{ boxShadow: `inset 0 0 0 2px ${rank1Accent}` }} />
+        )}
+      </div>
 
       {/* Pill strip at bottom */}
       <div className="absolute left-3 right-3 sm:left-5 sm:right-5 top-[139px] sm:top-[176px] h-[46px] sm:h-[54px] box-border border border-snow/35 rounded-xl bg-ink/35 z-[1]" />
@@ -59,7 +61,7 @@ export function PlayerHeroCard({
           width={224}
           height={276}
           unoptimized
-          className="block w-full h-[220px] sm:h-[276px] object-contain object-bottom"
+          className="block w-full h-[220px] sm:h-[276px] object-contain object-bottom drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)]"
         />
       </div>
 
