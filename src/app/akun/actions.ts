@@ -32,14 +32,12 @@ export async function saveProfile(_: ActionState, fd: FormData): Promise<ActionS
     const instagram = normalizeInstagram(str(fd, "instagram"));
     if (instagram === null) throw new Error("Username Instagram tidak valid. Contoh: @basecamppadel.id");
 
-    const removePhoto = fd.get("remove_photo") === "on";
-    const pickedGoogle = fd.get("use_google_photo") === "on";
-    const uploaded = await uploadAvatar(supabase, user.id, fd.get("photo") as File | null);
-    // the Google picture: picked with "Pakai foto Google", or kept as the default while there's no photo yet
-    const { data: current } = await supabase.from("profiles").select("photo_url, photo_source").eq("user_id", user.id).maybeSingle();
-    const useGoogle = pickedGoogle || (!removePhoto && !current?.photo_url && current?.photo_source !== "none");
-    const photo = uploaded ?? (useGoogle ? await importGoogleAvatar(supabase, user) : null);
-    if (pickedGoogle && !photo) throw new Error("Foto Google tidak bisa diambil. Coba lagi atau unggah foto.");
+    // a picked photo, else on the first save (Lengkapi profil) the Google picture as the default
+    const uploaded = await uploadAvatar(user.id, fd.get("photo") as File | null);
+    const { data: current } = mode === "setup" && !uploaded
+      ? await supabase.from("profiles").select("photo_url").eq("user_id", user.id).maybeSingle()
+      : { data: null };
+    const photo = uploaded ?? (mode === "setup" && !current?.photo_url ? await importGoogleAvatar(user) : null);
     const { data, error } = await supabase.rpc("account_save_profile", {
       p_nickname: str(fd, "nickname"),
       p_gender: str(fd, "gender") as Gender,
@@ -48,7 +46,7 @@ export async function saveProfile(_: ActionState, fd: FormData): Promise<ActionS
       p_hand: str(fd, "hand") as DominantHand | "",
       p_position: str(fd, "position") as CourtPosition | "",
       p_photo_url: photo,
-      p_remove_photo: !photo && removePhoto,
+      p_remove_photo: false,
       p_photo_source: uploaded ? "upload" : photo ? "google" : "",
       p_full_name: str(fd, "full_name"),
       p_instagram: instagram,

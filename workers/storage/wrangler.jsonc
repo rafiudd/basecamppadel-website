@@ -1,0 +1,9 @@
+{
+  // Basecamp Padel storage worker (see src/index.ts). Deploy from this folder:
+  //   npx wrangler secret put STORAGE_SECRET   (same value as STORAGE_WORKER_SECRET in the app)
+  //   npx wrangler deploy
+  "name": "basecamppadel",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "basecamp-padel" }]
+}

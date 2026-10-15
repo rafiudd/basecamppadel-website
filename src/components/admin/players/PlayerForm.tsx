@@ -4,6 +4,7 @@ import type { Player } from "@/lib/database.types";
 import { upsertPlayer } from "@/app/admin/actions";
 import { LEVELS } from "@/lib/config";
 import { formatWhatsapp } from "@/lib/accountRules";
+import { PlayerPhotoInput } from "./PlayerPhotoInput";
 
 /** `accountEmail`: the player account linked to this player, if any. */
 export function PlayerForm({ player, accountEmail }: { player?: Player; accountEmail?: string | null }) {
@@ -24,7 +25,7 @@ export function PlayerForm({ player, accountEmail }: { player?: Player; accountE
         </div>
         <div>
           <div className="label">Foto cutout (PNG/WebP)</div>
-          <input className="field text-xs" name="photo" type="file" accept="image/png,image/webp,image/jpeg" />
+          <PlayerPhotoInput />
         </div>
         {player?.photo_url && (
           <label className="flex items-center gap-2 text-xs text-snow/70">

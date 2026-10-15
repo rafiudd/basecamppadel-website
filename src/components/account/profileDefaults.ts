@@ -1,4 +1,4 @@
-import { formatWhatsapp, profilePhoto } from "@/lib/accountRules";
+import { formatWhatsapp } from "@/lib/accountRules";
 import type { Profile } from "@/lib/database.types";
 import type { ProfileDefaults } from "./ProfileForm";
 
@@ -24,8 +24,8 @@ export type EditableProfile = Pick<
   "full_name" | "nickname" | "gender" | "region" | "whatsapp" | "instagram" | "play_duration" | "dominant_hand" | "position" | "self_level" | "photo_url" | "photo_source"
 >;
 
-/** Edit profil: the saved profile as form values (photo per profilePhoto: none stays none). */
-export function profileDefaults(p: EditableProfile, googleAvatar: string | null = null): ProfileDefaults {
+/** Edit profil: the saved profile as form values (the saved photo only, which is what a save keeps). */
+export function profileDefaults(p: EditableProfile): ProfileDefaults {
   return {
     fullName: p.full_name,
     nickname: p.nickname,
@@ -37,6 +37,6 @@ export function profileDefaults(p: EditableProfile, googleAvatar: string | null 
     hand: p.dominant_hand ?? "",
     position: p.position ?? "",
     selfLevel: p.self_level ?? "",
-    photoUrl: profilePhoto(p, googleAvatar),
+    photoUrl: p.photo_url,
   };
 }

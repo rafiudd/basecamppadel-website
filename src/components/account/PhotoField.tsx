@@ -3,38 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "@/components/ui/Toast";
 import { PHOTO_MAX_BYTES } from "@/lib/accountRules";
+import { compressImage, MAX_SOURCE_BYTES } from "@/lib/imageCompress";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { secondaryButton } from "./styles";
 
-const SIZE = 512;
-
-/** Center-crops an image to a SIZE×SIZE JPEG. */
-async function cropSquare(file: File): Promise<File> {
-  const bitmap = await createImageBitmap(file);
-  const side = Math.min(bitmap.width, bitmap.height);
-  const canvas = document.createElement("canvas");
-  canvas.width = SIZE;
-  canvas.height = SIZE;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, SIZE, SIZE);
-  bitmap.close();
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.88));
-  if (!blob) throw new Error("crop failed");
-  return new File([blob], "avatar.jpg", { type: "image/jpeg" });
-}
-
 /**
- * Profile photo: max 2 MB, cropped square in the browser. The cropped file goes into a hidden
- * `name="photo"` input, so the form posts it like any file field; `remove_photo` clears it, and
- * `use_google_photo` asks the server to copy the Google account picture (it reads that from the
- * signed-in user, not from the form).
+ * Profile photo: pick a new one only (compressed and cropped square in the browser). The cropped file
+ * goes into a hidden `name="photo"` input, so the form posts it like any file field. The Google
+ * picture is a first-login default set on the server, not a choice here.
  */
-export function PhotoField({ name, current, googleAvatar = null }: { name: string; current: string | null; googleAvatar?: string | null }) {
+export function PhotoField({ name, current }: { name: string; current: string | null }) {
   const picker = useRef<HTMLInputElement>(null);
   const posted = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [removed, setRemoved] = useState(false);
-  const [useGoogle, setUseGoogle] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
@@ -44,16 +25,15 @@ export function PhotoField({ name, current, googleAvatar = null }: { name: strin
     e.target.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) return void toast.error("File foto harus berupa gambar.");
-    if (file.size > PHOTO_MAX_BYTES) return void toast.error("Foto maksimal 2 MB.");
+    if (file.size > MAX_SOURCE_BYTES) return void toast.error("Foto maksimal 20 MB.");
     setBusy(true);
     try {
-      const cropped = await cropSquare(file);
+      const cropped = await compressImage(file, { maxSide: 512, square: true, quality: 0.88 });
+      if (cropped.size > PHOTO_MAX_BYTES) return void toast.error("Foto terlalu besar setelah dikompres. Coba foto lain.");
       const dt = new DataTransfer();
       dt.items.add(cropped);
       posted.current!.files = dt.files;
       setPreview(URL.createObjectURL(cropped));
-      setRemoved(false);
-      setUseGoogle(false);
     } catch {
       toast.error("Foto ini tidak bisa dibaca. Coba foto lain (JPG/PNG).");
     } finally {
@@ -61,30 +41,19 @@ export function PhotoField({ name, current, googleAvatar = null }: { name: strin
     }
   }
 
-  function clear() {
-    if (posted.current) posted.current.files = new DataTransfer().files;
-    setPreview(null);
-    setRemoved(true);
-    setUseGoogle(false);
-  }
-
-  const shown = useGoogle ? googleAvatar : (preview ?? (removed ? null : current));
+  const shown = preview ?? current;
 
   return (
     <div className="flex items-center gap-4">
       <ProfileAvatar name={name} photoUrl={shown} className="w-20 h-20 text-2xl" />
       <div className="flex flex-col gap-2 items-start">
-        <div className="flex gap-2 flex-wrap">
-          <button type="button" className={`${secondaryButton} min-h-10 px-4`} onClick={() => picker.current?.click()} disabled={busy} data-loading={busy || undefined}>
-            {shown ? "Ganti foto" : "Pilih foto"}
-          </button>
-        </div>
-        <div className="text-xs text-ink/60">JPG/PNG, maks 2 MB. Otomatis dipotong persegi.</div>
+        <button type="button" className={`${secondaryButton} min-h-10 px-4`} onClick={() => picker.current?.click()} disabled={busy} data-loading={busy || undefined}>
+          {shown ? "Ganti foto" : "Pilih foto"}
+        </button>
+        <div className="text-xs text-ink/60">JPG/PNG. Otomatis dikompres & dipotong persegi.</div>
       </div>
       <input ref={picker} type="file" accept="image/*" className="hidden" onChange={onPick} aria-label="Pilih foto profil" />
       <input ref={posted} type="file" name="photo" className="hidden" tabIndex={-1} aria-hidden />
-      {removed && <input type="hidden" name="remove_photo" value="on" />}
-      {useGoogle && <input type="hidden" name="use_google_photo" value="on" />}
     </div>
   );
 }

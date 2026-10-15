@@ -177,7 +177,7 @@ export function ProfileForm({
 
           <h2 className={sectionHeading}>Data diri</h2>
 
-          <PhotoField name={fullName || nickname} current={defaults.photoUrl} googleAvatar={googleAvatar} />
+          <PhotoField name={fullName || nickname} current={defaults.photoUrl} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4.5">
             <Text label="Nama lengkap" hint="Dari akun Google, bisa diubah">

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
+import { uploadImage } from "@/lib/server/storage";
 import type { Gender, Player } from "@/lib/database.types";
 import { normalizeWhatsapp } from "@/lib/accountRules";
 
@@ -119,16 +120,10 @@ export async function deleteCourt(_: ActionState, fd: FormData): Promise<ActionS
 }
 
 // ---------------------------------------------------------------- players
+/** Player cutout photo (admin only: callers run requireAdmin first) → R2 under players/. */
 async function uploadPhoto(file: File | null): Promise<string | null> {
   if (!file || file.size === 0) return null;
-  const supabase = await createClient();
-  const ext = (file.name.split(".").pop() || "png").toLowerCase();
-  const path = `${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage
-    .from("players")
-    .upload(path, file, { contentType: file.type || undefined, upsert: false });
-  if (error) throw new Error(`Upload foto gagal: ${error.message}`);
-  return supabase.storage.from("players").getPublicUrl(path).data.publicUrl;
+  return uploadImage("players", file, 5 * 1024 * 1024);
 }
 
 export async function upsertPlayer(_: ActionState, fd: FormData): Promise<ActionState> {
