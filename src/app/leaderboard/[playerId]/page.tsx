@@ -65,9 +65,12 @@ export default async function PlayerPage({ params }: Props) {
   return (
     <PublicShell>
       {/* Hero section */}
-      <section className="bg-indigo text-snow px-6 md:px-12 pt-8 md:pt-12 overflow-hidden">
-        <div className="w-full max-w-[1440px] mx-auto flex flex-col md:flex-row items-center md:items-end justify-between gap-8">
-          <div className="flex-1 flex flex-col gap-5 py-4 pb-8 md:pb-12 max-w-[580px]">
+      <section className="bg-indigo text-snow px-6 md:px-12 pt-4 md:pt-6 overflow-hidden">
+        <div className="relative w-full max-w-[1440px] mx-auto flex flex-col md:flex-row items-center md:items-end justify-between gap-8">
+          {/* Big coral circle, vertically centered in the hero, its left edge curving behind the player
+              (a quarter into the photo); the hero section clips it */}
+          <div className="absolute -bottom-[260px] md:bottom-auto md:top-1/2 md:-translate-y-1/2 left-[calc(50%-70px)] md:left-auto md:-right-[710px] w-[760px] h-[760px] md:w-[980px] md:h-[980px] rounded-full bg-[linear-gradient(165deg,#FF5A3C_0%,#F26A45_55%,#E4573D_100%)]" />
+          <div className="relative z-10 flex-1 flex flex-col gap-4 py-2 pb-6 md:pb-8 max-w-[580px]">
             <Link
               href="/leaderboard"
               className="no-underline text-snow/75 font-sans font-semibold text-sm hover:text-volt transition-colors inline-flex items-center gap-1"
@@ -76,10 +79,10 @@ export default async function PlayerPage({ params }: Props) {
             </Link>
 
             <div className="flex items-baseline gap-4 flex-wrap">
-              <div className="font-display font-bold text-[56px] text-volt leading-none">
+              <div className="font-display font-bold text-[72px] sm:text-[88px] text-volt leading-none">
                 {player.rank}
               </div>
-              <h1 className="font-display font-bold text-[36px] sm:text-[42px] leading-none m-0">
+              <h1 className="font-display font-bold text-[48px] sm:text-[60px] leading-none m-0">
                 {player.name}
               </h1>
             </div>
@@ -144,7 +147,9 @@ export default async function PlayerPage({ params }: Props) {
           </div>
 
           {/* Photo */}
-          <div className="flex-none self-center md:self-end w-[260px] sm:w-[300px] md:w-[320px] h-[340px] md:h-[412px] relative">
+          <div className="flex-none self-center md:self-end mt-7 md:mt-10 w-[280px] sm:w-[320px] md:w-[360px] h-[330px] sm:h-[380px] md:h-[420px] relative">
+            {/* Soft glow right behind the photo, like the coaching rapor header */}
+            <div className="absolute left-1/2 -translate-x-1/2 -bottom-[60px] w-[380px] h-[380px] md:w-[480px] md:h-[480px] rounded-full bg-[radial-gradient(circle,rgba(190,130,150,.55)_0%,rgba(120,80,140,.25)_40%,rgba(27,22,80,0)_70%)]" />
             <Image
               src={
                 player.photo_url ||
@@ -153,11 +158,11 @@ export default async function PlayerPage({ params }: Props) {
                   : "/images/player-placeholder-men.svg")
               }
               alt={`Foto ${player.name}`}
-              width={320}
-              height={412}
+              width={420}
+              height={540}
               priority
               unoptimized
-              className="block w-full h-full object-contain object-bottom"
+              className="relative block w-full h-full object-contain object-bottom origin-bottom scale-[1.2] drop-shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
             />
           </div>
         </div>

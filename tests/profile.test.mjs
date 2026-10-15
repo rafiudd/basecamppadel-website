@@ -201,3 +201,18 @@ test("eventHistory: an award whose event can't be read still has a title and the
   assert.equal(formatDayMonthYear(""), "");
   assert.equal(formatDayMonthYear("2026-10-05"), "5 Okt 2026");
 });
+
+test("skillBoards: a skill added later to an existing category joins that category (Master Teknik appends)", async () => {
+  const { skillBoards } = await import("../src/lib/coachingRules.ts");
+  const sk = (key, group_label, sort, kind = "teknik") => ({ key, kind, group_label, label: key, sort });
+  const [teknik] = skillBoards(
+    [sk("forehand", "Groundstroke", 1), sk("volley", "Di net", 2), sk("lob", "Groundstroke", 40), sk("new-cat", "Baru", 41)],
+    [],
+  );
+  assert.deepEqual(teknik.groups.map((g) => [g.label, g.items.map((i) => i.key)]), [
+    ["Groundstroke", ["forehand", "lob"]],
+    ["Di net", ["volley"]],
+    ["Baru", ["new-cat"]],
+  ]);
+  assert.equal(teknik.total, 4);
+});

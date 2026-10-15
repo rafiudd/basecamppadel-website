@@ -1,7 +1,18 @@
 "use client";
 
-import NextTopLoader from "nextjs-toploader";
+import { useEffect } from "react";
+import NextTopLoader, { useTopLoader } from "nextjs-toploader";
 import { usePathname } from "next/navigation";
+
+/** Runs the top bar while `busy` is true: for server actions that stay on the page (saves, deletes). */
+export function useTopLoaderWhile(busy: boolean) {
+  const loader = useTopLoader();
+  useEffect(() => {
+    if (!busy) return;
+    loader.start();
+    return () => void loader.done();
+  }, [busy, loader]);
+}
 
 /**
  * Thin progress bar on top while a page loads (link clicks, and `router.push` through

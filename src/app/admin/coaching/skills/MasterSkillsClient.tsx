@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
+import { useTopLoaderWhile } from "@/components/TopLoader";
 import type { CoachingSkill } from "@/lib/database.types";
 import {
   upsertSkillAction,
@@ -47,6 +48,19 @@ export function MasterSkillsClient({
   const [formError, setFormError] = useState<string | null>(null);
 
   const [isPending, startTransition] = useTransition();
+  /** Which button's action is running, so only that button shows the spinner. */
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  useTopLoaderWhile(isPending || busyKey !== null);
+  const run = (key: string, action: () => Promise<void>) => {
+    setBusyKey(key);
+    startTransition(async () => {
+      try {
+        await action();
+      } finally {
+        setBusyKey(null);
+      }
+    });
+  };
 
   // Filtered skills
   const filteredSkills = useMemo(() => {
@@ -98,7 +112,7 @@ export function MasterSkillsClient({
       return;
     }
 
-    startTransition(async () => {
+    run("save", async () => {
       try {
         await upsertSkillAction({
           id: editingSkill?.id,
@@ -138,7 +152,7 @@ export function MasterSkillsClient({
       prev.map((s) => (s.id === skill.id ? { ...s, active: newActive } : s))
     );
 
-    startTransition(async () => {
+    run(`toggle:${skill.id}`, async () => {
       try {
         await toggleSkillActiveAction(skill.id, newActive);
         toast.success(newActive ? `Teknik "${skill.name}" diaktifkan` : `Teknik "${skill.name}" dinonaktifkan`);
@@ -157,7 +171,7 @@ export function MasterSkillsClient({
       return;
     }
 
-    startTransition(async () => {
+    run(`delete:${skill.id}`, async () => {
       try {
         await deleteSkillAction(skill.id);
         setSkills((prev) => prev.filter((s) => s.id !== skill.id));
@@ -328,6 +342,7 @@ export function MasterSkillsClient({
                       <button
                         type="button"
                         onClick={() => handleToggleActive(skill)}
+                        data-loading={busyKey === `toggle:${skill.id}` || undefined}
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold cursor-pointer transition-all border ${
                           skill.active
                             ? "bg-[#6FD39A]/20 border-[#6FD39A]/40 text-[#6FD39A]"
@@ -350,6 +365,7 @@ export function MasterSkillsClient({
                           <button
                             type="button"
                             onClick={() => handleDelete(skill)}
+                            data-loading={busyKey === `delete:${skill.id}` || undefined}
                             className="text-xs bg-transparent hover:bg-[#FF5A3C]/20 text-[#FF5A3C] px-2.5 py-1 rounded-md transition-colors"
                           >
                             Hapus
@@ -459,6 +475,7 @@ export function MasterSkillsClient({
                 <button
                   type="submit"
                   disabled={isPending}
+                  data-loading={busyKey === "save" || undefined}
                   className="border-0 rounded-lg px-5 py-2 font-bold text-sm bg-[#FF5A3C] text-[#17151F] hover:bg-[#FF5A3C]/90 disabled:opacity-50"
                 >
                   {isPending ? "Menyimpan..." : "Simpan Teknik"}

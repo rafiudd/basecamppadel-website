@@ -54,19 +54,21 @@ export function skillBoards(skills: SkillDef[], reports: CoachReport[]): SkillBo
     }
   }
   return (["teknik", "ingame"] as const).map((kind) => {
-    const groups: SkillGroup[] = [];
+    // one group per category (Master Teknik appends new skills at the end, so a category's skills
+    // need not be next to each other); categories in the order of their first skill
+    const groups = new Map<string, SkillGroup>();
     let rated = 0;
-    const ofKind = skills.filter((s) => s.kind === kind).sort((a, b) => a.sort - b.sort);
+    const ofKind = skills.filter((s) => s.kind === kind).sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
     for (const s of ofKind) {
       const scores = history.get(s.key) ?? [];
       const score = scores.at(-1) ?? null;
       const delta = scores.length >= 2 ? round1(scores[scores.length - 1] - scores[scores.length - 2]) : null;
       if (score !== null) rated++;
-      let group = groups.at(-1);
-      if (!group || group.label !== s.group_label) groups.push((group = { label: s.group_label, items: [] }));
-      group.items.push({ key: s.key, label: s.label, score, delta });
+      const label = s.group_label.trim() || "Lainnya";
+      if (!groups.has(label)) groups.set(label, { label, items: [] });
+      groups.get(label)!.items.push({ key: s.key, label: s.label, score, delta });
     }
-    return { kind, rated, total: ofKind.length, groups };
+    return { kind, rated, total: ofKind.length, groups: [...groups.values()] };
   });
 }
 

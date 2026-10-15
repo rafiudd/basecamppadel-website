@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
+import { useTopLoaderWhile } from "@/components/TopLoader";
 import type { Coach, CoachingSkill, Player, Venue } from "@/lib/database.types";
 
 import {
@@ -124,9 +125,27 @@ export function SessionFormClient({
 
   // UI state
   const [isPending, startTransition] = useTransition();
+  /** Which button's action is running, so only that button shows the spinner. */
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  useTopLoaderWhile(isPending || busyKey !== null);
+  const run = (key: string, action: () => Promise<void>) => {
+    setBusyKey(key);
+    startTransition(async () => {
+      try {
+        await action();
+      } finally {
+        setBusyKey(null);
+      }
+    });
+  };
   const [error, setError] = useState<string | null>(null);
   const [playerSearchQuery, setPlayerSearchQuery] = useState("");
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
+  // Group that newly added players go into (picked with the color circles); falls back to the first group
+  const [targetGroupId, setTargetGroupId] = useState("");
+  const groupKey = (g: FormGroupItem) => g.id || g.tempId;
+  const addTargetId =
+    groups.find((g) => groupKey(g) === targetGroupId) ? targetGroupId : groups[0] ? groupKey(groups[0]) : "";
 
 
 
@@ -183,17 +202,17 @@ export function SessionFormClient({
   // Player assignment helpers
   const handleAddPlayer = (pid: string) => {
     if (!pid || sessionPlayerIds.includes(pid)) return;
-    const firstGroupId = groups[0]?.id || groups[0]?.tempId || "";
     setSessionPlayerIds([...sessionPlayerIds, pid]);
-    setPlayerGroupMap({ ...playerGroupMap, [pid]: firstGroupId });
+    setPlayerGroupMap({ ...playerGroupMap, [pid]: addTargetId });
   };
 
-  const handleRemovePlayer = (pid: string) => {
-    setSessionPlayerIds(sessionPlayerIds.filter((id) => id !== pid));
+  const handleRemovePlayers = (pids: string[]) => {
+    setSessionPlayerIds(sessionPlayerIds.filter((id) => !pids.includes(id)));
     const nextMap = { ...playerGroupMap };
-    delete nextMap[pid];
+    for (const pid of pids) delete nextMap[pid];
     setPlayerGroupMap(nextMap);
   };
+  const handleRemovePlayer = (pid: string) => handleRemovePlayers([pid]);
 
   const handleTogglePlayer = (pid: string) => {
     if (sessionPlayerIds.includes(pid)) {
@@ -206,10 +225,9 @@ export function SessionFormClient({
   const handleSelectAllShown = (pids: string[]) => {
     const toAdd = pids.filter((id) => !sessionPlayerIds.includes(id));
     if (toAdd.length === 0) return;
-    const firstGroupId = groups[0]?.id || groups[0]?.tempId || "";
     const nextMap = { ...playerGroupMap };
     toAdd.forEach((id) => {
-      nextMap[id] = firstGroupId;
+      nextMap[id] = addTargetId;
     });
     setSessionPlayerIds([...sessionPlayerIds, ...toAdd]);
     setPlayerGroupMap(nextMap);
@@ -220,8 +238,10 @@ export function SessionFormClient({
     setPlayerGroupMap({});
   };
 
-  const handleAssignPlayerGroup = (pid: string, targetGroupId: string) => {
-    setPlayerGroupMap({ ...playerGroupMap, [pid]: targetGroupId });
+  const handleAssignPlayerGroup = (pids: string[], targetGroupId: string) => {
+    const nextMap = { ...playerGroupMap };
+    for (const pid of pids) nextMap[pid] = targetGroupId;
+    setPlayerGroupMap(nextMap);
   };
 
   const handleDistributeEvenly = () => {
@@ -267,7 +287,7 @@ export function SessionFormClient({
       return;
     }
 
-    startTransition(async () => {
+    run("save", async () => {
       try {
         if (isEdit && sessionId) {
           await updateCoachingSessionAction({
@@ -323,7 +343,7 @@ export function SessionFormClient({
     if (!confirm(`Hapus sesi "${title}"? Semua data grup dan penilaian di sesi ini akan dihapus.`)) {
       return;
     }
-    startTransition(async () => {
+    run("delete", async () => {
       try {
         await deleteCoachingSessionAction(sessionId);
         toast.success(`Sesi "${title}" berhasil dihapus`);
@@ -376,7 +396,8 @@ export function SessionFormClient({
               type="button"
               onClick={handleDeleteSession}
               disabled={isPending}
-              className="border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-xs bg-transparent text-[#FF5A3C] hover:bg-[#FF5A3C]/10 transition-all"
+              data-loading={busyKey === "delete" || undefined}
+              className="border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-xs bg-transparent text-[#FF5A3C] hover:bg-[#FF5A3C]/10 transition-all disabled:opacity-50 inline-flex items-center justify-center"
             >
               Hapus Sesi
             </button>
@@ -390,6 +411,7 @@ export function SessionFormClient({
           <button
             type="submit"
             disabled={isPending}
+            data-loading={busyKey === "save" || undefined}
             className="border-0 rounded-lg min-h-11 px-6 font-sans font-bold text-sm bg-[#FF5A3C] text-[#17151F] hover:bg-[#FF5A3C]/90 transition-all shadow-md disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
             {isPending ? "Menyimpan..." : "Simpan Sesi"}
@@ -445,11 +467,13 @@ export function SessionFormClient({
         filteredSessionPlayers={filteredSessionPlayers}
         unassignedMasterPlayers={unassignedMasterPlayers}
         playerGroupMap={playerGroupMap}
+        addTargetId={addTargetId}
+        onAddTargetChange={setTargetGroupId}
         playerSearchQuery={playerSearchQuery}
         onSearchQueryChange={setPlayerSearchQuery}
         onOpenAddModal={() => setShowAddPlayerModal(true)}
         onAddPlayer={handleAddPlayer}
-        onRemovePlayer={handleRemovePlayer}
+        onRemovePlayers={handleRemovePlayers}
         onAssignPlayerGroup={handleAssignPlayerGroup}
         onDistributeEvenly={handleDistributeEvenly}
       />

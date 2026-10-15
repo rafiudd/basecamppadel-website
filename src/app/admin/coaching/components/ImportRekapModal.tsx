@@ -256,6 +256,7 @@ export function ImportRekapModal({
           <button
             type="button"
             disabled={isPending || previews.length === 0}
+            data-loading={isPending || undefined}
             onClick={handleImport}
             className="bg-volt text-ink font-bold text-xs px-5 py-2.5 rounded-lg hover:bg-volt/90 disabled:opacity-50"
           >

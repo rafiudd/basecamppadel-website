@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import type { Coach } from "@/lib/database.types";
 import type { CoachingSessionSummary, SessionFullData } from "@/lib/coaching-db";
 import {
@@ -106,6 +106,7 @@ export function CoachingHeader({
             type="button"
             onClick={onPublishAll}
             disabled={isPublishingAll || !sessionData}
+            data-loading={isPublishingAll || undefined}
             className="border-0 rounded-lg min-h-11 px-4.5 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FF5A3C] text-[#17151F] hover:bg-[#FF5A3C]/90 transition-all disabled:opacity-50 cursor-pointer"
           >
             {isPublishingAll ? "Mengirim..." : "Kirim semua ke pemain"}
@@ -131,6 +132,7 @@ export function CoachingHeader({
               type="button"
               onClick={onPublishAll}
               disabled={isPublishingAll}
+              data-loading={isPublishingAll || undefined}
               title="Kirim semua ke pemain"
               className="border-0 rounded-lg h-9 px-3 font-sans font-bold text-xs whitespace-nowrap inline-flex items-center justify-center gap-1 bg-[#FF5A3C] text-[#17151F] hover:bg-[#FF5A3C]/90 transition-all disabled:opacity-50 cursor-pointer shadow-xs"
             >
