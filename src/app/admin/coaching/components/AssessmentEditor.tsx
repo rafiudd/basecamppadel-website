@@ -130,6 +130,15 @@ export function AssessmentEditor({
                 Ubah Level
               </button>
             )}
+            {currentPlayerItem.status === "submitted" && currentPlayerItem.assessment && (
+              <Link
+                href={`/admin/coaching/rapor/${currentPlayerItem.assessment.id}`}
+                target="_blank"
+                className="text-sm text-[#FBF7F1]/80 hover:text-[#FFD43B] no-underline"
+              >
+                Lihat rapor ↗
+              </Link>
+            )}
             <Link
               href={`/leaderboard/${currentPlayerItem.player.id}`}
               className="text-sm text-[#FBF7F1]/80 hover:text-[#FFD43B] no-underline"

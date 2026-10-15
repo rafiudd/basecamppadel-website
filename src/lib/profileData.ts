@@ -7,7 +7,7 @@ import { matchSection } from "@/lib/compLabels";
  * The skill list as the admin keeps it in Master Teknik (active ones, in their order); scores are
  * keyed by these row ids. Falls back to the default list when the table is empty.
  */
-async function loadSkills(supabase: Supa): Promise<SkillDef[]> {
+export async function loadSkills(supabase: Supa): Promise<SkillDef[]> {
   const { data } = await supabase
     .from("coaching_skills")
     .select("id, type, category, name, sort_order")
