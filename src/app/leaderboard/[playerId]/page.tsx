@@ -5,8 +5,10 @@ import { PublicShell } from "@/components/PublicShell";
 import { YOUTUBE_URL } from "@/lib/config";
 import { getPlayerById } from "@/lib/leaderboard";
 import { getLiveMatch } from "@/lib/queries";
-import { createClient } from "@/lib/supabase/server";
 import { getAdminUser } from "@/lib/auth";
+import { getAccount } from "@/lib/account";
+import { loadCoaching } from "@/lib/profileData";
+import type { CoachReport } from "@/lib/coachingRules";
 import { LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
 
 export const revalidate = 0;
@@ -22,19 +24,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PlayerPage({ params }: Props) {
   const { playerId } = await params;
-  const supabase = await createClient();
-  const [{ isAdmin, isCoach }, player, liveMatch, { data: coachNotes }, { data: allSkills }] = await Promise.all([
+  const [{ isAdmin, isCoach }, player, liveMatch, account] = await Promise.all([
     getAdminUser(),
     getPlayerById(playerId),
     getLiveMatch(),
-    supabase
-      .from("coaching_assessments")
-      .select("*, coaching_sessions(title, session_date, venue_name), coaches(name)")
-      .eq("player_id", playerId)
-      .eq("published_to_player", true)
-      .eq("status", "submitted")
-      .order("created_at", { ascending: false }),
-    supabase.from("coaching_skills").select("id, name"),
+    getAccount(),
   ]);
 
   const canSeeLevelName = isAdmin || isCoach;
@@ -51,6 +45,13 @@ export default async function PlayerPage({ params }: Props) {
       </PublicShell>
     );
   }
+
+  // Coach notes are personal: only the logged-in player they belong to can read them. An
+  // anonymous visitor sees a locked teaser; a visitor logged in as someone else sees nothing here.
+  const isOwnPlayer = account.profile?.player_id === player.id;
+  const { reports: coachReports } = isOwnPlayer
+    ? await loadCoaching(account.supabase, player.id)
+    : { reports: [] as CoachReport[] };
 
   const isCurrentlyPlayingLive = Boolean(
     liveMatch &&
@@ -217,51 +218,61 @@ export default async function PlayerPage({ params }: Props) {
               </div>
             )}
 
-            {/* Catatan Coach (Publikasi Coaching) */}
-            {coachNotes && coachNotes.length > 0 && (
-              <div className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-4 text-ink shadow-xs">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h2 className="font-display font-bold text-xl m-0">Catatan Coach</h2>
-                  <span className="text-xs font-semibold text-ink/60">
-                    {coachNotes.length} evaluasi tercatat
-                  </span>
-                </div>
-                <div className="flex flex-col divide-y divide-ink/8">
-                  {coachNotes.map((note: any) => (
-                    <div key={note.id} className="py-3 flex flex-col gap-2 text-sm">
-                      <div className="flex items-center justify-between text-xs text-ink/60 flex-wrap gap-1">
-                        <span className="font-bold text-ink">
-                          {note.coaching_sessions?.title || "Sesi Coaching"}
-                        </span>
-                        <span>
-                          {note.coaching_sessions?.session_date}{" "}
-                          {note.coaches?.name ? `· Coach ${note.coaches.name}` : ""}
-                        </span>
-                      </div>
-                      {note.evaluation && (
-                        <div className="bg-ink/3 p-3 rounded-xl flex flex-col gap-1">
-                          <span className="text-2xs uppercase tracking-wider font-bold text-indigo">
-                            Evaluasi
-                          </span>
-                          <p className="text-xs text-ink/80 whitespace-pre-line m-0">
-                            {note.evaluation}
-                          </p>
+            {/* Catatan Coach (Publikasi Coaching) — personal, so it's gated by who's logged in */}
+            {!account.user ? (
+              <LockedCoachNotes playerId={player.id} />
+            ) : (
+              isOwnPlayer && (
+                <div className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-4 text-ink shadow-xs">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h2 className="font-display font-bold text-xl m-0">Catatan Coach</h2>
+                    {coachReports.length > 0 && (
+                      <span className="text-xs font-semibold text-ink/60">
+                        {coachReports.length} evaluasi tercatat
+                      </span>
+                    )}
+                  </div>
+                  {coachReports.length === 0 ? (
+                    <p className="text-sm text-ink/60 m-0">Belum ada catatan coach untuk kamu.</p>
+                  ) : (
+                    <div className="flex flex-col divide-y divide-ink/8">
+                      {coachReports.map((r) => (
+                        <div key={r.id} className="py-3 flex flex-col gap-2 text-sm">
+                          <div className="flex items-center justify-between text-xs text-ink/60 flex-wrap gap-1">
+                            <span className="font-bold text-ink">
+                              {r.session.title || "Sesi Coaching"}
+                            </span>
+                            <span>
+                              {r.session.session_date}{" "}
+                              {r.session.coach_name ? `· Coach ${r.session.coach_name}` : ""}
+                            </span>
+                          </div>
+                          {r.evaluation.length > 0 && (
+                            <div className="bg-ink/3 p-3 rounded-xl flex flex-col gap-1">
+                              <span className="text-2xs uppercase tracking-wider font-bold text-indigo">
+                                Evaluasi
+                              </span>
+                              <p className="text-xs text-ink/80 whitespace-pre-line m-0">
+                                {r.evaluation.join("\n")}
+                              </p>
+                            </div>
+                          )}
+                          {r.next_practice.length > 0 && (
+                            <div className="bg-volt/10 border border-volt/30 p-3 rounded-xl flex flex-col gap-1">
+                              <span className="text-2xs uppercase tracking-wider font-bold text-ink">
+                                Latihan Berikutnya
+                              </span>
+                              <p className="text-xs text-ink/80 whitespace-pre-line m-0">
+                                {r.next_practice.join("\n")}
+                              </p>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {note.next_practice && (
-                        <div className="bg-volt/10 border border-volt/30 p-3 rounded-xl flex flex-col gap-1">
-                          <span className="text-2xs uppercase tracking-wider font-bold text-ink">
-                            Latihan Berikutnya
-                          </span>
-                          <p className="text-xs text-ink/80 whitespace-pre-line m-0">
-                            {note.next_practice}
-                          </p>
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
+              )
             )}
 
             {/* Riwayat Match Terakhir */}
@@ -381,5 +392,36 @@ export default async function PlayerPage({ params }: Props) {
         </div>
       </section>
     </PublicShell>
+  );
+}
+
+/** Blurred preview of the "Catatan Coach" card for a visitor who isn't logged in. */
+function LockedCoachNotes({ playerId }: { playerId: string }) {
+  const nextHref = `/masuk?next=${encodeURIComponent(`/leaderboard/${playerId}`)}`;
+  return (
+    <div className="relative bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-4 text-ink shadow-xs overflow-hidden">
+      <h2 className="font-display font-bold text-xl m-0">Catatan Coach</h2>
+      <div aria-hidden className="flex flex-col gap-2 blur-[6px] select-none pointer-events-none">
+        <div className="h-3.5 w-2/3 rounded bg-ink/15" />
+        <div className="h-20 rounded-xl bg-ink/6" />
+        <div className="h-3.5 w-1/2 rounded bg-ink/15" />
+        <div className="h-16 rounded-xl bg-volt/15" />
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white/60 px-6 text-center">
+        <span className="w-10 h-10 rounded-full bg-indigo/10 text-indigo flex items-center justify-center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="4" y="11" width="16" height="9" rx="2" />
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+          </svg>
+        </span>
+        <p className="text-sm font-semibold text-ink m-0">Masuk untuk lihat catatan coach kamu</p>
+        <Link
+          href={nextHref}
+          className="no-underline bg-coral text-ink rounded-full py-2.5 px-5 font-sans font-bold text-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
+        >
+          Masuk
+        </Link>
+      </div>
+    </div>
   );
 }
