@@ -225,6 +225,33 @@ export type CompEvent = {
   point_preset_id: string | null;
   mabar_points: MabarPoints;
   quota: number | null;
+  league_id: string | null;
+  league_volume_id: string | null;
+  volume_number: number | null;
+  created_at: string;
+};
+
+export type League = {
+  id: string;
+  slug: string;
+  name: string;
+  organizer: string;
+  description: string;
+  total_volumes: number;
+  point_preset_id: string | null;
+  points: EventPoints;
+  published: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LeagueVolume = {
+  id: string;
+  league_id: string;
+  volume_number: number;
+  is_final: boolean;
+  event_id: string | null;
+  approx_date: string;
   created_at: string;
 };
 
@@ -500,6 +527,18 @@ export type Database = {
         Row: CoachingAssessment;
         Insert: Insert<CoachingAssessment, "session_id" | "player_id">;
         Update: Partial<CoachingAssessment>;
+        Relationships: [];
+      };
+      leagues: {
+        Row: League;
+        Insert: Insert<League, "slug" | "name">;
+        Update: Partial<League>;
+        Relationships: [];
+      };
+      league_volumes: {
+        Row: LeagueVolume;
+        Insert: Insert<LeagueVolume, "league_id" | "volume_number">;
+        Update: Partial<LeagueVolume>;
         Relationships: [];
       };
     };

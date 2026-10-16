@@ -34,6 +34,7 @@ export type CompetitionData = {
   groupStageComplete: boolean;
   koStarted: boolean;
   conflicts: Conflict[];
+  league: { id: string; name: string; slug: string } | null;
 };
 
 // plain helpers instead of closures on CompetitionData, so the data can be passed to client components
@@ -135,13 +136,16 @@ export async function loadCompetition(supabase: Supa, by: { id?: string; slug?: 
   const { data: event } = await q.maybeSingle();
   if (!event) return null;
 
-  const [{ data: teams }, { data: links }, { data: matches }, { data: courts }, { data: venue }] = await Promise.all([
+  const [{ data: teams }, { data: links }, { data: matches }, { data: courts }, { data: venue }, { data: league }] = await Promise.all([
     supabase.from("comp_teams").select("*").eq("event_id", event.id).order("created_at"),
     supabase.from("comp_team_players").select("*").eq("event_id", event.id).order("slot"),
     supabase.from("matches").select("*").eq("event_id", event.id).order("starts_at", { nullsFirst: false }).order("bracket_pos").order("created_at"),
     supabase.from("courts").select("*").order("name"),
     event.venue_id
       ? supabase.from("venues").select("*").eq("id", event.venue_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    event.league_id
+      ? supabase.from("leagues").select("id, name, slug").eq("id", event.league_id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
@@ -199,6 +203,7 @@ export async function loadCompetition(supabase: Supa, by: { id?: string; slug?: 
     groupStageComplete: groups.length > 0 && groups.every((g) => g.complete),
     koStarted: koMatches.some((m) => !m.is_bye && (m.status !== "scheduled" || m.team_a_games + m.team_b_games > 0)),
     conflicts: findConflicts(timed, event.match_minutes),
+    league: league ?? null,
   };
 }
 
