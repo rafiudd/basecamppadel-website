@@ -28,7 +28,8 @@ export function PhotoField({ name, current }: { name: string; current: string | 
     if (file.size > MAX_SOURCE_BYTES) return void toast.error("Foto maksimal 20 MB.");
     setBusy(true);
     try {
-      const cropped = await compressImage(file, { maxSide: 512, square: true, quality: 0.88 });
+      // keepAlpha: a transparent PNG stays transparent (WebP) instead of getting a black background as JPEG
+      const cropped = await compressImage(file, { maxSide: 512, square: true, quality: 0.88, keepAlpha: true });
       if (cropped.size > PHOTO_MAX_BYTES) return void toast.error("Foto terlalu besar setelah dikompres. Coba foto lain.");
       const dt = new DataTransfer();
       dt.items.add(cropped);

@@ -178,7 +178,7 @@ export function SessionPlayersTable({
                 options={unassignedMasterPlayers.map((p) => ({
                   value: p.id,
                   label: p.name,
-                  hint: [p.level || "Beginner", (p as any).city || (p as any).region].filter(Boolean).join(" · "),
+                  hint: [p.level || "Beginner", p.region].filter(Boolean).join(" · "),
                 }))}
                 className="bg-[#FBF7F1]/10 border-0 rounded-lg px-3 py-2 text-xs text-snow focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
               />
@@ -327,7 +327,7 @@ export function SessionPlayersTable({
                         </td>
                         <td className="py-2.5 px-3.5">
                           <div className="flex items-center gap-2.5">
-                            <Avatar name={player.name} size={30} />
+                            <Avatar name={player.name} photoUrl={player.photo_url} size={30} />
                             <span className="font-semibold text-snow">{player.name}</span>
                           </div>
                         </td>
