@@ -41,8 +41,7 @@ export function PlayerPickerModal({
     return (
       p.name.toLowerCase().includes(q) ||
       (p.level && p.level.toLowerCase().includes(q)) ||
-      Boolean((p as any).city && (p as any).city.toLowerCase().includes(q)) ||
-      Boolean((p as any).region && (p as any).region.toLowerCase().includes(q))
+      Boolean(p.region && p.region.toLowerCase().includes(q))
     );
   });
 
@@ -109,7 +108,7 @@ export function PlayerPickerModal({
         <div className="max-h-80 overflow-y-auto divide-y divide-[#FBF7F1]/8 bg-[#17151F]/40 rounded-xl p-1 border border-[#FBF7F1]/6">
           {filtered.length === 0 ? (
             <div className="text-center py-8 text-xs text-[#FBF7F1]/50">
-              Tidak ada pemain yang cocok dengan pencarian "{search}"
+              Tidak ada pemain yang cocok dengan pencarian &ldquo;{search}&rdquo;
             </div>
           ) : (
             filtered.map((p) => {
@@ -127,11 +126,11 @@ export function PlayerPickerModal({
                     onChange={() => onTogglePlayer(p.id)}
                     className="w-4 h-4 accent-[#FFD43B] flex-none rounded"
                   />
-                  <Avatar name={p.name} size={32} />
+                  <Avatar name={p.name} photoUrl={p.photo_url} size={32} />
                   <span className="flex-1 min-w-0">
                     <span className="block font-bold text-sm text-snow truncate">{p.name}</span>
                     <span className="block text-2xs text-[#FBF7F1]/65 truncate">
-                      {[p.level || "Beginner", (p as any).city || (p as any).region].filter(Boolean).join(" · ")}
+                      {[p.level || "Beginner", p.region].filter(Boolean).join(" · ")}
                     </span>
                   </span>
                   {p.gender && <GenderBadge gender={p.gender as "M" | "F"} />}

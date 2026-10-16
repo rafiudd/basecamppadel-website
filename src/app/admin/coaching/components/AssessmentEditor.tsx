@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { Avatar } from "@/components/ui/Avatar";
+import { initials } from "@/lib/format";
 import type { CoachingSkill } from "@/lib/database.types";
-import { LEVEL_DEFINITIONS, type PlayerLevelName, type computePlayerLevel } from "@/lib/coaching";
+import { LEVEL_DEFINITIONS, type computePlayerLevel } from "@/lib/coaching";
 import type { SessionPlayerItem } from "@/lib/coaching-db";
 import { ScoringRow } from "./ScoringRow";
 
@@ -70,21 +72,26 @@ export function AssessmentEditor({
       <div className="bg-[#221F30] rounded-2xl p-5 lg:p-6 flex flex-col gap-5 border border-[#FBF7F1]/5">
         {/* Player Header Card */}
         <div className="flex items-center gap-3.5 pb-2">
-          <span
-            aria-hidden="true"
-            className="w-12 h-12 rounded-full flex items-center justify-center font-display font-bold text-base flex-none"
-            style={{
-              backgroundColor: LEVEL_DEFINITIONS[currentComputedLevel.level]?.color || "#FFD43B",
-              color: LEVEL_DEFINITIONS[currentComputedLevel.level]?.textColor || "#17151F",
-            }}
-          >
-            {currentPlayerItem.player.name
-              .split(" ")
-              .map((w) => w[0])
-              .slice(0, 2)
-              .join("")
-              .toUpperCase()}
-          </span>
+          {currentPlayerItem.player.photo_url ? (
+            // photo with a ring in the level color, so the level stays visible
+            <span
+              className="rounded-full p-[3px] flex-none"
+              style={{ backgroundColor: LEVEL_DEFINITIONS[currentComputedLevel.level]?.color || "#FFD43B" }}
+            >
+              <Avatar name={currentPlayerItem.player.name} photoUrl={currentPlayerItem.player.photo_url} size={42} />
+            </span>
+          ) : (
+            <span
+              aria-hidden="true"
+              className="w-12 h-12 rounded-full flex items-center justify-center font-display font-bold text-base flex-none"
+              style={{
+                backgroundColor: LEVEL_DEFINITIONS[currentComputedLevel.level]?.color || "#FFD43B",
+                color: LEVEL_DEFINITIONS[currentComputedLevel.level]?.textColor || "#17151F",
+              }}
+            >
+              {initials(currentPlayerItem.player.name)}
+            </span>
+          )}
 
           <div className="flex-grow min-w-0">
             <div className="flex items-center gap-2.5 flex-wrap">

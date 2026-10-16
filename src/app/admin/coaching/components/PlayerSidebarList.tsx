@@ -1,5 +1,6 @@
 "use client";
 
+import { Avatar } from "@/components/ui/Avatar";
 import { LEVEL_DEFINITIONS } from "@/lib/coaching";
 import type { SessionFullData, SessionPlayerItem } from "@/lib/coaching-db";
 
@@ -99,13 +100,6 @@ export function PlayerSidebarList({
         ) : (
           filteredPlayers.map((pItem, idx) => {
             const isSelected = pItem.player.id === currentPlayerItem?.player.id;
-            const initials = pItem.player.name
-              .split(" ")
-              .map((w) => w[0])
-              .slice(0, 2)
-              .join("")
-              .toUpperCase();
-
             const pLevel = pItem.computedLevel.level;
             const pColor = LEVEL_DEFINITIONS[pLevel]?.color || "#FFD43B";
 
@@ -120,12 +114,7 @@ export function PlayerSidebarList({
                     : "bg-transparent border border-transparent hover:bg-[#FBF7F1]/5"
                 }`}
               >
-                <span
-                  aria-hidden="true"
-                  className="w-[34px] height-[34px] h-[34px] rounded-full bg-[#2C2862] flex items-center justify-center font-display font-bold text-xs flex-none text-[#FBF7F1]"
-                >
-                  {initials}
-                </span>
+                <Avatar name={pItem.player.name} photoUrl={pItem.player.photo_url} size={34} />
                 <div className="flex-grow min-w-0">
                   <span className="block font-bold text-[15px] text-[#FBF7F1] truncate">
                     {pItem.player.name}

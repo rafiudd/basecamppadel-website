@@ -28,20 +28,24 @@ export async function loadCoaching(supabase: Supa, playerId: string | null): Pro
 
   const { data: rows } = await supabase
     .from("coaching_assessments")
-    .select("id, session_id, coach_id, scores, evaluation, next_practice")
+    .select("id, session_id, coach_id, group_id, scores, evaluation, next_practice")
     .eq("player_id", playerId)
     .eq("status", "submitted")
     .eq("published_to_player", true);
   if (!rows?.length) return { skills, reports: [] };
 
-  const coachIds = [...new Set(rows.map((r) => r.coach_id).filter((id): id is string => !!id))];
-  const [{ data: sessions }, { data: coaches }] = await Promise.all([
+  const groupIds = [...new Set(rows.map((r) => r.group_id).filter((id): id is string => !!id))];
+  const [{ data: sessions }, { data: groups }] = await Promise.all([
     supabase.from("coaching_sessions").select("id, title, session_date, venue_name, event_id").in("id", [...new Set(rows.map((r) => r.session_id))]),
-    coachIds.length ? supabase.from("coaches").select("id, name").in("id", coachIds) : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    groupIds.length ? supabase.from("coaching_groups").select("id, coach_id").in("id", groupIds) : Promise.resolve({ data: [] as { id: string; coach_id: string | null }[] }),
   ]);
+  const groupCoach = new Map((groups ?? []).map((g) => [g.id, g.coach_id]));
+  const coachIds = [...new Set([...rows.map((r) => r.coach_id), ...groupCoach.values()].filter((id): id is string => !!id))];
+  const { data: coaches } = coachIds.length ? await supabase.from("coaches").select("id, name").in("id", coachIds) : { data: [] as { id: string; name: string }[] };
   const known = new Set(skills.map((s) => s.key));
   const sessionById = new Map((sessions ?? []).map((s) => [s.id, s]));
   const coachById = new Map((coaches ?? []).map((c) => [c.id, c.name]));
+  const coachName = (id: string | null | undefined) => (id && coachById.get(id)) || "";
 
   const reports = rows.flatMap((r) => {
     const session = sessionById.get(r.session_id);
@@ -53,7 +57,8 @@ export async function loadCoaching(supabase: Supa, playerId: string | null): Pro
         title: session.title,
         session_date: session.session_date,
         venue: session.venue_name,
-        coach_name: (r.coach_id && coachById.get(r.coach_id)) || "",
+        coach_name: coachName(r.coach_id),
+        group_coach_name: coachName(r.group_id ? groupCoach.get(r.group_id) : null),
         event_id: session.event_id,
       },
       evaluation: splitNotes(r.evaluation),
