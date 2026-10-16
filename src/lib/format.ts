@@ -11,6 +11,16 @@ export function formatSessionDay(isoDate: string): string {
   return `${DAYS[date.getUTCDay()]}, ${d} ${MONTHS[m - 1]}`;
 }
 
+/** "2026-10-24" -> "Sab, 24 Okt" */
+export function formatDateShortIndo(isoDate: string | null | undefined): string {
+  if (!isoDate) return "";
+  const [y, m, d] = (isoDate ?? "").slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return "";
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const daysShort = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+  return `${daysShort[date.getUTCDay()]}, ${d} ${MONTHS[m - 1]}`;
+}
+
 export function parseDateParts(isoDate: string) {
   const [y, m, d] = isoDate.split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));

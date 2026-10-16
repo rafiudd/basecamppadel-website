@@ -11,6 +11,13 @@ import type { PlayerSummary } from "@/components/admin/event/types";
 export type Step = 1 | 2 | 3 | 4;
 export type TeamSlot = { p1: string; p2: string; group: string };
 export type PresetSummary = { id: string; name: string };
+export type InitialLeagueContext = {
+  leagueId?: string;
+  volumeId?: string;
+  volumeNum?: number;
+  title?: string;
+  presetId?: string;
+};
 type Issue = { message: string; fields: string[] };
 
 /** Which format counters a planFormat() message is about. */
@@ -28,10 +35,18 @@ const emptyTeam = (i: number, groups: number): TeamSlot => ({ p1: "", p2: "", gr
  * All state of the Buat Event wizard, plus what each step derives from it. Every field starts empty,
  * and steps are passed in order: "Lanjut" only moves on when the current step is complete.
  */
-export function useEventWizard({ players, courts }: { players: PlayerSummary[]; courts: Court[] }) {
+export function useEventWizard({
+  players,
+  courts,
+  initialLeague,
+}: {
+  players: PlayerSummary[];
+  courts: Court[];
+  initialLeague?: InitialLeagueContext;
+}) {
   const [step, setStep] = useState<Step>(1);
   const [showErrors, setShowErrors] = useState(false);
-  const [type, setType] = useState<EventType | null>(null);
+  const [type, setType] = useState<EventType | null>(initialLeague?.leagueId ? "kompetisi" : null);
   const isMabar = type === "mabar";
 
   // ---- kompetisi format (null until set)
@@ -116,12 +131,12 @@ export function useEventWizard({ players, courts }: { players: PlayerSummary[]; 
 
   // ---- details
   const courtsOf = (venueId: string) => courts.filter((c) => c.venue_id === venueId);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialLeague?.title ?? "");
   const [eventDate, setEventDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [venueId, setVenueIdRaw] = useState("");
   const [courtIds, setCourtIds] = useState<string[]>([]);
-  const [presetId, setPresetId] = useState("");
+  const [presetId, setPresetId] = useState(initialLeague?.presetId ?? "");
   const [published, setPublished] = useState(false);
   const [durationHours, setDurationHours] = useState("2");
   const [priceAmount, setPriceAmount] = useState("");

@@ -29,21 +29,26 @@ export function NewEventWizard({
   courts,
   presets,
   hourRates,
+  initialLeague,
 }: {
   players: PlayerSummary[];
   venues: Venue[];
   courts: Court[];
   presets: PresetSummary[];
   hourRates: CourtHourRate[];
+  initialLeague?: import("./useEventWizard").InitialLeagueContext;
 }) {
-  const w = useEventWizard({ players, courts });
+  const w = useEventWizard({ players, courts, initialLeague });
   const back = w.step > 1 && (
     <button type="button" onClick={() => w.back((w.step - 1) as Step)} className="btn min-h-11">← Kembali</button>
   );
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="Buat Event" back={{ href: "/admin/events", label: "Event" }} />
+      <PageHeader
+        title={initialLeague?.title ? `Buat Event · ${initialLeague.title}` : "Buat Event"}
+        back={{ href: initialLeague?.leagueId ? `/admin/liga/${initialLeague.leagueId}` : "/admin/events", label: initialLeague?.leagueId ? "Liga" : "Event" }}
+      />
       <Stepper w={w} />
 
       {w.step === 1 && <StepType w={w} />}
@@ -62,7 +67,7 @@ export function NewEventWizard({
         // the capture handler runs before the form's submit, so an incomplete step 4 never posts
         <div onSubmitCapture={(e) => !w.canSubmit() && e.preventDefault()}>
           <ActionForm action={createCompetition} successText="Event dibuat" className="flex flex-col gap-5">
-            <EarlierStepsFields w={w} />
+            <EarlierStepsFields w={w} initialLeague={initialLeague} />
             <StepDetail w={w} venues={venues} presets={presets} hourRates={hourRates} />
             <StepErrors messages={w.stepErrors} />
             <div className="flex justify-between gap-2">
@@ -114,7 +119,7 @@ function Stepper({ w }: { w: EventWizard }) {
 }
 
 /** Steps 1–3 as hidden inputs of the final form (see createCompetition for the fields). */
-function EarlierStepsFields({ w }: { w: EventWizard }) {
+function EarlierStepsFields({ w, initialLeague }: { w: EventWizard; initialLeague?: import("./useEventWizard").InitialLeagueContext }) {
   if (w.isMabar) {
     return (
       <>
@@ -137,6 +142,9 @@ function EarlierStepsFields({ w }: { w: EventWizard }) {
       <input type="hidden" name="num_groups" value={w.kompetisi.numGroups ?? ""} />
       <input type="hidden" name="advance_per_group" value={w.kompetisi.advance ?? ""} />
       <input type="hidden" name="teams" value={JSON.stringify(w.teams.filled)} />
+      {initialLeague?.leagueId && <input type="hidden" name="league_id" value={initialLeague.leagueId} />}
+      {initialLeague?.volumeId && <input type="hidden" name="league_volume_id" value={initialLeague.volumeId} />}
+      {initialLeague?.volumeNum && <input type="hidden" name="volume_number" value={initialLeague.volumeNum} />}
     </>
   );
 }

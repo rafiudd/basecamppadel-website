@@ -10,6 +10,7 @@ import { useAccountChip } from "./account/useAccountChip";
 const LINKS = [
   { href: "/", label: "Home" },
   { href: "/jadwal", label: "Jadwal" },
+  { href: "/liga", label: "Liga" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 

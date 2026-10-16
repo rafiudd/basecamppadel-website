@@ -27,6 +27,15 @@ export function EventHeader({ event }: { event: EventItem }) {
             </span>
           )}
 
+          {event.league_name && event.league_slug && (
+            <Link
+              href={`/liga/${event.league_slug}`}
+              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-[#1F4A2C] text-[#F2E27A] no-underline hover:opacity-90 transition-opacity"
+            >
+              Liga · {event.league_name}
+            </Link>
+          )}
+
           {isLive && (
             <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold bg-coral/22 text-[#ff8a73]">
               <span className="w-1.5 h-1.5 rounded-full bg-coral animate-livepulse" />

@@ -60,6 +60,9 @@ export interface EventItem {
   registeredParticipants?: Array<{ id: string; name: string; level: string; avatar: string }>;
   registeredTeams?: Array<{ id: string; name: string; avatar: string }>;
   whatsapp_url?: string | null;
+  league_id?: string | null;
+  league_name?: string | null;
+  league_slug?: string | null;
 }
 
 export interface KnockoutMatch {
@@ -130,15 +133,19 @@ function getPublicClient() {
 }
 
 function formatCourtRange(names: string[]): string {
-  if (!names.length) return "Court 1";
-  const nums = names
-    .map((n) => Number(n.replace(/\D/g, "")))
-    .filter((n) => Number.isFinite(n) && n > 0)
-    .sort((a, b) => a - b);
+  const uniqueNames = [...new Set(names.filter(Boolean))];
+  if (!uniqueNames.length) return "Court 1";
+  const nums = [
+    ...new Set(
+      uniqueNames
+        .map((n) => Number(n.replace(/\D/g, "")))
+        .filter((n) => Number.isFinite(n) && n > 0),
+    ),
+  ].sort((a, b) => a - b);
   if (nums.length > 1 && nums[nums.length - 1] - nums[0] === nums.length - 1) {
     return `Court ${nums[0]}–${nums[nums.length - 1]}`;
   }
-  return names.map(courtLabel).join(", ") || "Court 1";
+  return uniqueNames.map(courtLabel).join(", ") || "Court 1";
 }
 
 function formatTimeRangeStr(startHHMM: string, hours = 2): string {
@@ -172,7 +179,7 @@ export async function getEvents(): Promise<EventItem[]> {
       const liveEventIds = new Set((liveMatches ?? []).map((m) => m.event_id).filter(Boolean));
 
       const items: EventItem[] = dbEvents.map((e) => {
-        const isLive = liveEventIds.has(e.id);
+        const isLive = liveEventIds.has(e.id) || e.status === "active";
         const isFinished = e.status === "finished";
         const status = isFinished ? "finished" : isLive ? "live" : "open";
 
@@ -300,7 +307,7 @@ export async function getEventByIdOrSlug(idOrSlug: string): Promise<EventItem | 
 
 function mapCompetitionToEventItem(data: CompetitionData): EventItem {
   const { event, venue, courts, teams, matches } = data;
-  const isLive = matches.some((m) => m.is_live);
+  const isLive = matches.some((m) => m.is_live) || event.status === "active";
   const isFinished = event.status === "finished";
   const status: "live" | "open" | "finished" = isFinished ? "finished" : isLive ? "live" : "open";
 
@@ -309,7 +316,12 @@ function mapCompetitionToEventItem(data: CompetitionData): EventItem {
     : parseDateParts(event.created_at.slice(0, 10));
 
   const venueName = venue?.name || "East Padel House";
-  const courtNames = courts.length > 0 ? formatCourtRange(courts.map((c) => c.name)) : "Court 1";
+  const eventCourts = event.court_ids && event.court_ids.length > 0
+    ? courts.filter((c) => event.court_ids.includes(c.id))
+    : event.venue_id
+    ? courts.filter((c) => c.venue_id === event.venue_id)
+    : courts;
+  const courtNames = eventCourts.length > 0 ? formatCourtRange(eventCourts.map((c) => c.name)) : "Court 1";
 
   const currentSlots = teams.length;
   const totalSlots = event.num_teams || 8;
@@ -412,6 +424,9 @@ function mapCompetitionToEventItem(data: CompetitionData): EventItem {
     podium,
     registeredTeams,
     whatsapp_url: event.whatsapp_url,
+    league_id: data.league?.id ?? null,
+    league_name: data.league?.name ?? null,
+    league_slug: data.league?.slug ?? null,
   };
 }
 
@@ -451,7 +466,8 @@ async function mapMabarToEventItem(supabase: any, event: CompEvent): Promise<Eve
   }
 
   const isFinished = event.status === "finished";
-  const status: "live" | "open" | "finished" = isFinished ? "finished" : isLive ? "live" : "open";
+  const isLiveStatus = isLive || event.status === "active";
+  const status: "live" | "open" | "finished" = isFinished ? "finished" : isLiveStatus ? "live" : "open";
 
   const currentSlots = participants.length;
   const totalSlots = event.quota || (event.court_ids?.length ? event.court_ids.length * 4 : 8);
@@ -777,12 +793,12 @@ function presetToEventPoints(items: PointCategoryItem[]): EventPoints {
   const out: EventPoints = { champion: 0, runner_up: 0, sf: 0, qf: 0, r16: 0, group: 0 };
   for (const c of items) {
     const n = c.name.toLowerCase().trim();
-    if (n === "juara") out.champion = pts(c);
+    if (n === "juara" || n === "champion") out.champion = pts(c);
     else if (n.startsWith("runner")) out.runner_up = pts(c);
     else if (n.startsWith("semifinal")) out.sf = pts(c);
-    else if (n.includes("fase grup")) out.group = pts(c);
+    else if (n.includes("fase grup") || n.includes("partisipasi") || n.includes("peserta")) out.group = pts(c);
     else {
-      if (n.includes("8 besar")) out.qf = pts(c);
+      if (n.includes("8 besar") || n.includes("quarter")) out.qf = pts(c);
       if (n.includes("16 besar") || n.includes("lolos grup")) out.r16 = pts(c);
     }
   }
