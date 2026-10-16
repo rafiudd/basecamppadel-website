@@ -36,11 +36,11 @@ export function PublicLigaDetailView({ league, standings }: Props) {
         {/* Background shapes */}
         <div
           aria-hidden="true"
-          className="absolute -right-16 -top-20 w-64 h-64 rounded-full bg-[#F2E27A] border-4 border-white opacity-90 pointer-events-none"
+          className="absolute -right-10 -top-10 sm:-right-14 sm:-top-14 md:-right-16 md:-top-20 w-32 h-32 sm:w-40 sm:h-40 md:w-56 md:h-56 rounded-full bg-[#F2E27A] border-4 md:border-[5px] border-white opacity-95 pointer-events-none"
         />
         <div
           aria-hidden="true"
-          className="absolute -left-16 -bottom-16 w-52 h-52 rounded-full bg-[#F2E27A] border-4 border-white opacity-90 pointer-events-none"
+          className="absolute -left-10 -bottom-10 sm:-left-12 sm:-bottom-12 md:-left-16 md:-bottom-16 w-28 h-28 sm:w-32 sm:h-32 md:w-48 md:h-48 rounded-full bg-[#F2E27A] border-4 md:border-[5px] border-white opacity-95 pointer-events-none"
         />
         <div
           aria-hidden="true"
