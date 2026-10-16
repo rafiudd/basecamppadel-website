@@ -78,6 +78,10 @@ async function createKompetisi(supabase: Supa, fd: FormData) {
   if (filled.length > numTeams) throw new Error(`Jumlah tim (${filled.length}) melebihi format (${numTeams}).`);
 
   const details = readDetails(fd);
+  const leagueId = str(fd, "league_id") || null;
+  const leagueVolumeId = str(fd, "league_volume_id") || null;
+  const volumeNumber = int(fd, "volume_number", 0) || null;
+
   const { data: event, error } = await supabase
     .from("events")
     .insert({
@@ -89,10 +93,17 @@ async function createKompetisi(supabase: Supa, fd: FormData) {
       num_groups: numGroups,
       advance_per_group: advance,
       ko_start: plan.koStart ?? "final",
+      league_id: leagueId,
+      league_volume_id: leagueVolumeId,
+      volume_number: volumeNumber,
     })
     .select("id")
     .single();
   if (error) throw new Error(error.message);
+
+  if (leagueVolumeId) {
+    await supabase.from("league_volumes").update({ event_id: event.id }).eq("id", leagueVolumeId);
+  }
 
   await insertTeams(supabase, event.id, filled);
   return event.id;

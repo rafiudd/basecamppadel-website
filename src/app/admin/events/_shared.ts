@@ -12,6 +12,8 @@ export function revalidateEvent(id: string) {
   revalidatePath("/admin/live");
   revalidatePath("/jadwal");
   revalidatePath("/jadwal/[slug]", "page");
+  revalidatePath("/admin/liga");
+  revalidatePath("/liga");
 }
 
 export async function load(supabase: Supa, id: string): Promise<CompetitionData> {

@@ -12,7 +12,8 @@
     "db:admin": "node --env-file=.env.local scripts/db.mjs admin",
     "db:setup": "node --env-file=.env.local scripts/db.mjs setup",
     "photos:r2": "node --env-file=.env.local scripts/photos-to-r2.mjs",
-    "test": "node --experimental-strip-types --no-warnings --test tests/*.test.mjs"
+    "test": "node --experimental-strip-types --no-warnings --test tests/*.test.mjs",
+    "test:liga": "node --experimental-strip-types --env-file=.env scripts/test-liga-flow.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
