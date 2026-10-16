@@ -358,7 +358,6 @@ export function CoachingClient({
         currentPlayerItem={currentPlayerItem}
         activePlayerIndex={activePlayerIndex}
         totalPlayers={filteredPlayers.length}
-        showMobilePlayerPicker={showMobilePlayerPicker}
         onPrevPlayer={() => setActivePlayerIndex(activePlayerIndex - 1)}
         onNextPlayer={() => setActivePlayerIndex(activePlayerIndex + 1)}
         onToggleMobilePicker={() => setShowMobilePlayerPicker(!showMobilePlayerPicker)}

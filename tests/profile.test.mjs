@@ -138,6 +138,7 @@ test("raporHtml: escapes text, half segment, title is the file name", async () =
   const { raporHtml } = await import("../src/lib/raporTemplate.ts");
   const html = raporHtml({
     fileName: "BASECAMP_CLINIC_FITA_5_OKT",
+    eventLabel: "MABAR WITH COACH",
     name: "<b>Fita</b>",
     date: "2026-10-05",
     coaches: ["Lukman"],
@@ -156,6 +157,105 @@ test("raporHtml: escapes text, half segment, title is the file name", async () =
   assert.match(html, /<i class="sg on"><\/i><i class="sg on"><\/i><i class="sg on"><\/i><i class="sg hf"><\/i><i class="sg"><\/i>/);
   assert.match(html, /a &amp; b/);
   assert.doesNotMatch(html, /Perlu dilatih/);
+  assert.match(html, /RAPOR MABAR WITH COACH/);
+  assert.doesNotMatch(html, /class="two"/);
+});
+
+test("raporHtml: notes-only session has no score cards; many skills go two columns", async () => {
+  const { raporHtml, TWO_COLUMN_FROM } = await import("../src/lib/raporTemplate.ts");
+  const base = { fileName: "F", eventLabel: "CLINIC", name: "Fita", date: "2026-10-05", coaches: [], averageLabel: "", best: [], weakest: [], evaluation: ["ok"], nextPractice: [] };
+  const notesOnly = raporHtml({ ...base, average: null, ratings: [] });
+  assert.doesNotMatch(notesOnly, /Nilai rata-rata|Nilai per teknik/);
+  assert.match(notesOnly, /Evaluasi/);
+  const ratings = Array.from({ length: TWO_COLUMN_FROM }, (_, i) => ({ label: `S${i}`, score: 3, scoreLabel: "Lumayan" }));
+  assert.match(raporHtml({ ...base, average: 3, averageLabel: "Lumayan", ratings }), /class="two"/);
+  assert.doesNotMatch(raporHtml({ ...base, average: 3, averageLabel: "Lumayan", ratings: ratings.slice(1) }), /class="two"/);
+});
+
+test("previousReport: first rapor has nothing to compare, later ones the last rated session", async () => {
+  const { previousReport } = await import("../src/lib/coachingRules.ts");
+  const rep = (id, date, ratings) => ({ id, session: { id, title: "", session_date: date, venue: "", coach_name: "" }, evaluation: [], next_practice: [], ratings });
+  const reports = [rep("c", "2026-10-12", [{ skill_key: "lob", score: 3 }]), rep("a", "2026-09-01", [{ skill_key: "lob", score: 2 }]), rep("b", "2026-09-20", [])];
+  assert.deepEqual({ ...previousReport(reports, "a"), previous: previousReport(reports, "a").previous?.id }, { session: 1, previous: undefined, previousSession: 0 });
+  const third = previousReport(reports, "c");
+  assert.equal(third.session, 3);
+  assert.equal(third.previous?.id, "a"); // "b" has no scores
+  assert.equal(third.previousSession, 1);
+});
+
+test("raporCompare: none for a first rapor, else badge, rounded deltas and the two notes", async () => {
+  const { raporCompare } = await import("../src/lib/coachingRules.ts");
+  const rated = [{ label: "Lob", score: 3, prev: 2.5 }, { label: "Volley FH", score: 2.8, prev: 3.1 }, { label: "Bajada", score: 3, prev: null }];
+  assert.equal(raporCompare(rated, { session: 1, previous: null, previousSession: 0 }), null);
+  const c = raporCompare(rated, { session: 3, previous: { id: "x" }, previousSession: 2 });
+  assert.equal(c.session, 3);
+  assert.deepEqual(c.chart.map((x) => x.delta), [0.5, -0.3, null]);
+  assert.equal(c.summary, "1 naik · 1 turun");
+  assert.deepEqual(c.notes.map((n) => n.lead), ["Paling kuat:", "Progres:"]);
+  assert.match(c.notes[0].text, /^Lob, Bajada \(3\)\./);
+});
+
+test("progressSummary / chartChanges: counts, the Progres note, biggest changes first", async () => {
+  const { progressSummary, chartChanges } = await import("../src/lib/coachingRules.ts");
+  const mixed = progressSummary([{ label: "Lob", delta: 0.5 }, { label: "Volley FH", delta: -1 }, { label: "Bajada", delta: null }, { label: "Servis", delta: 0 }], 1);
+  assert.equal(mixed.summary, "1 naik · 1 tetap · 1 turun");
+  assert.equal(mixed.note, "naik dari sesi 1 di Lob. Yang turun (Volley FH) jadi fokus latihan berikutnya.");
+  assert.equal(progressSummary([{ label: "A", delta: -0.5 }, { label: "B", delta: -1 }], 2).note, "A, B turun dari sesi 2, jadi ini fokus latihan berikutnya.");
+  assert.deepEqual(progressSummary([{ label: "A", delta: null }], 1), { summary: "", note: "" });
+  const five = ["A", "B", "C", "D", "E"].map((label) => ({ label, delta: 1 }));
+  assert.equal(progressSummary(five, 1).note, "naik dari sesi 1 di A, B, C dan 2 lainnya. Pertahankan!");
+  const many = Array.from({ length: 12 }, (_, i) => ({ label: `S${i}`, delta: i === 3 ? -2 : i === 7 ? 1 : i < 6 ? 0 : null }));
+  const shown = chartChanges(many);
+  assert.equal(shown.length, 10);
+  assert.deepEqual(shown.map((c) => c.label).slice(0, 4), ["S0", "S1", "S2", "S3"]); // skill order kept
+  assert.ok(shown.some((c) => c.label === "S7"));
+});
+
+test("raporHtml: comparison only when given; markers, previous column, SESI badge, bold notes", async () => {
+  const { raporHtml } = await import("../src/lib/raporTemplate.ts");
+  const base = { fileName: "F", eventLabel: "CLINIC", name: "Fita", date: "2026-10-12", coaches: [], average: 2.5, averageLabel: "Lumayan", best: ["Lob"], weakest: ["Volley"], evaluation: [], nextPractice: [] };
+  const first = raporHtml({ ...base, ratings: [{ label: "Lob", score: 3, scoreLabel: "Lumayan" }, { label: "Volley", score: 2, scoreLabel: "Mulai bisa" }] });
+  assert.match(first, /Paling bagus/);
+  assert.doesNotMatch(first, /Progres vs|class="pm"|SESI \d/);
+  const second = raporHtml({
+    ...base,
+    ratings: [{ label: "Lob", score: 3, scoreLabel: "Lumayan", prev: 2 }, { label: "Volley", score: 2, scoreLabel: "Mulai bisa", prev: null }],
+    compare: { session: 2, previousSession: 1, summary: "1 naik", chart: [{ label: "Lob", delta: 1 }, { label: "Volley", delta: null }], notes: [{ lead: "Progres:", text: "naik dari sesi 1 di Lob." }] },
+  });
+  assert.match(second, /Progres vs sesi 1/);
+  assert.doesNotMatch(second, /Paling bagus/);
+  assert.match(second, />SESI 2</);
+  assert.match(second, /class="pm" style="left:40%"/);
+  assert.match(second, /<span class="bp">2<\/span>/);
+  assert.match(second, /<span class="bp">–<\/span>/);
+  assert.match(second, />\+1</);
+  assert.match(second, />BARU</);
+  assert.match(second, /<li><b>Progres:<\/b> naik dari sesi 1 di Lob.<\/li>/);
+});
+
+test("raporHtml: player photo with glow in the header, badges move under the logo; only http(s) photos", async () => {
+  const { raporHtml } = await import("../src/lib/raporTemplate.ts");
+  const base = { fileName: "F", eventLabel: "CLINIC", name: "Fita", date: "2026-10-12", coaches: [], average: null, averageLabel: "", best: [], weakest: [], ratings: [], evaluation: ["ok"], nextPractice: [] };
+  const withPhoto = raporHtml({ ...base, photoUrl: 'https://img.example/a.png?x="1"' });
+  assert.match(withPhoto, /<img class="pp" src="https:\/\/img\.example\/a\.png\?x=&quot;1&quot;"/);
+  assert.match(withPhoto, /<i class="gl"><\/i>/);
+  assert.match(withPhoto, /class="top ph"/);
+  assert.match(withPhoto, /<div class="bd">/);
+  for (const photoUrl of [null, "javascript:alert(1)", "data:image/png;base64,AA"]) {
+    const html = raporHtml({ ...base, photoUrl });
+    assert.doesNotMatch(html, /class="pp"|class="gl"|class="bd"/);
+  }
+});
+
+test("raporEventLabel / raporCoaches: title without its date, grader then group coach", async () => {
+  const { raporEventLabel, raporCoaches } = await import("../src/lib/coachingRules.ts");
+  assert.equal(raporEventLabel("Coaching Clinic · Basecamp Battle #01"), "COACHING CLINIC · BASECAMP BATTLE #01");
+  assert.equal(raporEventLabel("Mabar with Coach · Sen, 5 Okt 2026"), "MABAR WITH COACH");
+  assert.equal(raporEventLabel("  "), "MABAR WITH COACH");
+  const s = { id: "s", title: "", session_date: "2026-10-05", venue: "", coach_name: "Lukman" };
+  assert.deepEqual(raporCoaches({ ...s, group_coach_name: "Dani" }), ["Lukman", "Dani"]);
+  assert.deepEqual(raporCoaches({ ...s, group_coach_name: "Lukman" }), ["Lukman"]);
+  assert.deepEqual(raporCoaches({ ...s, coach_name: "", group_coach_name: "Dani" }), ["Dani"]);
 });
 
 test("COACHING_SKILLS (default list): 23 teknik + 16 in-game, unique keys", async () => {

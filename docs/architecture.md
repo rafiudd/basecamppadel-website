@@ -48,6 +48,19 @@ supabase/migrations/      ── skema, RLS, RPC, constraint (penjaga terakhir a
 - **Tulis ke DB:** hanya lewat RPC `account_*` (security definer, lihat migrasi 0012 dan 0013). Server action ada di `app/akun/actions.ts`.
 - **Tampilan dipakai bersama `/akun` dan `/akun-demo`:** `ProfileView`, `ProfileSetupView`, `ProfileEditView`, `ClaimView`. Action-nya diteruskan sebagai prop. Demo memakai data contoh di `lib/demoAccount.ts` dan tersembunyi kecuali `NEXT_PUBLIC_ACCOUNT_DEMO=1`.
 - **Rapor PDF:** `lib/rapor.ts` dan `lib/raporTemplate.ts`, berupa HTML A4 yang dicetak lewat browser. `<title>` = nama file.
+  - Selalu 1 halaman: mulai 13 skill, daftar nilai jadi 2 kolom. Kalau isi masih tidak muat, isinya diperkecil (CSS `zoom`) sebelum dialog print terbuka.
+  - Foto pemain tampil di kanan header, dengan glow radial di belakangnya dan drop shadow:
+    - sumbernya `players.photo_url` (foto potongan yang juga dipakai leaderboard), kalau kosong `profiles.photo_url`;
+    - hanya URL http(s) yang dipakai;
+    - kalau ada foto, badge SESI dan tanggal pindah ke bawah logo;
+    - tanpa foto, header tetap seperti semula.
+  - Label di atas nama diambil dari judul sesi. Coach yang tampil = coach yang menilai + coach grup pemain.
+  - Sesi yang hanya berisi catatan (tanpa nilai) tidak menampilkan kartu nilai.
+  - Rapor pertama pemain tampil apa adanya. Mulai rapor kedua, rapor dibandingkan dengan rapor sebelumnya yang punya nilai (`previousReport`):
+    - badge "SESI N";
+    - grafik "Progres vs sesi N", menggantikan kartu "Paling bagus / Perlu dilatih";
+    - garis merah dan kolom abu-abu berisi nilai sesi lalu;
+    - poin "Paling kuat:" dan "Progres:" di bawah evaluasi coach.
 
 ## Status
 

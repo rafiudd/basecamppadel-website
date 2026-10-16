@@ -9,7 +9,15 @@ export type SkillDef = { key: string; kind: SkillKind; group_label: string; labe
 
 export type CoachReport = {
   id: string;
-  session: { id: string; title: string; session_date: string; venue: string; coach_name: string; event_id?: string | null };
+  session: {
+    id: string;
+    title: string;
+    session_date: string;
+    venue: string;
+    coach_name: string; // the coach who sent the assessment
+    group_coach_name?: string; // the coach of the player's group, when it is someone else
+    event_id?: string | null;
+  };
   evaluation: string[];
   next_practice: string[];
   ratings: { skill_key: string; score: number }[];
@@ -140,6 +148,104 @@ export function raporFileName(name: string, isoDate: string): string {
   const [, m, d] = isoDate.slice(0, 10).split("-").map(Number);
   const who = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "") || "PEMAIN";
   return `BASECAMP_CLINIC_${who}_${d}_${MONTH_UPPER[m - 1]}`;
+}
+
+/**
+ * The line above the name on the rapor, from the session title ("Coaching Clinic · Battle #01").
+ * A date part the admin typed into the title is dropped, since the rapor shows the date already.
+ */
+export function raporEventLabel(title: string): string {
+  const label = title
+    .split("·")
+    .map((p) => p.trim())
+    .filter((p) => p && !/\d{1,2}\s+\p{L}{3,}\.?\s+\d{4}/u.test(p))
+    .join(" · ");
+  return (label || "Mabar with Coach").toUpperCase();
+}
+
+/**
+ * The rapor's place in the player's sessions: `session` is its number (1 = first sent rapor) and
+ * `previous` the latest earlier rapor with scores, the one a second-or-later rapor compares with.
+ */
+export function previousReport(reports: CoachReport[], reportId: string): { session: number; previous: CoachReport | null; previousSession: number } {
+  const list = chronological(reports);
+  const idx = list.findIndex((r) => r.id === reportId);
+  for (let i = idx - 1; i >= 0; i--) {
+    if (list[i].ratings.length) return { session: idx + 1, previous: list[i], previousSession: i + 1 };
+  }
+  return { session: idx + 1, previous: null, previousSession: 0 };
+}
+
+export type SkillChange = { label: string; delta: number | null }; // null: not rated in the previous session ("BARU")
+
+/** "A, B, C dan 4 lainnya": a long skill list would fill the notes card. */
+const listJoin = (labels: string[]) => (labels.length > 3 ? `${labels.slice(0, 3).join(", ")} dan ${labels.length - 3} lainnya` : labels.join(", "));
+
+/**
+ * The "Progres vs sesi N" counts ("2 tetap · 2 turun") and the matching evaluation point. Skills new
+ * this session are left out of both.
+ */
+export function progressSummary(changes: SkillChange[], previousSession: number): { summary: string; note: string } {
+  const up = changes.filter((c) => c.delta !== null && c.delta > 0).map((c) => c.label);
+  const down = changes.filter((c) => c.delta !== null && c.delta < 0).map((c) => c.label);
+  const same = changes.filter((c) => c.delta === 0).length;
+  const summary = [up.length && `${up.length} naik`, same && `${same} tetap`, down.length && `${down.length} turun`].filter(Boolean).join(" · ");
+  const vs = `sesi ${previousSession}`;
+  let note = "";
+  if (up.length && down.length) note = `naik dari ${vs} di ${listJoin(up)}. Yang turun (${listJoin(down)}) jadi fokus latihan berikutnya.`;
+  else if (up.length) note = `naik dari ${vs} di ${listJoin(up)}. Pertahankan!`;
+  else if (down.length) note = `${listJoin(down)} turun dari ${vs}, jadi ini fokus latihan berikutnya.`;
+  else if (same) note = `nilainya sama dengan ${vs}. Saatnya naik level di sesi berikutnya.`;
+  return { summary, note };
+}
+
+/**
+ * At most `max` bars fit the progress chart: every skill when they fit, else the biggest changes
+ * first, then unchanged, then new ones, shown in skill order.
+ */
+export function chartChanges<T extends SkillChange>(changes: T[], max = 10): T[] {
+  if (changes.length <= max) return changes;
+  const weight = (c: SkillChange) => (c.delta ? 1 + Math.abs(c.delta) : c.delta === 0 ? 0.5 : 0);
+  const keep = new Set([...changes].sort((a, b) => weight(b) - weight(a)).slice(0, max));
+  return changes.filter((c) => keep.has(c));
+}
+
+/** What a second-or-later rapor adds: the session badge, the progress chart and two evaluation points. */
+export type RaporCompare = {
+  session: number; // this rapor's number, the "SESI 2" badge
+  previousSession: number;
+  summary: string; // "2 tetap · 2 turun"
+  chart: SkillChange[];
+  notes: { lead: string; text: string }[]; // "Paling kuat:", "Progres:" after the coach's evaluation
+};
+
+/**
+ * The comparison with the previous session, or null for a first rapor (no earlier rapor with scores)
+ * and for one without scores. `rated` is in skill order, `prev` the previous session's score.
+ */
+export function raporCompare(
+  rated: { label: string; score: number; prev: number | null }[],
+  position: ReturnType<typeof previousReport>,
+): RaporCompare | null {
+  if (!position.previous || !rated.length) return null;
+  const changes = rated.map((r) => ({ label: r.label, delta: r.prev === null ? null : round1(r.score - r.prev) }));
+  const { summary, note } = progressSummary(changes, position.previousSession);
+  const { best } = reportHighlights(rated);
+  return {
+    session: position.session,
+    previousSession: position.previousSession,
+    summary,
+    chart: chartChanges(changes),
+    notes: [
+      { lead: "Paling kuat:", text: `${best.map((r) => r.label).join(", ")} (${best[0].score}). Pertahankan dan jadikan senjata utama.` },
+      ...(note ? [{ lead: "Progres:", text: note }] : []),
+    ],
+  };
+}
+
+/** Coach names for the rapor: the one who rated first, then the group's coach (no duplicates). */
+export function raporCoaches(session: CoachReport["session"]): string[] {
+  return [...new Set([session.coach_name, session.group_coach_name ?? ""].map((n) => n.trim()).filter(Boolean))];
 }
 
 /** Best and weakest skill by latest score (ties: the first in skill order). */

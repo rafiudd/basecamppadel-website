@@ -1,5 +1,6 @@
 "use client";
 
+import { Avatar } from "@/components/ui/Avatar";
 import { LEVEL_DEFINITIONS } from "@/lib/coaching";
 import type { SessionPlayerItem } from "@/lib/coaching-db";
 
@@ -7,7 +8,6 @@ export function MobilePlayerNavigator({
   currentPlayerItem,
   activePlayerIndex,
   totalPlayers,
-  showMobilePlayerPicker,
   onPrevPlayer,
   onNextPlayer,
   onToggleMobilePicker,
@@ -15,7 +15,6 @@ export function MobilePlayerNavigator({
   currentPlayerItem: SessionPlayerItem | null;
   activePlayerIndex: number;
   totalPlayers: number;
-  showMobilePlayerPicker: boolean;
   onPrevPlayer: () => void;
   onNextPlayer: () => void;
   onToggleMobilePicker: () => void;
@@ -38,6 +37,7 @@ export function MobilePlayerNavigator({
         onClick={onToggleMobilePicker}
       >
         <div className="flex items-center justify-center gap-2">
+          <Avatar name={currentPlayerItem.player.name} photoUrl={currentPlayerItem.player.photo_url} size={28} />
           <span className="font-display font-bold text-lg truncate">
             {currentPlayerItem.player.name}
           </span>

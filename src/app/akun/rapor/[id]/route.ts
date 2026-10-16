@@ -12,8 +12,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { supabase, user, profile } = await getAccount();
   if (!user) return NextResponse.redirect(new URL(`/masuk?next=${encodeURIComponent("/akun?tab=catatan")}`, request.url));
 
-  const { skills, reports } = await loadCoaching(supabase, profile?.player_id ?? null);
+  const playerId = profile?.player_id ?? null;
+  const [{ skills, reports }, { data: player }] = await Promise.all([
+    loadCoaching(supabase, playerId),
+    playerId ? supabase.from("players").select("photo_url").eq("id", playerId).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
   const report = reports.find((r) => r.id === id);
   if (!profile || !report) return new NextResponse("Rapor tidak ditemukan.", { status: 404 });
-  return raporResponse(profile.nickname, report, skills);
+  // the player photo (the cut-out one the leaderboard shows), else the profile photo
+  return raporResponse(profile.nickname, report, skills, reports, player?.photo_url || profile.photo_url || null);
 }
