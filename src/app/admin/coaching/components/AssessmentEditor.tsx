@@ -10,6 +10,7 @@ import { LEVEL_DEFINITIONS, type computePlayerLevel } from "@/lib/coaching";
 import type { SessionPlayerItem } from "@/lib/coaching-db";
 import { generateCoachNote } from "../ai-actions";
 import { ScoringRow } from "./ScoringRow";
+import { PlayerProfileModal } from "./PlayerProfileModal";
 
 export function AssessmentEditor({
   currentPlayerItem,
@@ -66,6 +67,7 @@ export function AssessmentEditor({
   onOpenOverrideModal: () => void;
 }) {
   const [generating, setGenerating] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   if (!currentPlayerItem) {
     return (
@@ -181,12 +183,13 @@ export function AssessmentEditor({
                 Lihat rapor ↗
               </Link>
             )}
-            <Link
-              href={`/leaderboard/${currentPlayerItem.player.id}`}
-              className="text-sm text-[#FBF7F1]/80 hover:text-[#FFD43B] no-underline"
+            <button
+              type="button"
+              onClick={() => setShowProfile(true)}
+              className="border-0 bg-transparent cursor-pointer text-sm text-[#FBF7F1]/80 hover:text-[#FFD43B]"
             >
               Lihat profil ↗
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -433,6 +436,8 @@ export function AssessmentEditor({
           Simpan &amp; lanjut →
         </button>
       </div>
+
+      {showProfile && <PlayerProfileModal playerId={currentPlayerItem.player.id} onClose={() => setShowProfile(false)} />}
     </>
   );
 }
