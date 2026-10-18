@@ -188,6 +188,23 @@ export const CoachingIcon = make(
   { size: 22 },
 );
 
+export const UploadIcon = make(
+  <>
+    <path d="M12 3v12" />
+    <polyline points="7 8 12 3 17 8" />
+    <path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
+  </>,
+  { size: 18 },
+);
+export const ImageIcon = make(
+  <>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+    <path d="M21 15l-5-5-11 11" />
+  </>,
+  { size: 18 },
+);
+
 export const DotsHorizontalIcon = make(
   <>
     <circle cx="12" cy="12" r="1.5" fill="currentColor" />

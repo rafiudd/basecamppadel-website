@@ -40,8 +40,16 @@ export function MabarDetail({ data }: { data: MabarData }) {
 
         {rounds.length > 0 && (
           <>
-            <div className="font-display font-bold text-xl">
-              Ronde {selected} <span className="font-sans font-medium text-sm text-snow/70">dari {event.rounds}</span>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="font-display font-bold text-xl">
+                Ronde {selected} <span className="font-sans font-medium text-sm text-snow/70">dari {event.rounds}</span>
+              </div>
+              <a
+                href={`/admin/events/${event.id}/poster`}
+                className="btn min-h-10 px-4.5 tracking-button no-underline text-snow"
+              >
+                Buat poster jadwal
+              </a>
             </div>
             <RoundPicker total={event.rounds} existing={rounds.map((r) => r.round_no)} selected={selected} done={doneRoundNos} onSelect={setSelected} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
