@@ -3,6 +3,14 @@
 import type { CoachingSkill } from "@/lib/database.types";
 import { computeScoreDelta } from "@/lib/coaching";
 
+/** 1-5 clamp, 1 decimal — the quick-pick buttons cover whole/half steps; this lets a coach type
+ *  something finer, like 1.6 or 1.7, when the preset buttons aren't precise enough. */
+function parseFineScore(raw: string): number | null {
+  const v = Number(raw);
+  if (!raw.trim() || Number.isNaN(v)) return null;
+  return Math.round(Math.min(5, Math.max(1, v)) * 10) / 10;
+}
+
 export function ScoringRow({
   skill,
   currentScore,
@@ -61,6 +69,21 @@ export function ScoringRow({
               </button>
             );
           })}
+          <input
+            type="number"
+            inputMode="decimal"
+            min={1}
+            max={5}
+            step={0.1}
+            value={currentScore ?? ""}
+            onChange={(e) => {
+              const v = parseFineScore(e.target.value);
+              if (v !== null) onScoreClick(skill.id, v);
+            }}
+            placeholder="1.6"
+            title="Ketik nilai lebih presisi (1 angka desimal)"
+            className="w-16 h-10 rounded-lg border border-[#FBF7F1]/15 bg-transparent text-[#FBF7F1] text-sm font-bold text-center focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
+          />
         </div>
       </div>
 
@@ -126,6 +149,21 @@ export function ScoringRow({
             );
           })}
         </div>
+
+        <input
+          type="number"
+          inputMode="decimal"
+          min={1}
+          max={5}
+          step={0.1}
+          value={currentScore ?? ""}
+          onChange={(e) => {
+            const v = parseFineScore(e.target.value);
+            if (v !== null) onScoreClick(skill.id, v);
+          }}
+          placeholder="atau ketik nilai presisi, misal 1.6"
+          className="h-10 w-full rounded-lg border border-[#FBF7F1]/15 bg-transparent text-[#FBF7F1] text-sm font-bold text-center focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
+        />
       </div>
     </div>
   );
