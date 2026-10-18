@@ -29,6 +29,9 @@ export function AssessmentEditor({
   isPending,
   busyAction,
   isAdmin,
+  positionLabel,
+  hasPrev,
+  hasNext,
   onScoreClick,
   onToggleSkillChip,
   onEvaluationChange,
@@ -38,6 +41,9 @@ export function AssessmentEditor({
   onSaveDraft,
   onSubmitAndNext,
   onOpenOverrideModal,
+  onClose,
+  onPrev,
+  onNext,
 }: {
   currentPlayerItem: SessionPlayerItem | null;
   currentComputedLevel: ReturnType<typeof computePlayerLevel>;
@@ -55,6 +61,10 @@ export function AssessmentEditor({
   isPending: boolean;
   busyAction: "draft" | "submit" | null;
   isAdmin: boolean;
+  /** e.g. "pemain 2 dari 14" (within the current tab) */
+  positionLabel: string;
+  hasPrev: boolean;
+  hasNext: boolean;
   onScoreClick: (skillId: string, val: number) => void;
   onToggleSkillChip: (skillId: string) => void;
   onEvaluationChange: (val: string) => void;
@@ -65,17 +75,14 @@ export function AssessmentEditor({
   onSaveDraft: () => void;
   onSubmitAndNext: () => void;
   onOpenOverrideModal: () => void;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
 }) {
   const [generating, setGenerating] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
-  if (!currentPlayerItem) {
-    return (
-      <div className="bg-[#221F30] rounded-2xl p-12 text-center text-[#FBF7F1]/60 border border-[#FBF7F1]/5">
-        Pilih atau buat sesi coaching terlebih dahulu.
-      </div>
-    );
-  }
+  if (!currentPlayerItem) return null;
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -106,70 +113,108 @@ export function AssessmentEditor({
 
   return (
     <>
-      <div className="bg-[#221F30] rounded-2xl p-5 lg:p-6 flex flex-col gap-5 border border-[#FBF7F1]/5">
-        {/* Player Header Card */}
-        <div className="flex items-center gap-3.5 pb-2">
-          {currentPlayerItem.player.photo_url ? (
-            // photo with a ring in the level color, so the level stays visible
-            <span
-              className="rounded-full p-[3px] flex-none"
-              style={{ backgroundColor: LEVEL_DEFINITIONS[currentComputedLevel.level]?.color || "#FFD43B" }}
+      <div className="fixed inset-0 z-50 bg-black/70 flex items-stretch lg:items-center justify-center lg:p-4" onClick={onClose}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Penilaian ${currentPlayerItem.player.name}`}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-[#221F30] w-full h-full lg:h-auto lg:max-h-[88vh] lg:max-w-[760px] lg:rounded-2xl flex flex-col lg:border lg:border-[#FBF7F1]/5 overflow-hidden"
+        >
+          {/* Header: prev/next + player identity + close */}
+          <div className="flex-none flex items-center gap-2 p-3.5 lg:p-5 border-b border-[#FBF7F1]/10">
+            <button
+              type="button"
+              aria-label="Pemain sebelumnya"
+              disabled={!hasPrev}
+              onClick={onPrev}
+              className="w-10 h-10 border-0 rounded-xl bg-[#FBF7F1]/10 text-[#FBF7F1] text-lg font-bold flex-none flex items-center justify-center disabled:opacity-30 cursor-pointer"
             >
-              <Avatar name={currentPlayerItem.player.name} photoUrl={currentPlayerItem.player.photo_url} size={42} />
-            </span>
-          ) : (
-            <span
-              aria-hidden="true"
-              className="w-12 h-12 rounded-full flex items-center justify-center font-display font-bold text-base flex-none"
-              style={{
-                backgroundColor: LEVEL_DEFINITIONS[currentComputedLevel.level]?.color || "#FFD43B",
-                color: LEVEL_DEFINITIONS[currentComputedLevel.level]?.textColor || "#17151F",
-              }}
-            >
-              {initials(currentPlayerItem.player.name)}
-            </span>
-          )}
+              ‹
+            </button>
 
-          <div className="flex-grow min-w-0">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="font-display font-bold text-xl lg:text-[22px] m-0 text-[#FBF7F1]">
-                {currentPlayerItem.player.name}
-              </h2>
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                  currentPlayerItem.status === "submitted"
-                    ? "bg-[#2F9E5C]/20 text-[#6FD39A]"
-                    : currentPlayerItem.status === "draft"
-                    ? "bg-[#FFD43B]/18 text-[#FFD43B]"
-                    : "bg-[#FBF7F1]/10 text-[#FBF7F1]/75"
-                }`}
-              >
-                {currentPlayerItem.status === "submitted"
-                  ? "Terkirim"
-                  : currentPlayerItem.status === "draft"
-                  ? "Draft"
-                  : "Belum dinilai"}
-              </span>
-            </div>
-            <div className="text-[13px] text-[#FBF7F1]/70 mt-1 flex items-center gap-2 flex-wrap">
-              <span>
-                {currentPlayerItem.group?.name || "Grup 1"} · {currentPlayerItem.player.gender === "F" ? "Women" : "Men"} · {currentComputedLevel.level}
-              </span>
-              {currentComputedLevel.isOverridden && (
-                <span className="text-3xs text-[#FF5A3C] bg-[#FF5A3C]/10 px-1.5 py-0.5 rounded font-bold">
-                  Override
+            <div className="flex-grow min-w-0 flex items-center gap-3">
+              {currentPlayerItem.player.photo_url ? (
+                // photo with a ring in the level color, so the level stays visible
+                <span
+                  className="rounded-full p-[3px] flex-none"
+                  style={{ backgroundColor: LEVEL_DEFINITIONS[currentComputedLevel.level]?.color || "#FFD43B" }}
+                >
+                  <Avatar name={currentPlayerItem.player.name} photoUrl={currentPlayerItem.player.photo_url} size={38} />
+                </span>
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="w-11 h-11 rounded-full flex items-center justify-center font-display font-bold text-base flex-none"
+                  style={{
+                    backgroundColor: LEVEL_DEFINITIONS[currentComputedLevel.level]?.color || "#FFD43B",
+                    color: LEVEL_DEFINITIONS[currentComputedLevel.level]?.textColor || "#17151F",
+                  }}
+                >
+                  {initials(currentPlayerItem.player.name)}
                 </span>
               )}
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="font-display font-bold text-lg lg:text-xl m-0 text-[#FBF7F1] truncate">
+                    {currentPlayerItem.player.name}
+                  </h2>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                      currentPlayerItem.status === "submitted"
+                        ? "bg-[#2F9E5C]/20 text-[#6FD39A]"
+                        : currentPlayerItem.status === "draft"
+                        ? "bg-[#FFD43B]/18 text-[#FFD43B]"
+                        : "bg-[#FBF7F1]/10 text-[#FBF7F1]/75"
+                    }`}
+                  >
+                    {currentPlayerItem.status === "submitted"
+                      ? "Terkirim"
+                      : currentPlayerItem.status === "draft"
+                      ? "Draft"
+                      : "Belum dinilai"}
+                  </span>
+                </div>
+                <div className="text-xs text-[#FBF7F1]/70 mt-0.5 flex items-center gap-2 flex-wrap">
+                  <span className="truncate">
+                    {currentPlayerItem.group?.name || "Grup 1"} · {currentPlayerItem.player.gender === "F" ? "Women" : "Men"} · {currentComputedLevel.level} · {positionLabel}
+                  </span>
+                  {currentComputedLevel.isOverridden && (
+                    <span className="text-3xs text-[#FF5A3C] bg-[#FF5A3C]/10 px-1.5 py-0.5 rounded font-bold flex-none">
+                      Override
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
+
+            <button
+              type="button"
+              aria-label="Pemain berikutnya"
+              disabled={!hasNext}
+              onClick={onNext}
+              className="w-10 h-10 border-0 rounded-xl bg-[#FBF7F1]/10 text-[#FBF7F1] text-lg font-bold flex-none flex items-center justify-center disabled:opacity-30 cursor-pointer"
+            >
+              ›
+            </button>
+            <button
+              type="button"
+              aria-label="Tutup"
+              onClick={onClose}
+              className="w-10 h-10 border-0 rounded-xl bg-[#FBF7F1]/10 text-[#FBF7F1] text-lg flex-none flex items-center justify-center cursor-pointer"
+            >
+              ✕
+            </button>
           </div>
 
-          {/* Header Right Actions */}
-          <div className="flex items-center gap-2 flex-none">
+          {/* Secondary actions row */}
+          <div className="flex-none flex items-center justify-end gap-4 px-3.5 lg:px-5 py-2 border-b border-[#FBF7F1]/10 text-sm overflow-x-auto">
             {isAdmin && (
               <button
                 type="button"
                 onClick={onOpenOverrideModal}
-                className="hidden sm:inline-flex text-xs bg-[#FBF7F1]/10 hover:bg-[#FBF7F1]/15 text-[#FBF7F1]/90 px-3 py-1.5 rounded-lg border border-[#FBF7F1]/10 font-medium cursor-pointer"
+                className="text-xs bg-[#FBF7F1]/10 hover:bg-[#FBF7F1]/15 text-[#FBF7F1]/90 px-3 py-1.5 rounded-lg border border-[#FBF7F1]/10 font-medium cursor-pointer whitespace-nowrap"
               >
                 Ubah Level
               </button>
@@ -179,7 +224,7 @@ export function AssessmentEditor({
               <Link
                 href={`/admin/coaching/rapor/${currentPlayerItem.assessment.id}`}
                 target="_blank"
-                className="text-sm text-[#FBF7F1]/80 hover:text-[#FFD43B] no-underline"
+                className="text-sm text-[#FBF7F1]/80 hover:text-[#FFD43B] no-underline whitespace-nowrap"
               >
                 Lihat rapor ↗
               </Link>
@@ -187,15 +232,14 @@ export function AssessmentEditor({
             <button
               type="button"
               onClick={() => setShowProfile(true)}
-              className="border-0 bg-transparent cursor-pointer text-sm text-[#FBF7F1]/80 hover:text-[#FFD43B]"
+              className="border-0 bg-transparent cursor-pointer text-sm text-[#FBF7F1]/80 hover:text-[#FFD43B] whitespace-nowrap"
             >
               Lihat profil ↗
             </button>
           </div>
-        </div>
 
-        {/* Nilai Teknik & In-game Section */}
-        <div className="flex flex-col gap-4">
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto p-3.5 lg:p-6 flex flex-col gap-4">
           <div>
             <span className="text-[12px] tracking-[0.08em] text-[#FBF7F1]/70 uppercase mb-2 block font-medium">
               Nilai teknik &amp; in-game
@@ -385,10 +429,11 @@ export function AssessmentEditor({
               </span>
             </label>
           </div>
+          </div>
 
-          {/* DESKTOP FOOTER ACTION BAR */}
-          <div className="hidden lg:flex justify-between items-center gap-3 border-t border-[#FBF7F1]/10 pt-4.5 mt-2">
-            <span className="text-[13px] text-[#FBF7F1]/65">
+          {/* Footer: save status + actions, always visible */}
+          <div className="flex-none flex flex-col-reverse lg:flex-row lg:justify-between lg:items-center gap-2.5 border-t border-[#FBF7F1]/10 p-3.5 lg:p-4.5">
+            <span className="text-[13px] text-[#FBF7F1]/65 text-center lg:text-left">
               {saveStatus}
             </span>
 
@@ -398,7 +443,7 @@ export function AssessmentEditor({
                 onClick={onSaveDraft}
                 disabled={isPending}
                 data-loading={busyAction === "draft" || undefined}
-                className="border-0 rounded-lg min-h-11 px-4.5 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FBF7F1]/12 text-[#FBF7F1] hover:bg-[#FBF7F1]/18 transition-all disabled:opacity-50 cursor-pointer"
+                className="flex-1 lg:flex-none border-0 rounded-lg min-h-11 px-4.5 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FBF7F1]/12 text-[#FBF7F1] hover:bg-[#FBF7F1]/18 transition-all disabled:opacity-50 cursor-pointer"
               >
                 Simpan draft
               </button>
@@ -407,35 +452,13 @@ export function AssessmentEditor({
                 onClick={onSubmitAndNext}
                 disabled={isPending}
                 data-loading={busyAction === "submit" || undefined}
-                className="border-0 rounded-lg min-h-11 px-4.5 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FF5A3C] text-[#17151F] hover:bg-[#FF5A3C]/90 transition-all shadow-md disabled:opacity-50 cursor-pointer"
+                className="flex-1 lg:flex-none border-0 rounded-lg min-h-11 px-4.5 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FF5A3C] text-[#17151F] hover:bg-[#FF5A3C]/90 transition-all shadow-md disabled:opacity-50 cursor-pointer"
               >
-                Simpan &amp; kirim · lanjut pemain berikutnya →
+                {hasNext ? "Simpan & kirim · lanjut →" : "Simpan & kirim"}
               </button>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* MOBILE FLOATING STICKY ACTION BAR */}
-      <div className="fixed lg:hidden left-0 right-0 bottom-16 bg-[#17151F] border-t border-[#FBF7F1]/10 p-3 px-4 flex gap-2 z-30">
-        <button
-          type="button"
-          onClick={onSaveDraft}
-          disabled={isPending}
-          data-loading={busyAction === "draft" || undefined}
-          className="border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FBF7F1]/12 text-[#FBF7F1] disabled:opacity-50 cursor-pointer"
-        >
-          Draft
-        </button>
-        <button
-          type="button"
-          onClick={onSubmitAndNext}
-          disabled={isPending}
-          data-loading={busyAction === "submit" || undefined}
-          className="border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 flex-grow bg-[#FF5A3C] text-[#17151F] disabled:opacity-50 shadow-md cursor-pointer"
-        >
-          Simpan &amp; lanjut →
-        </button>
       </div>
 
       {showProfile && <PlayerProfileModal playerId={currentPlayerItem.player.id} onClose={() => setShowProfile(false)} />}

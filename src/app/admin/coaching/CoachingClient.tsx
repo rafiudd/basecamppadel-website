@@ -29,8 +29,7 @@ import { CreateSessionModal } from "./components/CreateSessionModal";
 import { OverrideLevelModal } from "./components/OverrideLevelModal";
 import { ImportRekapModal } from "./components/ImportRekapModal";
 import { CoachingHeader } from "./components/CoachingHeader";
-import { MobilePlayerNavigator } from "./components/MobilePlayerNavigator";
-import { PlayerSidebarList } from "./components/PlayerSidebarList";
+import { PlayerListTable } from "./components/PlayerListTable";
 import { AssessmentEditor } from "./components/AssessmentEditor";
 import { toast } from "@/components/ui/Toast";
 
@@ -62,11 +61,12 @@ export function CoachingClient({
   const router = useRouter();
   const [selectedCoachFilter, setSelectedCoachFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"semua" | "belum" | "draft" | "terkirim">("semua");
+  const [statusFilter, setStatusFilter] = useState<"belum" | "selesai">("belum");
 
-  // Active player selection
-  const [activePlayerIndex, setActivePlayerIndex] = useState(0);
-  const [showMobilePlayerPicker, setShowMobilePlayerPicker] = useState(false);
+  // Active player selection — by id (not index) so it survives the list reshuffling
+  // when a status change moves a player between the "belum"/"selesai" tabs.
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [showAssessment, setShowAssessment] = useState(false);
 
   // Modals
   const [showMasterTeknik, setShowMasterTeknik] = useState(false);
@@ -136,29 +136,35 @@ export function CoachingClient({
     };
   }, []);
 
-  // Filtered players list
-  const filteredPlayers = useMemo(() => {
+  // Players matching the coach filter + search, before the belum/selesai tab split —
+  // used to compute accurate counts for both tabs regardless of which one is active.
+  const baseFilteredPlayers = useMemo(() => {
     if (!sessionData) return [];
     return sessionData.players.filter((pItem) => {
-      // Coach filter
       if (selectedCoachFilter !== "all" && pItem.group?.coach_id !== selectedCoachFilter) {
         return false;
       }
-      // Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         if (!pItem.player.name.toLowerCase().includes(q)) return false;
       }
-      // Status filter
-      if (statusFilter === "belum" && pItem.status !== "unrated") return false;
-      if (statusFilter === "draft" && pItem.status !== "draft") return false;
-      if (statusFilter === "terkirim" && pItem.status !== "submitted") return false;
-
       return true;
     });
-  }, [sessionData, selectedCoachFilter, searchQuery, statusFilter]);
+  }, [sessionData, selectedCoachFilter, searchQuery]);
 
-  const currentPlayerItem = filteredPlayers[activePlayerIndex] || filteredPlayers[0] || null;
+  const belumCount = useMemo(() => baseFilteredPlayers.filter((p) => p.status !== "submitted").length, [baseFilteredPlayers]);
+  const selesaiCount = useMemo(() => baseFilteredPlayers.filter((p) => p.status === "submitted").length, [baseFilteredPlayers]);
+
+  // Filtered players list for the active tab
+  const filteredPlayers = useMemo(() => {
+    return baseFilteredPlayers.filter((p) => (statusFilter === "selesai" ? p.status === "submitted" : p.status !== "submitted"));
+  }, [baseFilteredPlayers, statusFilter]);
+
+  const activePlayerIndex = filteredPlayers.findIndex((p) => p.player.id === selectedPlayerId);
+  // If the selected player vanished from the active tab (search/tab changed underneath the
+  // modal, or it was just submitted and handleSubmitAndNext had nowhere to go), the render
+  // below is gated on currentPlayerItem so the modal simply won't show — nothing left to do here.
+  const currentPlayerItem = activePlayerIndex >= 0 ? filteredPlayers[activePlayerIndex] : null;
 
   // Initialize/sync editor form state when active player changes
   useEffect(() => {
@@ -283,6 +289,9 @@ export function CoachingClient({
       autoSaveTimerRef.current = null;
       pendingPayloadRef.current = null;
     }
+    // Submitting moves this player out of the "belum" tab, so grab the next id now —
+    // after refresh the list reshuffles and this player's own index won't mean "next" anymore.
+    const nextPlayerId = activePlayerIndex < filteredPlayers.length - 1 ? filteredPlayers[activePlayerIndex + 1].player.id : null;
     setBusyAction("submit");
     startTransition(async () => {
       setSaveStatus("Mengirim...");
@@ -301,8 +310,10 @@ export function CoachingClient({
         setSaveStatus("Terkirim");
         toast.success(`Penilaian ${currentPlayerItem.player.name} berhasil disimpan & dikirim`);
 
-        if (activePlayerIndex < filteredPlayers.length - 1) {
-          setActivePlayerIndex(activePlayerIndex + 1);
+        if (nextPlayerId) {
+          setSelectedPlayerId(nextPlayerId);
+        } else {
+          setShowAssessment(false);
         }
         router.refresh();
       } catch (err: any) {
@@ -426,38 +437,21 @@ export function CoachingClient({
 
       {sessionData ? (
         <>
-          <MobilePlayerNavigator
-            currentPlayerItem={currentPlayerItem}
-            activePlayerIndex={activePlayerIndex}
-            totalPlayers={filteredPlayers.length}
-            onPrevPlayer={() => {
-              flushPendingAutoSave();
-              setActivePlayerIndex(activePlayerIndex - 1);
+          <PlayerListTable
+            filteredPlayers={filteredPlayers}
+            belumCount={belumCount}
+            selesaiCount={selesaiCount}
+            searchQuery={searchQuery}
+            statusFilter={statusFilter}
+            onSearchChange={setSearchQuery}
+            onStatusFilterChange={setStatusFilter}
+            onSelectPlayer={(index) => {
+              setSelectedPlayerId(filteredPlayers[index].player.id);
+              setShowAssessment(true);
             }}
-            onNextPlayer={() => {
-              flushPendingAutoSave();
-              setActivePlayerIndex(activePlayerIndex + 1);
-            }}
-            onToggleMobilePicker={() => setShowMobilePlayerPicker(!showMobilePlayerPicker)}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-5 items-start">
-            <PlayerSidebarList
-              filteredPlayers={filteredPlayers}
-              currentPlayerItem={currentPlayerItem}
-              sessionData={sessionData}
-              searchQuery={searchQuery}
-              statusFilter={statusFilter}
-              showMobilePlayerPicker={showMobilePlayerPicker}
-              onSearchChange={setSearchQuery}
-              onStatusFilterChange={setStatusFilter}
-              onSelectPlayer={(index) => {
-                flushPendingAutoSave();
-                setActivePlayerIndex(index);
-                setShowMobilePlayerPicker(false);
-              }}
-            />
-
+          {showAssessment && currentPlayerItem && (
             <AssessmentEditor
               currentPlayerItem={currentPlayerItem}
               currentComputedLevel={currentComputedLevel}
@@ -475,6 +469,9 @@ export function CoachingClient({
               isPending={isPending}
               busyAction={busyAction}
               isAdmin={isAdmin}
+              positionLabel={`pemain ${activePlayerIndex + 1} dari ${filteredPlayers.length}`}
+              hasPrev={activePlayerIndex > 0}
+              hasNext={activePlayerIndex < filteredPlayers.length - 1}
               onScoreClick={handleScoreClick}
               onToggleSkillChip={handleToggleSkillChip}
               onEvaluationChange={(val) => {
@@ -505,8 +502,15 @@ export function CoachingClient({
                   setShowOverrideModal(true);
                 }
               }}
+              onClose={() => setShowAssessment(false)}
+              onPrev={() => {
+                if (activePlayerIndex > 0) setSelectedPlayerId(filteredPlayers[activePlayerIndex - 1].player.id);
+              }}
+              onNext={() => {
+                if (activePlayerIndex < filteredPlayers.length - 1) setSelectedPlayerId(filteredPlayers[activePlayerIndex + 1].player.id);
+              }}
             />
-          </div>
+          )}
         </>
       ) : (
         <p className="m-0 bg-[#221F30] rounded-2xl p-6 text-sm text-[#FBF7F1]/70 border border-[#FBF7F1]/5">

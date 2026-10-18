@@ -16,6 +16,8 @@ import {
   DotsHorizontalIcon,
   ListIcon,
   ChartIcon,
+  UploadIcon,
+  ImageIcon,
 } from "@/components/ui/icons";
 
 export function CoachingHeader({
@@ -72,9 +74,11 @@ export function CoachingHeader({
             <>
               <Link
                 href="/admin/coaching/skills"
-                className="border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FBF7F1]/10 text-[#FBF7F1] hover:bg-[#FBF7F1]/15 transition-all no-underline"
+                title="Master Teknik"
+                aria-label="Master Teknik"
+                className="border-0 rounded-lg w-11 h-11 inline-flex items-center justify-center bg-[#FBF7F1]/10 text-[#FBF7F1] hover:bg-[#FBF7F1]/15 transition-all no-underline"
               >
-                Master Teknik
+                <ListIcon size={18} />
               </Link>
               <Link
                 href="/admin/coaching/sessions/new"
@@ -97,19 +101,33 @@ export function CoachingHeader({
               <button
                 type="button"
                 onClick={onOpenImportRekap}
-                className="border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FBF7F1]/10 text-[#FBF7F1] hover:bg-[#FBF7F1]/15 transition-all cursor-pointer"
+                title="Import Excel"
+                aria-label="Import Excel"
+                className="border-0 rounded-lg w-11 h-11 inline-flex items-center justify-center bg-[#FBF7F1]/10 text-[#FBF7F1] hover:bg-[#FBF7F1]/15 transition-all cursor-pointer"
               >
-                Import Excel
+                <UploadIcon size={18} />
               </button>
             </>
+          )}
+          {sessionData && (
+            <a
+              href={`/admin/coaching/sessions/${sessionData.session.id}/poster`}
+              title="Buat poster"
+              aria-label="Buat poster"
+              className="border-0 rounded-lg w-11 h-11 inline-flex items-center justify-center bg-[#FBF7F1]/12 text-[#FBF7F1] hover:bg-[#FBF7F1]/18 transition-all no-underline"
+            >
+              <ImageIcon size={18} />
+            </a>
           )}
           <button
             type="button"
             onClick={onExportXlsx}
             disabled={!sessionData}
-            className="border-0 rounded-lg min-h-11 px-4.5 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center gap-2 bg-[#FBF7F1]/12 text-[#FBF7F1] hover:bg-[#FBF7F1]/18 transition-all disabled:opacity-50 cursor-pointer"
+            title="Export rekap (.xlsx)"
+            aria-label="Export rekap (.xlsx)"
+            className="border-0 rounded-lg w-11 h-11 inline-flex items-center justify-center bg-[#FBF7F1]/12 text-[#FBF7F1] hover:bg-[#FBF7F1]/18 transition-all disabled:opacity-50 cursor-pointer"
           >
-            Export rekap (.xlsx)
+            <ChartIcon size={18} />
           </button>
           <button
             type="button"
@@ -227,6 +245,16 @@ export function CoachingHeader({
                     <ChartIcon size={15} />
                     Export Rekap (.xlsx)
                   </button>
+                  {sessionData && (
+                    <a
+                      href={`/admin/coaching/sessions/${sessionData.session.id}/poster`}
+                      onClick={() => setShowMobileMenu(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[#FBF7F1] hover:bg-[#FBF7F1]/10 transition-colors no-underline text-xs font-semibold"
+                    >
+                      <ChartIcon size={15} />
+                      Buat Poster
+                    </a>
+                  )}
                 </div>
               </>
             )}
