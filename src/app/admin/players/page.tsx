@@ -8,10 +8,18 @@ import { PendingClaims, type PendingClaim } from "@/components/admin/players/Pen
 export default async function PlayersAdmin({ searchParams }: { searchParams: Promise<{ edit?: string; new?: string }> }) {
   const { edit, new: isNew } = await searchParams;
   const supabase = await createClient();
-  const [{ data: players }, { data: profiles }] = await Promise.all([
+  const [{ data: players }, { data: profiles }, { data: rosterRows }] = await Promise.all([
     supabase.from("players").select("*").order("points", { ascending: false }),
     supabase.from("profiles").select("user_id, email, nickname, full_name, whatsapp, player_id, claim_player_id"),
+    supabase.from("coaching_session_players").select("player_id, session_id"),
   ]);
+  // distinct sessions per player, so attending the same session twice (different group) isn't double-counted
+  const sessionSets: Record<string, Set<string>> = {};
+  for (const r of rosterRows ?? []) {
+    (sessionSets[r.player_id] ??= new Set()).add(r.session_id);
+  }
+  const coachingCounts: Record<string, number> = {};
+  for (const [playerId, set] of Object.entries(sessionSets)) coachingCounts[playerId] = set.size;
   const editing = players?.find((p) => p.id === edit);
   const linkedEmail = editing ? profiles?.find((x) => x.player_id === editing.id)?.email ?? null : null;
   const claims: PendingClaim[] = (profiles ?? [])
@@ -34,7 +42,11 @@ export default async function PlayersAdmin({ searchParams }: { searchParams: Pro
       )}
 
       {!showForm && <PendingClaims claims={claims} />}
-      {showForm ? <PlayerForm key={editing?.id ?? "new"} player={editing} accountEmail={linkedEmail} /> : <PlayersList players={players ?? []} />}
+      {showForm ? (
+        <PlayerForm key={editing?.id ?? "new"} player={editing} accountEmail={linkedEmail} />
+      ) : (
+        <PlayersList players={players ?? []} coachingCounts={coachingCounts} />
+      )}
     </div>
   );
 }
