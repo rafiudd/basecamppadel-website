@@ -8,6 +8,7 @@ import { SearchIcon } from "@/components/ui/icons";
 import { inputClass } from "@/components/ui/Field";
 import { deletePlayer } from "@/app/admin/actions";
 import { InlineDelete } from "@/components/admin/InlineDelete";
+import { PlayerProfileModal } from "@/components/admin/players/PlayerProfileModal";
 import { LEVELS } from "@/lib/config";
 import type { Player } from "@/lib/database.types";
 
@@ -26,6 +27,7 @@ export function PlayersList({ players }: { players: Player[] }) {
   const [level, setLevel] = useState("");
   const [sort, setSort] = useState<Sort>("poin");
   const [gender, setGender] = useState<"" | "M" | "F">("");
+  const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
 
   const term = q.trim().toLowerCase();
   const base = players.filter(
@@ -96,7 +98,13 @@ export function PlayersList({ players }: { players: Player[] }) {
             <tr key={p.id} className={`border-t border-snow/10 ${p.active ? "" : "opacity-50"}`}>
               <td className="py-2 pr-3"><Avatar name={p.name} photoUrl={p.photo_url} size={36} /></td>
               <td className="py-2.5 pr-3 font-display font-bold whitespace-nowrap">
-                <span className="flex items-center gap-2">{p.name} <GenderBadge gender={p.gender} /></span>
+                <button
+                  type="button"
+                  onClick={() => setProfilePlayer(p)}
+                  className="border-0 bg-transparent cursor-pointer p-0 flex items-center gap-2 font-display font-bold text-snow hover:text-volt"
+                >
+                  {p.name} <GenderBadge gender={p.gender} />
+                </button>
               </td>
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{p.level}</td>
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{p.region || "—"}</td>
@@ -112,17 +120,19 @@ export function PlayersList({ players }: { players: Player[] }) {
         {shown.map((p) => (
           <div key={p.id} className={`bg-ink-3 rounded-card py-3 pl-3.5 pr-2 flex items-center gap-3 ${p.active ? "" : "opacity-50"}`}>
             <Avatar name={p.name} photoUrl={p.photo_url} size={36} />
-            <div className="flex-1 min-w-0">
-              <div className="font-display font-bold text-input flex items-center gap-2">{p.name} <GenderBadge gender={p.gender} /></div>
+            <button type="button" onClick={() => setProfilePlayer(p)} className="flex-1 min-w-0 border-0 bg-transparent cursor-pointer text-left p-0">
+              <div className="font-display font-bold text-input flex items-center gap-2 text-snow">{p.name} <GenderBadge gender={p.gender} /></div>
               <div className="text-caption text-snow/70">{[p.level, p.region].filter(Boolean).join(" · ")}</div>
               <div className="text-caption text-snow/70"><b className="text-snow">{p.points}</b> poin · {p.wins}–{p.losses} W-L</div>
-            </div>
+            </button>
             <Actions p={p} />
           </div>
         ))}
       </div>
 
       {shown.length === 0 && <p className="text-sm text-snow/50 m-0">{players.length ? "Tidak ada pemain yang cocok." : "Belum ada pemain."}</p>}
+
+      {profilePlayer && <PlayerProfileModal player={profilePlayer} onClose={() => setProfilePlayer(null)} />}
     </>
   );
 }

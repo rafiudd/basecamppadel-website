@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
-import { initials, parseDateParts } from "@/lib/format";
+import { CoachingHistoryList } from "@/components/admin/CoachingHistoryList";
+import { initials } from "@/lib/format";
 import { LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
 import { getPlayerCoachingProfile, type PlayerCoachingProfile } from "../player-profile-actions";
 
@@ -63,37 +64,7 @@ export function PlayerProfileModal({ playerId, onClose }: { playerId: string; on
 
           <div className="flex flex-col gap-3">
             <div className="text-xs font-bold tracking-caps text-snow/60">CATATAN SEBELUMNYA</div>
-            {data.history.length === 0 ? (
-              <div className="text-sm text-snow/50">Belum ada catatan coaching.</div>
-            ) : (
-              <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto pr-1">
-                {data.history.map((h) => (
-                  <div key={h.id} className="bg-ink rounded-xl p-4 flex flex-col gap-2 border border-snow/8">
-                    <div className="flex items-center justify-between gap-2 flex-wrap text-xs text-snow/60">
-                      <span className="font-bold text-snow">{h.sessionTitle}</span>
-                      <span className="flex items-center gap-2">
-                        {h.sessionDate && parseDateParts(h.sessionDate).dateFormatted}
-                        {h.coachName && ` · Coach ${h.coachName}`}
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-2xs font-bold ${
-                            h.status === "submitted" ? "bg-win/20 text-win-soft" : "bg-volt/18 text-volt"
-                          }`}
-                        >
-                          {h.status === "submitted" ? "Terkirim" : "Draft"}
-                        </span>
-                      </span>
-                    </div>
-                    {h.evaluation && <p className="text-sm text-snow/85 whitespace-pre-line m-0">{h.evaluation}</p>}
-                    {h.nextPractice && (
-                      <div className="bg-volt/10 border border-volt/25 rounded-lg p-2.5">
-                        <span className="text-2xs uppercase tracking-wider font-bold text-snow/70">Latihan berikutnya</span>
-                        <p className="text-xs text-snow/80 whitespace-pre-line m-0 mt-1">{h.nextPractice}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <CoachingHistoryList history={data.history} />
           </div>
         </div>
       )}
