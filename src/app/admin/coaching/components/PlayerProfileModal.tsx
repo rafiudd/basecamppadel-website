@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
-import { initials, formatDayMonthYear } from "@/lib/format";
+import { initials, parseDateParts } from "@/lib/format";
 import { LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
 import { getPlayerCoachingProfile, type PlayerCoachingProfile } from "../player-profile-actions";
 
@@ -72,7 +72,7 @@ export function PlayerProfileModal({ playerId, onClose }: { playerId: string; on
                     <div className="flex items-center justify-between gap-2 flex-wrap text-xs text-snow/60">
                       <span className="font-bold text-snow">{h.sessionTitle}</span>
                       <span className="flex items-center gap-2">
-                        {h.sessionDate && formatDayMonthYear(h.sessionDate)}
+                        {h.sessionDate && parseDateParts(h.sessionDate).dateFormatted}
                         {h.coachName && ` · Coach ${h.coachName}`}
                         <span
                           className={`rounded-full px-2 py-0.5 text-2xs font-bold ${
