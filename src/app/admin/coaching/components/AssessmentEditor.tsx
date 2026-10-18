@@ -32,6 +32,7 @@ export function AssessmentEditor({
   onToggleSkillChip,
   onEvaluationChange,
   onNextPracticeChange,
+  onGenerated,
   onPublishedChange,
   onSaveDraft,
   onSubmitAndNext,
@@ -57,6 +58,8 @@ export function AssessmentEditor({
   onToggleSkillChip: (skillId: string) => void;
   onEvaluationChange: (val: string) => void;
   onNextPracticeChange: (val: string) => void;
+  /** Sets evaluation + nextPractice together as one atomic update/save (see handleGenerate). */
+  onGenerated: (evaluation: string, nextPractice: string) => void;
   onPublishedChange: (val: boolean) => void;
   onSaveDraft: () => void;
   onSubmitAndNext: () => void;
@@ -83,13 +86,14 @@ export function AssessmentEditor({
         gender: currentPlayerItem.player.gender,
         level: currentComputedLevel.level,
         ratings,
+        existingEvaluation: evaluation,
+        existingNextPractice: nextPractice,
       });
       if (res.error) {
         toast.error(res.error);
         return;
       }
-      if (res.evaluation) onEvaluationChange(res.evaluation);
-      if (res.nextPractice) onNextPracticeChange(res.nextPractice);
+      onGenerated(res.evaluation || evaluation, res.nextPractice || nextPractice);
       toast.success("Draft AI diisi — cek & edit dulu sebelum disimpan");
     } catch {
       toast.error("Gagal generate. Coba lagi.");

@@ -406,6 +406,14 @@ export function CoachingClient({
             setNextPractice(val);
             triggerAutoSave(scores, activeSkillIds, evaluation, val, publishedToPlayer);
           }}
+          onGenerated={(ev, np) => {
+            // one atomic update + one save with both new values — setting them via the two
+            // onChange handlers above back-to-back would race (each closes over the other's
+            // pre-AI value) and whichever autosave lands last would silently revert the other field
+            setEvaluation(ev);
+            setNextPractice(np);
+            triggerAutoSave(scores, activeSkillIds, ev, np, publishedToPlayer);
+          }}
           onPublishedChange={(val) => {
             setPublishedToPlayer(val);
             triggerAutoSave(scores, activeSkillIds, evaluation, nextPractice, val);
