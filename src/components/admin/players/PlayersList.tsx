@@ -12,7 +12,7 @@ import { PlayerProfileModal } from "@/components/admin/players/PlayerProfileModa
 import { LEVELS } from "@/lib/config";
 import type { Player } from "@/lib/database.types";
 
-type Sort = "poin" | "nama" | "wl";
+type Sort = "poin" | "nama" | "wl" | "match" | "coaching";
 
 function Actions({ p }: { p: Player }) {
   return (
@@ -22,12 +22,15 @@ function Actions({ p }: { p: Player }) {
   );
 }
 
-export function PlayersList({ players }: { players: Player[] }) {
+export function PlayersList({ players, coachingCounts }: { players: Player[]; coachingCounts: Record<string, number> }) {
   const [q, setQ] = useState("");
   const [level, setLevel] = useState("");
   const [sort, setSort] = useState<Sort>("poin");
   const [gender, setGender] = useState<"" | "M" | "F">("");
   const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+
+  const matchCount = (p: Player) => p.wins + p.losses;
+  const coachingCount = (p: Player) => coachingCounts[p.id] ?? 0;
 
   const term = q.trim().toLowerCase();
   const base = players.filter(
@@ -40,7 +43,11 @@ export function PlayersList({ players }: { players: Player[] }) {
         ? a.name.localeCompare(b.name)
         : sort === "wl"
           ? b.wins - b.losses - (a.wins - a.losses) || b.wins - a.wins
-          : b.points - a.points || a.name.localeCompare(b.name),
+          : sort === "match"
+            ? matchCount(b) - matchCount(a) || a.name.localeCompare(b.name)
+            : sort === "coaching"
+              ? coachingCount(b) - coachingCount(a) || a.name.localeCompare(b.name)
+              : b.points - a.points || a.name.localeCompare(b.name),
     );
   const chips = [
     { id: "" as const, label: "Semua", n: base.length },
@@ -64,6 +71,8 @@ export function PlayersList({ players }: { players: Player[] }) {
             <option value="poin">Urutkan: Poin</option>
             <option value="nama">Urutkan: Nama</option>
             <option value="wl">Urutkan: W-L</option>
+            <option value="match">Urutkan: Match</option>
+            <option value="coaching">Urutkan: Coaching</option>
           </select>
         </div>
         <div className="flex gap-2 overflow-x-auto">
@@ -90,6 +99,8 @@ export function PlayersList({ players }: { players: Player[] }) {
             <th className="pb-2.5 pr-3 font-semibold">Region</th>
             <th className="pb-2.5 pr-3 font-semibold">Poin</th>
             <th className="pb-2.5 pr-3 font-semibold">W-L</th>
+            <th className="pb-2.5 pr-3 font-semibold">Match</th>
+            <th className="pb-2.5 pr-3 font-semibold">Coaching</th>
             <th className="pb-2.5" />
           </tr>
         </thead>
@@ -110,6 +121,8 @@ export function PlayersList({ players }: { players: Player[] }) {
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{p.region || "—"}</td>
               <td className="py-2.5 pr-3 font-display font-bold">{p.points}</td>
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{p.wins}–{p.losses}</td>
+              <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{matchCount(p)}×</td>
+              <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{coachingCount(p)}×</td>
               <td className="py-2"><Actions p={p} /></td>
             </tr>
           ))}
@@ -124,6 +137,7 @@ export function PlayersList({ players }: { players: Player[] }) {
               <div className="font-display font-bold text-input flex items-center gap-2 text-snow">{p.name} <GenderBadge gender={p.gender} /></div>
               <div className="text-caption text-snow/70">{[p.level, p.region].filter(Boolean).join(" · ")}</div>
               <div className="text-caption text-snow/70"><b className="text-snow">{p.points}</b> poin · {p.wins}–{p.losses} W-L</div>
+              <div className="text-caption text-snow/70">{matchCount(p)}× match · {coachingCount(p)}× coaching</div>
             </button>
             <Actions p={p} />
           </div>
