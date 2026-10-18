@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
+import { toast } from "@/components/ui/Toast";
 import { initials } from "@/lib/format";
 import type { CoachingSkill } from "@/lib/database.types";
 import { LEVEL_DEFINITIONS, type computePlayerLevel } from "@/lib/coaching";
 import type { SessionPlayerItem } from "@/lib/coaching-db";
+import { generateCoachNote } from "../ai-actions";
 import { ScoringRow } from "./ScoringRow";
 
 export function AssessmentEditor({
@@ -59,6 +62,8 @@ export function AssessmentEditor({
   onSubmitAndNext: () => void;
   onOpenOverrideModal: () => void;
 }) {
+  const [generating, setGenerating] = useState(false);
+
   if (!currentPlayerItem) {
     return (
       <div className="bg-[#221F30] rounded-2xl p-12 text-center text-[#FBF7F1]/60 border border-[#FBF7F1]/5">
@@ -66,6 +71,32 @@ export function AssessmentEditor({
       </div>
     );
   }
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const ratings = [...chosenTeknikSkills, ...chosenIngameSkills]
+        .filter((s) => scores[s.id] > 0)
+        .map((s) => ({ label: s.name, category: s.category, score: scores[s.id] }));
+      const res = await generateCoachNote({
+        playerName: currentPlayerItem.player.name,
+        gender: currentPlayerItem.player.gender,
+        level: currentComputedLevel.level,
+        ratings,
+      });
+      if (res.error) {
+        toast.error(res.error);
+        return;
+      }
+      if (res.evaluation) onEvaluationChange(res.evaluation);
+      if (res.nextPractice) onNextPracticeChange(res.nextPractice);
+      toast.success("Draft AI diisi — cek & edit dulu sebelum disimpan");
+    } catch {
+      toast.error("Gagal generate. Coba lagi.");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   return (
     <>
@@ -294,6 +325,17 @@ export function AssessmentEditor({
 
           {/* EVALUATION, NEXT PRACTICE & CHECKBOX */}
           <div className="flex flex-col gap-4 pt-2">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={generating}
+                data-loading={generating || undefined}
+                className="border-0 rounded-lg min-h-9 px-3.5 font-sans font-bold text-xs whitespace-nowrap inline-flex items-center justify-center gap-1.5 bg-[#FFD43B]/14 text-[#FFD43B] hover:bg-[#FFD43B]/22 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                ✨ {generating ? "Lagi nulis…" : "Generate dengan AI"}
+              </button>
+            </div>
             <label className="block">
               <span className="text-[12px] tracking-[0.08em] text-[#FBF7F1]/70 uppercase mb-2 block font-medium">
                 Evaluasi (apa yang udah bagus &amp; yang perlu dibenerin)
