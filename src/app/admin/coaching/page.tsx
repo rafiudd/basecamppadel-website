@@ -6,6 +6,7 @@ import {
   getCoachingSkills,
   getCoaches,
 } from "@/lib/coaching-db";
+import { pickSessionTab, splitSessionsByStatus } from "@/lib/coaching";
 import { CoachingClient } from "./CoachingClient";
 
 export const metadata = { title: "Admin · Catatan Coaching — Basecamp Padel" };
@@ -14,16 +15,18 @@ export const dynamic = "force-dynamic";
 export default async function CoachingAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ session?: string }>;
+  searchParams: Promise<{ session?: string; when?: string }>;
 }) {
   const { isAdmin, isCoach } = await getAdminUser();
-  const { session: paramSessionId } = await searchParams;
+  const { session: paramSessionId, when } = await searchParams;
 
   const supabase = await createClient();
 
-  // Fetch all coaching sessions
-  const sessions = await getCoachingSessions();
-  const activeSessionId = paramSessionId || sessions[0]?.id || "";
+  // Coaching sessions split into one tab per status: Draft, Berjalan (active), Selesai (finished)
+  const split = splitSessionsByStatus(await getCoachingSessions());
+  const tab = pickSessionTab(split, when, paramSessionId);
+  const sessions = split[tab];
+  const activeSessionId = (paramSessionId && sessions.some((s) => s.id === paramSessionId) ? paramSessionId : sessions[0]?.id) || "";
 
   // Fetch session full data, all master skills, coaches, players, venues, events
   const [sessionData, allSkills, allCoaches, { data: allPlayers }, { data: venues }, { data: events }] =
@@ -39,6 +42,8 @@ export default async function CoachingAdminPage({
   return (
     <CoachingClient
       sessions={sessions}
+      sessionTab={tab}
+      sessionCounts={{ draft: split.draft.length, berjalan: split.berjalan.length, selesai: split.selesai.length }}
       sessionData={sessionData}
       activeSessionId={activeSessionId}
       allSkills={allSkills}

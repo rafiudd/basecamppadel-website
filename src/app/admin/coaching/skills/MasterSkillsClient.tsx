@@ -1,5 +1,6 @@
 "use client";
 
+import { unwrap } from "@/lib/actionState";
 import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "nextjs-toploader/app";
@@ -114,13 +115,13 @@ export function MasterSkillsClient({
 
     run("save", async () => {
       try {
-        await upsertSkillAction({
+        unwrap(await upsertSkillAction({
           id: editingSkill?.id,
           name: formName.trim(),
           type: formType,
           category: formCategory.trim(),
           active: formActive,
-        });
+        }));
 
         // Update local state
         if (editingSkill) {
@@ -154,7 +155,7 @@ export function MasterSkillsClient({
 
     run(`toggle:${skill.id}`, async () => {
       try {
-        await toggleSkillActiveAction(skill.id, newActive);
+        unwrap(await toggleSkillActiveAction(skill.id, newActive));
         toast.success(newActive ? `Teknik "${skill.name}" diaktifkan` : `Teknik "${skill.name}" dinonaktifkan`);
       } catch {
         // Rollback
@@ -173,7 +174,7 @@ export function MasterSkillsClient({
 
     run(`delete:${skill.id}`, async () => {
       try {
-        await deleteSkillAction(skill.id);
+        unwrap(await deleteSkillAction(skill.id));
         setSkills((prev) => prev.filter((s) => s.id !== skill.id));
         toast.success(`Teknik "${skill.name}" berhasil dihapus`);
       } catch (err: any) {

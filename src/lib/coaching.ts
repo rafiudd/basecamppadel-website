@@ -206,3 +206,30 @@ export function computeScoreDelta(
     return { delta: 0, symbol: "=", formatted: "= 0" };
   }
 }
+
+/** One tab per coaching session status, in lifecycle order. */
+export const SESSION_TABS = ["draft", "berjalan", "selesai"] as const;
+export type SessionTab = (typeof SESSION_TABS)[number];
+
+const TAB_STATUS: Record<SessionTab, string> = { draft: "draft", berjalan: "active", selesai: "finished" };
+
+/** Sessions grouped by tab (= status). Order follows the input. */
+export function splitSessionsByStatus<T extends { status: string }>(sessions: T[]): Record<SessionTab, T[]> {
+  return {
+    draft: sessions.filter((s) => s.status === TAB_STATUS.draft),
+    berjalan: sessions.filter((s) => s.status === TAB_STATUS.berjalan),
+    selesai: sessions.filter((s) => s.status === TAB_STATUS.selesai),
+  };
+}
+
+/**
+ * Which tab to open: the one asked for, else the one holding the asked session, else the first
+ * non-empty of Berjalan, Draft, Selesai (Berjalan when all are empty).
+ */
+export function pickSessionTab(split: Record<SessionTab, { id: string }[]>, asked?: string, sessionId?: string): SessionTab {
+  const asTab = SESSION_TABS.find((t) => t === asked);
+  if (asTab) return asTab;
+  const holding = sessionId && SESSION_TABS.find((t) => split[t].some((s) => s.id === sessionId));
+  if (holding) return holding;
+  return (["berjalan", "draft", "selesai"] as const).find((t) => split[t].length) ?? "berjalan";
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { unwrap } from "@/lib/actionState";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { LEVEL_DEFINITIONS, LEVEL_NAMES, type PlayerLevelName } from "@/lib/coaching";
@@ -38,12 +39,12 @@ export function OverrideLevelModal({
 
     startTransition(async () => {
       try {
-        await overridePlayerLevelAction({
+        unwrap(await overridePlayerLevelAction({
           playerId,
           sessionId,
           overrideLevel: selectedLevel,
           overrideReason: reason.trim(),
-        });
+        }));
         toast.success(`Level ${playerName} berhasil diubah ke ${selectedLevel}`);
         onSuccess(selectedLevel);
         onClose();

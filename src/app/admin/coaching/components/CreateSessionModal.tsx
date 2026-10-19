@@ -1,5 +1,6 @@
 "use client";
 
+import { unwrap } from "@/lib/actionState";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Modal";
 import type { Coach, CoachingSkill, Venue } from "@/lib/database.types";
@@ -83,7 +84,7 @@ export function CreateSessionModal({
 
     startTransition(async () => {
       try {
-        const res = await createCoachingSessionAction({
+        const res = unwrap(await createCoachingSessionAction({
           title,
           sessionDate,
           venueName,
@@ -94,7 +95,7 @@ export function CreateSessionModal({
             color: g.color,
             coachId: g.coachId || null,
           })),
-        });
+        }));
         toast.success(`Sesi coaching "${title}" berhasil dibuat`);
         onCreated(res.sessionId);
         onClose();
