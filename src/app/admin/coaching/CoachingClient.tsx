@@ -452,7 +452,7 @@ export function CoachingClient({
         </>
       ) : (
         <p className="m-0 bg-[#221F30] rounded-2xl p-6 text-sm text-[#FBF7F1]/70 border border-[#FBF7F1]/5">
-          {sessionTab === "berjalan" ? "Belum ada sesi yang sedang berjalan. Buat sesi baru, atau lihat tab Selesai." : "Belum ada sesi yang selesai."}
+          {EMPTY_TAB_TEXT[sessionTab]}
         </p>
       )}
 
@@ -510,3 +510,9 @@ export function CoachingClient({
     </div>
   );
 }
+
+const EMPTY_TAB_TEXT: Record<SessionTab, string> = {
+  draft: "Belum ada sesi draft. Buat sesi baru untuk mulai persiapan.",
+  berjalan: "Belum ada sesi yang sedang berjalan. Ubah status sesi ke Aktif, atau lihat tab lain.",
+  selesai: "Belum ada sesi yang selesai.",
+};

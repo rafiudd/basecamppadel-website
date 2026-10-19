@@ -135,14 +135,18 @@ test("Excel: Generate dan Parse Rekap Clinic roundtrip", () => {
 });
 
 
-test("Sesi: Berjalan = draft / active, Selesai = finished (urutan input tetap)", async () => {
+test("Sesi: satu tab per status (Draft / Berjalan / Selesai), urutan input tetap", async () => {
   const { splitSessionsByStatus, pickSessionTab } = await import("../src/lib/coaching.ts");
   const s = (id, status) => ({ id, status });
-  const split = splitSessionsByStatus([s("c", "active"), s("b", "finished"), s("a", "draft"), s("z", "finished")]);
-  assert.deepEqual(split.berjalan.map((x) => x.id), ["c", "a"]);
+  const split = splitSessionsByStatus([s("c", "active"), s("b", "finished"), s("a", "draft"), s("y", "active"), s("z", "finished")]);
+  assert.deepEqual(split.draft.map((x) => x.id), ["a"]);
+  assert.deepEqual(split.berjalan.map((x) => x.id), ["c", "y"]);
   assert.deepEqual(split.selesai.map((x) => x.id), ["b", "z"]);
   assert.equal(pickSessionTab(split), "berjalan");
+  assert.equal(pickSessionTab(split, undefined, "a"), "draft");
   assert.equal(pickSessionTab(split, undefined, "z"), "selesai");
   assert.equal(pickSessionTab(split, "selesai", "c"), "selesai");
-  assert.equal(pickSessionTab({ berjalan: [], selesai: [s("a", "finished")] }), "selesai");
+  assert.equal(pickSessionTab(split, "bogus"), "berjalan");
+  assert.equal(pickSessionTab({ draft: [s("a", "draft")], berjalan: [], selesai: [s("b", "finished")] }), "draft");
+  assert.equal(pickSessionTab({ draft: [], berjalan: [], selesai: [] }), "berjalan");
 });
