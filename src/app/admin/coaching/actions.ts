@@ -6,6 +6,15 @@ import { guardResult } from "@/lib/server/action";
 import { requireAdminOrCoach, requireAdmin } from "@/lib/auth";
 import { computePlayerLevel, LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
 
+/**
+ * Sets a player's level through coaching_apply_level (0020): players is admin-write only under RLS,
+ * so a plain update from a coach matched 0 rows without an error.
+ */
+async function applyPlayerLevel(supabase: Awaited<ReturnType<typeof createClient>>, playerId: string, level: string) {
+  const { error } = await supabase.rpc("coaching_apply_level", { p_player_id: playerId, p_level: level });
+  if (error) throw new Error(error.message);
+}
+
 export async function saveAssessmentDraftAction(data: {
   sessionId: string;
   playerId: string;
@@ -124,17 +133,8 @@ export async function submitAssessmentAction(data: {
 
     if (error) throw new Error(error.message);
 
-    // Update player level in players table unless explicitly overridden
-    if (!player?.level_overridden) {
-      const { error: e1 } = await supabase
-        .from("players")
-        .update({
-          level: levelRes.level,
-          level_color: levelRes.color,
-        })
-        .eq("id", data.playerId);
-      if (e1) throw new Error(e1.message);
-    }
+    // Update player level unless explicitly overridden
+    if (!player?.level_overridden) await applyPlayerLevel(supabase, data.playerId, levelRes.level);
 
     revalidatePath("/admin/coaching");
     revalidatePath("/leaderboard");
@@ -189,16 +189,7 @@ export async function publishAllSessionDraftsAction(sessionId: string) {
         .eq("id", draft.id);
       if (e2) throw new Error(e2.message);
 
-      if (!player?.level_overridden) {
-        const { error: e3 } = await supabase
-          .from("players")
-          .update({
-            level: levelRes.level,
-            level_color: levelRes.color,
-          })
-          .eq("id", draft.player_id);
-        if (e3) throw new Error(e3.message);
-      }
+      if (!player?.level_overridden) await applyPlayerLevel(supabase, draft.player_id, levelRes.level);
     }
 
     revalidatePath("/admin/coaching");
@@ -272,7 +263,7 @@ export async function importRekapDraftsAction(params: {
   }>;
 }) {
   return guardResult(async () => {
-    await requireAdminOrCoach();
+    await requireAdmin(); // writes coaching_session_players, which RLS keeps admin-only
     const supabase = await createClient();
 
     const { sessionId, items } = params;
