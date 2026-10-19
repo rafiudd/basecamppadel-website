@@ -1,6 +1,7 @@
 import type { SkillBoard, SkillScore } from "@/lib/coachingRules";
 
-const TITLE = { teknik: "Teknik", ingame: "In-game" } as const;
+export const BOARD_TITLE = { teknik: "Teknik", ingame: "In-game" } as const;
+export const INGAME_NOTE = "Non-teknik: taktik, kerja sama, mental & fisik. Dinilai coach waktu kamu main.";
 
 /** Five segments; a .5 score fills half of the last one. */
 function ScoreBar({ score }: { score: number | null }) {
@@ -21,7 +22,7 @@ function ScoreBar({ score }: { score: number | null }) {
   );
 }
 
-function Row({ item }: { item: SkillScore }) {
+export function SkillRow({ item }: { item: SkillScore }) {
   const rated = item.score !== null;
   return (
     <div className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)_4.5rem] md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_5rem] items-center gap-3 py-2 border-t border-ink/7">
@@ -45,24 +46,27 @@ function Row({ item }: { item: SkillScore }) {
   );
 }
 
-/** D.2: every skill of one kind, grouped by category; unrated skills stay grey. */
-export function SkillBoardCard({ board, footnote }: { board: SkillBoard; footnote?: string }) {
+/**
+ * D.2: every skill of one kind, grouped by category; unrated skills stay grey. `plain` drops the card
+ * frame (inside the "Lihat semua" dialog).
+ */
+export function SkillBoardCard({ board, footnote, plain }: { board: SkillBoard; footnote?: string; plain?: boolean }) {
   return (
-    <section className="bg-white border border-ink/8 rounded-2xl p-5 md:p-6 text-ink">
+    <section className={`text-ink ${plain ? "" : "bg-white border border-ink/8 rounded-2xl p-5 md:p-6"}`}>
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-display font-bold text-xl m-0">{TITLE[board.kind]}</h2>
+        <h2 className="font-display font-bold text-xl m-0">{BOARD_TITLE[board.kind]}</h2>
         <span className="text-caption text-ink/60">
           {board.rated} dari {board.total} udah dinilai
         </span>
       </div>
       {board.kind === "ingame" && (
-        <p className="m-0 mt-1 text-caption text-ink/60 leading-copy">Non-teknik: taktik, kerja sama, mental &amp; fisik. Dinilai coach waktu kamu main.</p>
+        <p className="m-0 mt-1 text-caption text-ink/60 leading-copy">{INGAME_NOTE}</p>
       )}
       {board.groups.map((g) => (
         <div key={g.label}>
           <div className="text-2xs font-bold tracking-[0.1em] uppercase text-ink/55 pt-3.5 pb-1">{g.label}</div>
           {g.items.map((item) => (
-            <Row key={item.key} item={item} />
+            <SkillRow key={item.key} item={item} />
           ))}
         </div>
       ))}

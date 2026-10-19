@@ -65,6 +65,15 @@ export const LEVEL_DEFINITIONS: Record<PlayerLevelName, LevelInfo> = {
 
 export const LEVEL_NAMES: PlayerLevelName[] = ["Rookie", "Beginner", "Low Bronze", "Bronze", "Silver"];
 
+/** The pin a player wears for each level (what players see; the level name stays for admins). */
+export const LEVEL_PIN: Record<PlayerLevelName, string> = {
+  Rookie: "Putih",
+  Beginner: "Kuning",
+  "Low Bronze": "Biru",
+  Bronze: "Merah",
+  Silver: "Hitam",
+};
+
 /**
  * B.4 Hitung level
  * - Rookie = Putih
