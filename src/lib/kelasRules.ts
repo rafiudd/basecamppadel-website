@@ -225,3 +225,72 @@ export function generateWhatsAppReminderUrl(
   const msg = `Halo ${participantName}, pengingat kelas *${classTitle}* di Basecamp Padel sesi berikutnya akan dimulai pada *${dateLabel}* pukul *${timeRange}*${venue}. Mohon hadir 10 menit sebelum kelas dimulai. Sampai ketemu di court! 🎾`;
   return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(msg)}`;
 }
+
+/** Indonesian date format: e.g. "12 Okt 2026" */
+export function formatReviewDate(dateStr: string | Date | undefined | null): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return String(dateStr);
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+    "Jul", "Agu", "Sep", "Okt", "Nov", "Des"
+  ];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** Converts "Sab, 31 Okt & 7 Nov" with "09.00–10.30" into friendly "Sabtu pagi" */
+export function formatScheduleFriendly(datesLabel?: string, timeRange?: string): string {
+  if (!datesLabel) return "jadwal reguler";
+  const dayPrefix = datesLabel.split(",")[0]?.trim() || "";
+  const dayMap: Record<string, string> = {
+    Sen: "Senin",
+    Sel: "Selasa",
+    Rab: "Rabu",
+    Kam: "Kamis",
+    Jum: "Jumat",
+    Sab: "Sabtu",
+    Min: "Minggu",
+  };
+  const dayFull = dayMap[dayPrefix] || dayPrefix;
+
+  let timePeriod = "";
+  if (timeRange) {
+    const startHour = parseInt(timeRange.split(/[:.]/)[0], 10);
+    if (!isNaN(startHour)) {
+      if (startHour < 12) timePeriod = "pagi";
+      else if (startHour < 15) timePeriod = "siang";
+      else if (startHour < 18) timePeriod = "sore";
+      else timePeriod = "malam";
+    }
+  }
+
+  return timePeriod ? `${dayFull} ${timePeriod}` : dayFull;
+}
+
+/** Relative time in Indonesian with rounding: "Baru saja", "1 jam lalu", "2 hari lalu", etc. */
+export function formatRelativeTime(dateStr: string | Date | undefined | null): string {
+  if (!dateStr) return "Baru saja";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "Baru saja";
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  if (diffMs < 0) return "Baru saja";
+
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+  const diffWeek = Math.floor(diffDay / 7);
+  const diffMonth = Math.floor(diffDay / 30);
+  const diffYear = Math.floor(diffDay / 365);
+
+  if (diffSec < 60) return "Baru saja";
+  if (diffMin < 60) return `${diffMin} menit lalu`;
+  if (diffHour < 24) return `${diffHour} jam lalu`;
+  if (diffDay < 7) return `${diffDay} hari lalu`;
+  if (diffWeek < 5) return `${diffWeek} minggu lalu`;
+  if (diffMonth < 12) return `${diffMonth} bulan lalu`;
+  return `${diffYear} tahun lalu`;
+}
+

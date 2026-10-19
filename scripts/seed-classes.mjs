@@ -30,7 +30,7 @@ const CLASSES_DATA = [
       { session: 1, title: "Pengenalan & Game Mini", desc: "Adaptasi raket, rasa pantulan bola di kaca, dan langsung coba main mini game 1 set." }
     ],
     schedules: [
-      { datesLabel: "Sab, 31 Okt", timeRange: "07.00–08.30", status: "full" },
+      { datesLabel: "Sab, 31 Okt", timeRange: "07.00–08.30", status: "active" },
       { datesLabel: "Sab, 7 Nov", timeRange: "07.00–08.30", status: "active" }
     ]
   },
@@ -247,7 +247,7 @@ const CLASSES_DATA = [
     schedules: [
       { datesLabel: "Sab, 31 Okt & 7 Nov", timeRange: "09.00–10.30", status: "active" },
       { datesLabel: "Sel, 3 & 10 Nov", timeRange: "19.00–20.30", status: "active" },
-      { datesLabel: "Sab, 14 & 21 Nov", timeRange: "09.00–10.30", status: "full" }
+      { datesLabel: "Sab, 14 & 21 Nov", timeRange: "09.00–10.30", status: "active" }
     ],
     reviews: [
       { author: "Sari", rating: 5, date: "12 Okt 2026", content: "Akhirnya ngerti kenapa selalu telat di kaca belakang. Drill-nya repetitif tapi kerasa banget hasilnya di mabar minggu depannya." },
@@ -791,20 +791,38 @@ async function seedClasses() {
 
   for (const c of CLASSES_DATA) {
     const coachId = c.coachName ? (coachMap[c.coachName] || null) : null;
+    const defaultPhotos = [
+      "/images/classes/coach-drill.jpg",
+      "/images/classes/backglass-shot.jpg",
+      "/images/classes/volley-drill.jpg",
+      "/images/cover.jpg",
+      "/images/hero.jpg",
+      "/images/community.webp",
+    ];
+    const photoIdx = c.sortOrder || 0;
+    const coverUrl = defaultPhotos[photoIdx % defaultPhotos.length];
+    const galleryUrls = [
+      defaultPhotos[photoIdx % defaultPhotos.length],
+      defaultPhotos[(photoIdx + 1) % defaultPhotos.length],
+      defaultPhotos[(photoIdx + 2) % defaultPhotos.length],
+    ];
+
     const res = await client.query(
       `insert into public.classes (
-        slug, title, category, description, suitable_pins, video_url, cover_image_url,
+        slug, title, category, description, suitable_pins, video_url, cover_image_url, gallery_urls,
         total_sessions, duration_per_session, capacity, price, default_coach_id,
         min_participants, learning_points, sessions_breakdown, requirements,
         published, is_new, sort_order
       ) values (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
       )
       on conflict (slug) do update set
         title = excluded.title,
         category = excluded.category,
         description = excluded.description,
         suitable_pins = excluded.suitable_pins,
+        cover_image_url = excluded.cover_image_url,
+        gallery_urls = excluded.gallery_urls,
         total_sessions = excluded.total_sessions,
         duration_per_session = excluded.duration_per_session,
         capacity = excluded.capacity,
@@ -824,7 +842,8 @@ async function seedClasses() {
         c.desc,
         c.suitablePins,
         c.hasVideo ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : null,
-        null,
+        coverUrl,
+        galleryUrls,
         c.sessions,
         c.duration,
         c.capacity,
@@ -842,16 +861,56 @@ async function seedClasses() {
 
     const classId = res.rows[0].id;
 
-    // Seed schedules if any
-    if (c.schedules && c.schedules.length > 0) {
-      for (const s of c.schedules) {
-        await client.query(
-          `insert into public.class_schedules (
-            class_id, coach_id, venue_id, dates_label, time_range, status
-          ) values ($1, $2, $3, $4, $5, $6)
-          on conflict do nothing;`,
-          [classId, coachId, defaultVenueId, s.datesLabel, s.timeRange, s.status]
-        );
+    // Seed schedules strictly matching c.sessions
+    const generateDefaultSchedules = (sessions) => {
+      if (sessions === 1) {
+        return [
+          { datesLabel: "Sab, 31 Okt", timeRange: "09.00–10.30", status: "active" },
+          { datesLabel: "Sel, 3 Nov", timeRange: "19.00–20.30", status: "active" },
+          { datesLabel: "Sab, 7 Nov", timeRange: "09.00–10.30", status: "active" },
+        ];
+      }
+      if (sessions === 2) {
+        return [
+          { datesLabel: "Sab, 31 Okt & 7 Nov", timeRange: "09.00–10.30", status: "active" },
+          { datesLabel: "Sel, 3 & 10 Nov", timeRange: "19.00–20.30", status: "active" },
+          { datesLabel: "Sab, 14 & 21 Nov", timeRange: "09.00–10.30", status: "active" },
+        ];
+      }
+      if (sessions === 3) {
+        return [
+          { datesLabel: "Sab, 24, 31 Okt & 7 Nov", timeRange: "09.00–10.30", status: "active" },
+          { datesLabel: "Sel, 3, 10 & 17 Nov", timeRange: "19.00–20.30", status: "active" },
+        ];
+      }
+      if (sessions === 4) {
+        return [
+          { datesLabel: "Sab, 7, 14, 21 & 28 Nov", timeRange: "09.00–10.30", status: "active" },
+          { datesLabel: "Sen, 2, 9, 16 & 23 Nov", timeRange: "19.00–20.30", status: "active" },
+        ];
+      }
+      return [
+        { datesLabel: `Sab, 7 Nov (${sessions} Sesi)`, timeRange: "09.00–10.30", status: "active" },
+      ];
+    };
+
+    const schedulesToInsert =
+      c.schedules && c.schedules.length > 0
+        ? c.schedules
+        : generateDefaultSchedules(c.sessions);
+
+    let firstScheduleId = null;
+    for (const s of schedulesToInsert) {
+      const schedRes = await client.query(
+        `insert into public.class_schedules (
+          class_id, coach_id, venue_id, dates_label, time_range, status
+        ) values ($1, $2, $3, $4, $5, $6)
+        on conflict do nothing
+        returning id;`,
+        [classId, coachId, defaultVenueId, s.datesLabel, s.timeRange, s.status]
+      );
+      if (!firstScheduleId && schedRes.rows[0]?.id) {
+        firstScheduleId = schedRes.rows[0].id;
       }
     }
 
@@ -860,10 +919,10 @@ async function seedClasses() {
       for (const r of c.reviews) {
         await client.query(
           `insert into public.class_reviews (
-            class_id, author_name, rating, content
-          ) values ($1, $2, $3, $4)
+            class_id, author_name, rating, content, created_at, schedule_id
+          ) values ($1, $2, $3, $4, $5, $6)
           on conflict do nothing;`,
-          [classId, r.author, r.rating, r.content]
+          [classId, r.author, r.rating, r.content, r.date || new Date().toISOString(), firstScheduleId]
         );
       }
     }

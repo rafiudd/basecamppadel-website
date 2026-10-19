@@ -58,13 +58,15 @@ export default async function AdminClassDetailPage({
 
   const mappedSchedules = (schedules ?? []).map((s) => {
     const list = partMap[s.id] || [];
+    const cap = s.custom_capacity || c.capacity || 4;
+    const isFull = list.length >= cap;
     return {
       id: s.id,
       datesLabel: s.dates_label,
       timeRange: s.time_range,
-      status: s.status,
+      status: s.status === "cancelled" ? "cancelled" : (isFull ? "full" : "active"),
       startDate: s.start_date,
-      capacity: s.custom_capacity || c.capacity || 4,
+      capacity: cap,
       coachName: Array.isArray(s.coaches) ? s.coaches[0]?.name : (s.coaches as any)?.name ?? null,
       registeredCount: list.length,
       participants: list,
@@ -105,6 +107,12 @@ export default async function AdminClassDetailPage({
   const coaches = await getAdminCoaches();
   const venues = await getAdminVenues();
 
+  const { data: allPlayers } = await supabase
+    .from("players")
+    .select("id, name, gender, level, level_color, region, whatsapp, photo_url")
+    .eq("active", true)
+    .order("name", { ascending: true });
+
   const classData = {
     id: c.id,
     slug: c.slug,
@@ -131,6 +139,7 @@ export default async function AdminClassDetailPage({
       classData={classData}
       coaches={coaches}
       venues={venues}
+      allPlayers={allPlayers ?? []}
     />
   );
 }

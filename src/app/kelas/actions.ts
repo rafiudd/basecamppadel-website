@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { guard, str, int } from "@/lib/server/action";
+import { googleIdentity } from "@/lib/accountRules";
 
 /** Public booking action */
 export async function bookClass(prevState: any, fd: FormData): Promise<{ error?: string; success?: boolean }> {
@@ -47,6 +48,14 @@ export async function bookClass(prevState: any, fd: FormData): Promise<{ error?:
 
     if (error) throw error;
 
+    // Update schedule status to full if capacity reached
+    if ((count || 0) + 1 >= cap) {
+      await supabase
+        .from("class_schedules")
+        .update({ status: "full" })
+        .eq("id", scheduleId);
+    }
+
     revalidatePath(`/kelas/${slug}`);
     revalidatePath("/kelas");
   });
@@ -58,10 +67,9 @@ export async function bookClass(prevState: any, fd: FormData): Promise<{ error?:
   return { success: true };
 }
 
-/** Public comment submission */
+/** Public comment submission (requires user login) */
 export async function postClassComment(prevState: any, fd: FormData): Promise<{ error?: string; success?: boolean }> {
   const classId = str(fd, "class_id");
-  const authorName = str(fd, "author_name") || "Tamu";
   const comment = str(fd, "comment");
   const slug = str(fd, "slug");
 
@@ -71,8 +79,32 @@ export async function postClassComment(prevState: any, fd: FormData): Promise<{ 
 
   const res = await guard(async () => {
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error("Silakan masuk terlebih dahulu untuk mengirim komentar.");
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("nickname, full_name, player_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const google = googleIdentity(user.user_metadata);
+    const authorName =
+      profile?.nickname ||
+      profile?.full_name ||
+      google.name ||
+      user.email?.split("@")[0] ||
+      "Pemain";
+
     const { error } = await supabase.from("class_comments").insert({
       class_id: classId,
+      user_id: user.id,
+      player_id: profile?.player_id || null,
       author_name: authorName,
       comment,
     });

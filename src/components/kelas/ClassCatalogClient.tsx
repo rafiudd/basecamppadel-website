@@ -201,9 +201,15 @@ export function ClassCatalogClient({ initialClasses }: { initialClasses: any[] }
               </div>
 
               {/* Media Thumbnail */}
-              <Link href={`/kelas/${k.slug}`} className="block relative aspect-video bg-gradient-to-br from-[#2557D6] to-[#1B1650] overflow-hidden group">
-                <div className="absolute inset-0 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
-                  <span className="w-12 h-12 rounded-full bg-coral flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform">
+              <Link href={`/kelas/${k.slug}`} className="block relative aspect-video bg-ink/10 overflow-hidden group">
+                <img
+                  src={k.coverImageUrl || "/images/classes/coach-drill.jpg"}
+                  alt={k.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-transparent opacity-80" />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="w-12 h-12 rounded-full bg-coral flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
                     <svg className="w-5 h-5 text-ink ml-0.5" viewBox="0 0 24 24" fill="currentColor">
                       <polygon points="7,4 20,12 7,20" />
                     </svg>

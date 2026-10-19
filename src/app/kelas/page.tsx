@@ -11,10 +11,10 @@ export default async function PublicKelasPage() {
   const classes = await getPublicClasses();
 
   return (
-    <div className="min-h-screen bg-[#FBF7F1] text-ink flex flex-col">
+    <div className="text-ink flex flex-col">
       {/* Hero Header */}
-      <section className="bg-[#1B1650] text-snow px-6 py-12 md:px-12 md:py-16">
-        <div className="max-w-6xl mx-auto flex flex-col gap-2.5">
+      <section className="bg-indigo text-snow px-6 md:px-12 py-12 md:py-16">
+        <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-2.5">
           <span className="font-bold text-xs md:text-sm tracking-widest text-volt uppercase">
             Kelas
           </span>
@@ -29,9 +29,11 @@ export default async function PublicKelasPage() {
       </section>
 
       {/* Main Catalog Content */}
-      <main className="max-w-6xl w-full mx-auto px-4 md:px-12 py-8 md:py-12 flex-1">
-        <ClassCatalogClient initialClasses={classes} />
-      </main>
+      <section className="px-6 md:px-12 py-8 md:py-12 bg-snow">
+        <div className="w-full max-w-[1440px] mx-auto">
+          <ClassCatalogClient initialClasses={classes} />
+        </div>
+      </section>
     </div>
   );
 }

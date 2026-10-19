@@ -4,27 +4,38 @@ import { useState } from "react";
 import Link from "next/link";
 import { formatRupiah, PIN_COLORS, generateWhatsAppReminderUrl } from "@/lib/kelasRules";
 import { Badge } from "@/components/ui/Badge";
+import { Modal } from "@/components/ui/Modal";
+import { Avatar } from "@/components/ui/Avatar";
 import {
   addClassSchedule,
   updateParticipantAttendance,
   replyClassComment,
   toggleHideComment,
+  addClassParticipant,
+  removeClassParticipant,
 } from "@/app/admin/kelas/actions";
 
 export function AdminClassDetailClient({
   classData,
   coaches,
   venues,
+  allPlayers = [],
 }: {
   classData: any;
   coaches: any[];
   venues: any[];
+  allPlayers?: any[];
 }) {
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>(
     classData.schedules[0]?.id || ""
   );
 
   const [showAddSchedule, setShowAddSchedule] = useState(false);
+  const [showAddParticipant, setShowAddParticipant] = useState(false);
+  const [playerSearch, setPlayerSearch] = useState("");
+  const [addPaymentStatus, setAddPaymentStatus] = useState("paid");
+  const [submittingPlayerId, setSubmittingPlayerId] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
   const [replyText, setReplyText] = useState<Record<string, string>>({});
 
   const activeSchedule = classData.schedules.find(
@@ -33,8 +44,22 @@ export function AdminClassDetailClient({
 
   const participants = activeSchedule?.participants || [];
 
+  const registeredPlayerIds = new Set(
+    participants.map((p: any) => p.player_id).filter(Boolean)
+  );
+
+  const filteredPlayers = allPlayers.filter((p: any) => {
+    if (!playerSearch.trim()) return true;
+    const q = playerSearch.toLowerCase().trim();
+    return (
+      p.name.toLowerCase().includes(q) ||
+      (p.level && p.level.toLowerCase().includes(q)) ||
+      (p.region && p.region.toLowerCase().includes(q))
+    );
+  });
+
   return (
-    <div className="flex flex-col gap-6 max-w-6xl mx-auto w-full">
+    <div className="flex flex-col gap-6 w-full">
       {/* Back link */}
       <div>
         <Link
@@ -155,13 +180,26 @@ export function AdminClassDetailClient({
                 <input type="hidden" name="class_id" value={classData.id} />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <label className="flex flex-col gap-1">
-                    <span className="text-xs text-snow/70">Rentang Tanggal (Label)</span>
+                    <span className="text-xs text-snow/70">
+                      Rentang Tanggal ({classData.totalSessions} Sesi)
+                    </span>
                     <input
                       name="dates_label"
                       required
-                      placeholder="Misal: Sab, 31 Okt & 7 Nov"
+                      placeholder={
+                        classData.totalSessions === 1
+                          ? "Misal: Sab, 31 Okt"
+                          : classData.totalSessions === 2
+                          ? "Misal: Sab, 31 Okt & 7 Nov"
+                          : classData.totalSessions === 3
+                          ? "Misal: Sab, 21, 30 Okt & 3 Nov"
+                          : "Misal: Sab, 7, 14, 21 & 28 Nov"
+                      }
                       className="bg-snow/10 border-0 rounded-lg px-3 py-2 text-xs text-snow outline-none"
                     />
+                    <span className="text-[10px] text-snow/50">
+                      Wajib cantumkan {classData.totalSessions} tanggal sesi
+                    </span>
                   </label>
                   <label className="flex flex-col gap-1">
                     <span className="text-xs text-snow/70">Jam (Time Range)</span>
@@ -244,7 +282,9 @@ export function AdminClassDetailClient({
                           </span>
                         </div>
 
-                        {s.status === "full" ? (
+                        {s.status === "cancelled" ? (
+                          <Badge tone="faint">Dibatalkan</Badge>
+                        ) : s.status === "full" || s.registeredCount >= s.capacity ? (
                           <Badge tone="coral">Penuh</Badge>
                         ) : (
                           <Badge tone="volt">● Aktif</Badge>
@@ -273,23 +313,36 @@ export function AdminClassDetailClient({
               <h2 className="font-display font-bold text-lg text-snow m-0">
                 Peserta · {activeSchedule?.datesLabel || "Jadwal"}
               </h2>
-              {participants.length > 0 && (
-                <a
-                  href={generateWhatsAppReminderUrl(
-                    participants[0]?.phone || "628123456789",
-                    participants[0]?.name || "Peserta",
-                    classData.title,
-                    activeSchedule?.datesLabel || "",
-                    activeSchedule?.timeRange || "",
-                    "East Padel House"
-                  )}
-                  target="_blank"
-                  rel="noopener"
-                  className="btn px-3 py-1.5 rounded-lg bg-snow/12 hover:bg-snow/20 text-snow text-xs font-bold tracking-button no-underline"
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddError(null);
+                    setShowAddParticipant(true);
+                  }}
+                  disabled={!activeSchedule || participants.length >= (activeSchedule?.capacity || 4)}
+                  className="btn px-3 py-1.5 rounded-lg bg-volt text-[#1B1650] text-xs font-bold tracking-button disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  Kirim pengingat WA
-                </a>
-              )}
+                  + Tambah peserta
+                </button>
+                {participants.length > 0 && (
+                  <a
+                    href={generateWhatsAppReminderUrl(
+                      participants[0]?.phone || "628123456789",
+                      participants[0]?.name || "Peserta",
+                      classData.title,
+                      activeSchedule?.datesLabel || "",
+                      activeSchedule?.timeRange || "",
+                      "East Padel House"
+                    )}
+                    target="_blank"
+                    rel="noopener"
+                    className="btn px-3 py-1.5 rounded-lg bg-snow/12 hover:bg-snow/20 text-snow text-xs font-bold tracking-button no-underline"
+                  >
+                    Kirim pengingat WA
+                  </a>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-col divide-y divide-snow/10">
@@ -318,7 +371,7 @@ export function AdminClassDetailClient({
                         </div>
                       </div>
 
-                      {/* Attendance checkboxes */}
+                      {/* Attendance checkboxes & delete button */}
                       <div className="flex items-center gap-3">
                         {Array.from({ length: classData.totalSessions }).map((_, idx) => {
                           const sNum = String(idx + 1);
@@ -345,6 +398,24 @@ export function AdminClassDetailClient({
                             </label>
                           );
                         })}
+
+                        <form
+                          action={async (fd) => {
+                            if (confirm(`Hapus ${p.name} dari jadwal ini?`)) {
+                              await removeClassParticipant(fd);
+                            }
+                          }}
+                        >
+                          <input type="hidden" name="participant_id" value={p.id} />
+                          <input type="hidden" name="class_id" value={classData.id} />
+                          <button
+                            type="submit"
+                            title="Hapus peserta"
+                            className="w-7 h-7 rounded-lg bg-snow/5 hover:bg-coral/20 hover:text-coral text-snow/40 flex items-center justify-center text-xs transition-colors cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        </form>
                       </div>
                     </div>
                   );
@@ -480,6 +551,150 @@ export function AdminClassDetailClient({
           </section>
         </div>
       </div>
+      {/* Player Picker Modal */}
+      {showAddParticipant && activeSchedule && (
+        <Modal
+          title={`Tambah Peserta (${activeSchedule.datesLabel})`}
+          onClose={() => {
+            setShowAddParticipant(false);
+            setPlayerSearch("");
+            setAddError(null);
+          }}
+          width={580}
+        >
+          <div className="flex flex-col gap-4 text-snow">
+            {addError && (
+              <div className="p-3 rounded-xl bg-coral/20 border border-coral/30 text-coral text-xs font-semibold">
+                {addError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between text-xs text-snow/70">
+              <span>
+                Kapasitas: <b className="text-snow">{participants.length} / {activeSchedule.capacity}</b> terisi
+              </span>
+              <span className="text-volt font-semibold">
+                Sisa {Math.max(0, activeSchedule.capacity - participants.length)} slot
+              </span>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative">
+              <input
+                type="search"
+                autoFocus
+                placeholder="Cari nama pemain, level, atau kota..."
+                value={playerSearch}
+                onChange={(e) => setPlayerSearch(e.target.value)}
+                className="w-full bg-snow/10 border-0 rounded-xl px-4 py-2.5 text-sm text-snow placeholder:text-snow/45 focus:outline-none focus:ring-1 focus:ring-volt"
+              />
+            </div>
+
+            {/* Payment Status option */}
+            <div className="flex items-center gap-4 text-xs bg-snow/[0.03] p-2.5 rounded-xl border border-snow/10">
+              <span className="text-snow/60">Status Pembayaran:</span>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="modal_payment_status"
+                  value="paid"
+                  checked={addPaymentStatus === "paid"}
+                  onChange={() => setAddPaymentStatus("paid")}
+                  className="accent-volt"
+                />
+                <span className="font-semibold text-volt">Lunas</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="modal_payment_status"
+                  value="pending"
+                  checked={addPaymentStatus === "pending"}
+                  onChange={() => setAddPaymentStatus("pending")}
+                  className="accent-volt"
+                />
+                <span className="text-snow/70">Menunggu bayar</span>
+              </label>
+            </div>
+
+            {/* Players list */}
+            <div className="flex flex-col gap-1.5 max-h-80 overflow-y-auto pr-1 divide-y divide-snow/5">
+              {filteredPlayers.length === 0 ? (
+                <div className="py-8 text-center text-xs text-snow/50">
+                  Tidak ada pemain ditemukan.
+                </div>
+              ) : (
+                filteredPlayers.map((player: any) => {
+                  const isAlreadyRegistered = registeredPlayerIds.has(player.id);
+                  const isSlotFull = participants.length >= activeSchedule.capacity;
+
+                  return (
+                    <div
+                      key={player.id}
+                      className="py-2.5 px-2 rounded-xl flex items-center justify-between gap-3 hover:bg-snow/[0.03]"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar name={player.name} photoUrl={player.photo_url} size={34} />
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-snow truncate">
+                              {player.name}
+                            </span>
+                            {player.level_color && (
+                              <span
+                                className="w-2.5 h-2.5 rounded-full inline-block flex-none"
+                                title={`Pin ${player.level_color}`}
+                                style={{
+                                  background: PIN_COLORS[player.level_color]?.bg || "#FFF",
+                                }}
+                              />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-2xs text-snow/55">
+                            {player.level && <span>Level: {player.level}</span>}
+                            {player.region && <span>· {player.region}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isAlreadyRegistered ? (
+                        <span className="text-2xs font-bold text-snow/40 px-2.5 py-1 rounded-full bg-snow/5 border border-snow/10">
+                          Terdaftar
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={isSlotFull || submittingPlayerId === player.id}
+                          onClick={async () => {
+                            setSubmittingPlayerId(player.id);
+                            setAddError(null);
+                            const fd = new FormData();
+                            fd.set("class_id", classData.id);
+                            fd.set("schedule_id", activeSchedule.id);
+                            fd.set("player_id", player.id);
+                            fd.set("payment_status", addPaymentStatus);
+
+                            const res = await addClassParticipant(null, fd);
+                            setSubmittingPlayerId(null);
+                            if (res?.error) {
+                              setAddError(res.error);
+                            } else {
+                              setShowAddParticipant(false);
+                            }
+                          }}
+                          className="btn px-3 py-1.5 rounded-lg bg-volt text-[#1B1650] text-xs font-bold tracking-button disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+                        >
+                          {submittingPlayerId === player.id ? "Menambahkan..." : "+ Tambah"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

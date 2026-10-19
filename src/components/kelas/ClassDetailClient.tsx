@@ -1,31 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   formatRupiah,
   PIN_COLORS,
   calculateRatingSummary,
   generateWhatsAppBookingUrl,
+  formatReviewDate,
+  formatRelativeTime,
 } from "@/lib/kelasRules";
-import { bookClass, postClassComment } from "@/app/kelas/actions";
+import { postClassComment } from "@/app/kelas/actions";
+import { useAccountChip } from "@/components/account/useAccountChip";
+import { Avatar } from "@/components/ui/Avatar";
 
 export function ClassDetailClient({ classData }: { classData: any }) {
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>(
     classData.schedules[0]?.id || ""
   );
 
-  const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [bookingName, setBookingName] = useState("");
-  const [bookingPhone, setBookingPhone] = useState("");
-  const [bookingLoading, setBookingLoading] = useState(false);
-  const [bookingError, setBookingError] = useState<string | null>(null);
+  const defaultGallery = [
+    "/images/classes/coach-drill.jpg",
+    "/images/classes/backglass-shot.jpg",
+    "/images/classes/volley-drill.jpg",
+  ];
+  const galleryPhotos: string[] =
+    classData.galleryUrls && classData.galleryUrls.length > 0
+      ? classData.galleryUrls
+      : defaultGallery;
 
-  const [commentName, setCommentName] = useState("");
+  const [activeMedia, setActiveMedia] = useState<number | "video">(
+    classData.videoUrl ? "video" : 0
+  );
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const pathname = usePathname();
+  const account = useAccountChip();
+
   const [commentText, setCommentText] = useState("");
   const [commentSent, setCommentSent] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+
+  // Keyboard navigation for Lightbox
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsLightboxOpen(false);
+      if (e.key === "ArrowLeft") {
+        setLightboxIndex((prev) => (prev === 0 ? galleryPhotos.length - 1 : prev - 1));
+      }
+      if (e.key === "ArrowRight") {
+        setLightboxIndex((prev) => (prev === galleryPhotos.length - 1 ? 0 : prev + 1));
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isLightboxOpen, galleryPhotos.length]);
 
   const ratingSummary = calculateRatingSummary(classData.reviews);
 
@@ -33,48 +68,42 @@ export function ClassDetailClient({ classData }: { classData: any }) {
     classData.schedules.find((s: any) => s.id === selectedScheduleId) ||
     classData.schedules[0];
 
-  const handleBooking = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBookingLoading(true);
-    setBookingError(null);
-
-    const fd = new FormData();
-    fd.set("class_id", classData.id);
-    fd.set("schedule_id", selectedScheduleId);
-    fd.set("name", bookingName);
-    fd.set("phone", bookingPhone);
-    fd.set("slug", classData.slug);
-
-    const res = await bookClass(null, fd);
-    setBookingLoading(false);
-
-    if (res?.error) {
-      setBookingError(res.error);
-    } else {
-      setBookingSuccess(true);
-    }
-  };
 
   const handleComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim()) return;
+    if (!commentText.trim() || isSubmittingComment) return;
+
+    setIsSubmittingComment(true);
+    setCommentError(null);
 
     const fd = new FormData();
     fd.set("class_id", classData.id);
-    fd.set("author_name", commentName.trim() || "Pemain");
+    if (account?.name) {
+      fd.set("author_name", account.name);
+    }
     fd.set("comment", commentText.trim());
     fd.set("slug", classData.slug);
 
-    await postClassComment(null, fd);
-    setCommentSent(true);
-    setCommentText("");
+    try {
+      const res = await postClassComment(null, fd);
+      if (res?.error) {
+        setCommentError(res.error);
+      } else {
+        setCommentSent(true);
+        setCommentText("");
+      }
+    } catch (err: any) {
+      setCommentError(err.message || "Gagal mengirim pertanyaan. Silakan coba lagi.");
+    } finally {
+      setIsSubmittingComment(false);
+    }
   };
 
   return (
     <div className="flex flex-col">
       {/* Hero Header */}
-      <section className="bg-[#1B1650] text-snow px-6 py-10 md:px-12 md:py-14 relative overflow-hidden">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-8 lg:gap-12 items-center">
+      <section className="bg-indigo text-snow px-6 md:px-12 py-10 md:py-14 relative overflow-hidden">
+        <div className="w-full max-w-[1440px] mx-auto flex flex-col md:flex-row gap-8 lg:gap-12 items-center">
           <div className="flex-1 flex flex-col gap-4">
             <Link
               href="/kelas"
@@ -150,59 +179,146 @@ export function ClassDetailClient({ classData }: { classData: any }) {
             </div>
           </div>
 
-          {/* Media Player Box */}
-          <div className="w-full md:w-96 lg:w-[440px] flex-none flex flex-col gap-2.5">
-            <div className="relative aspect-video rounded-2xl bg-gradient-to-br from-[#2557D6] to-[#1B1650] overflow-hidden shadow-2xl flex items-center justify-center">
-              {isPlayingVideo ? (
-                <div className="w-full h-full flex items-center justify-center bg-black">
-                  <iframe
-                    className="w-full h-full"
-                    src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1"
-                    title="Video Preview"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
+          {/* Media Player & Gallery Box */}
+          <div className="w-full md:w-96 lg:w-[460px] flex-none flex flex-col gap-3">
+            <div className="relative aspect-video rounded-2xl bg-[#0F0D17] overflow-hidden shadow-2xl flex items-center justify-center border border-white/10 group">
+              {activeMedia === "video" ? (
+                isPlayingVideo ? (
+                  <div className="w-full h-full flex items-center justify-center bg-black">
+                    <iframe
+                      className="w-full h-full"
+                      src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1"
+                      title="Video Preview"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full h-full relative">
+                    <img
+                      src={classData.coverImageUrl || galleryPhotos[0]}
+                      alt={classData.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-ink/40" />
+                    <button
+                      type="button"
+                      onClick={() => setIsPlayingVideo(true)}
+                      className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer group/btn border-0 bg-transparent"
+                    >
+                      <span className="w-16 h-16 rounded-full bg-coral flex items-center justify-center shadow-2xl group-hover/btn:scale-110 transition-transform">
+                        <svg className="w-7 h-7 text-ink ml-1" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="7,4 20,12 7,20" />
+                        </svg>
+                      </span>
+                      <span className="absolute left-3 bottom-3 inline-flex items-center gap-1.5 bg-white/95 text-ink text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+                        Video preview kelas
+                      </span>
+                      <span className="absolute right-3 bottom-3 bg-ink/80 text-snow text-xs font-bold px-2 py-0.5 rounded">
+                        1:20
+                      </span>
+                    </button>
+                  </div>
+                )
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setIsPlayingVideo(true)}
-                  className="w-full h-full flex flex-col items-center justify-center cursor-pointer group"
+                <div
+                  className="w-full h-full relative cursor-zoom-in"
+                  onClick={() => {
+                    setLightboxIndex(activeMedia as number);
+                    setIsLightboxOpen(true);
+                  }}
                 >
-                  <span className="w-16 h-16 rounded-full bg-coral flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                    <svg className="w-7 h-7 text-ink ml-1" viewBox="0 0 24 24" fill="currentColor">
-                      <polygon points="7,4 20,12 7,20" />
-                    </svg>
-                  </span>
+                  <img
+                    src={galleryPhotos[activeMedia as number]}
+                    alt={`${classData.title} - Foto ${(activeMedia as number) + 1}`}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                   <span className="absolute left-3 bottom-3 inline-flex items-center gap-1.5 bg-white/95 text-ink text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-                    Video preview kelas
+                    Foto {(activeMedia as number) + 1} dari {galleryPhotos.length}
                   </span>
-                  <span className="absolute right-3 bottom-3 bg-ink/80 text-snow text-xs font-bold px-2 py-0.5 rounded">
-                    1:20
+                  <span className="absolute right-3 bottom-3 inline-flex items-center gap-1 bg-ink/80 hover:bg-ink text-snow text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm">
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <circle cx="11" cy="11" r="7" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                      <line x1="11" y1="8" x2="11" y2="14" />
+                      <line x1="8" y1="11" x2="14" y2="11" />
+                    </svg>
+                    Klik perbesar
                   </span>
-                </button>
+                </div>
               )}
             </div>
 
-            {/* Gallery Thumbnails */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="aspect-[4/3] rounded-lg bg-gradient-to-br from-blue-600 to-indigo-900 flex items-center justify-center text-[11px] font-bold text-snow/90">
-                Foto 1
-              </div>
-              <div className="aspect-[4/3] rounded-lg bg-gradient-to-br from-emerald-600 to-indigo-900 flex items-center justify-center text-[11px] font-bold text-snow/90">
-                Foto 2
-              </div>
-              <div className="aspect-[4/3] rounded-lg bg-gradient-to-br from-amber-600 to-indigo-900 flex items-center justify-center text-[11px] font-bold text-snow/90">
-                Foto 3
-              </div>
+            {/* Media Thumbnails Switcher */}
+            <div className="grid grid-cols-4 gap-2">
+              {/* Video Tab Thumbnail */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMedia("video");
+                  setIsPlayingVideo(false);
+                }}
+                className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all cursor-pointer p-0 bg-ink ${
+                  activeMedia === "video"
+                    ? "border-volt ring-2 ring-volt/40 scale-[1.02] shadow-md"
+                    : "border-white/20 opacity-75 hover:opacity-100 hover:border-white/50"
+                }`}
+              >
+                <img
+                  src={classData.coverImageUrl || galleryPhotos[0]}
+                  alt="Video thumbnail"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-ink/50 flex items-center justify-center">
+                  <span className="w-7 h-7 rounded-full bg-coral flex items-center justify-center shadow">
+                    <svg className="w-3.5 h-3.5 text-ink ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="7,4 20,12 7,20" />
+                    </svg>
+                  </span>
+                </div>
+                <span className="absolute bottom-1 left-1.5 right-1.5 text-[10px] font-bold text-snow truncate bg-black/60 px-1 rounded text-center">
+                  Video
+                </span>
+              </button>
+
+              {/* Photo Thumbnails */}
+              {galleryPhotos.map((url: string, idx: number) => {
+                const isActive = activeMedia === idx;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setActiveMedia(idx);
+                      setIsPlayingVideo(false);
+                    }}
+                    className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all cursor-pointer p-0 bg-ink/30 ${
+                      isActive
+                        ? "border-volt ring-2 ring-volt/40 scale-[1.02] shadow-md"
+                        : "border-white/20 opacity-75 hover:opacity-100 hover:border-white/50"
+                    }`}
+                  >
+                    <img
+                      src={url}
+                      alt={`Foto ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute bottom-1 left-1.5 right-1.5 text-[10px] font-bold text-snow bg-black/60 px-1 rounded text-center truncate">
+                      Foto {idx + 1}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
       </section>
 
       {/* Main Content & Sticky Booking */}
-      <main className="max-w-6xl w-full mx-auto px-4 md:px-12 py-8 md:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <section className="px-6 md:px-12 py-8 md:py-12 bg-snow">
+        <div className="w-full max-w-[1440px] mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column (8 Cols): Syllabus & Content */}
           <div className="lg:col-span-8 flex flex-col gap-6">
             {/* Yang Kamu Pelajari */}
@@ -283,15 +399,15 @@ export function ClassDetailClient({ classData }: { classData: any }) {
             </section>
 
             {/* Yang Perlu Dibawa */}
-            <section className="bg-white border border-ink/10 rounded-2xl p-6 md:p-8 flex flex-col gap-3 shadow-sm">
+            <section className="bg-white border border-ink/10 rounded-2xl p-6 md:p-8 flex flex-col gap-4 shadow-sm">
               <h2 className="font-display font-bold text-xl md:text-2xl text-ink m-0">
                 Yang perlu dibawa
               </h2>
-              <ul className="m-0 pl-5 text-xs md:text-sm text-ink/80 leading-loose">
+              <div className="flex flex-col gap-2.5 pl-6 text-xs md:text-sm text-ink/85 leading-relaxed">
                 {classData.requirements.map((req: string, idx: number) => (
-                  <li key={idx}>{req}</li>
+                  <div key={idx}>{req}</div>
                 ))}
-              </ul>
+              </div>
             </section>
 
             {/* Ulasan Peserta */}
@@ -337,22 +453,42 @@ export function ClassDetailClient({ classData }: { classData: any }) {
 
               {/* Reviews List */}
               <div className="flex flex-col divide-y divide-ink/10">
-                {classData.reviews.map((r: any) => (
-                  <div key={r.id} className="py-4 flex flex-col gap-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-full bg-ink/10 text-ink font-bold flex items-center justify-center">
-                          {r.authorName.charAt(0)}
+                {classData.reviews.map((r: any) => {
+                  const pinBg =
+                    r.pinColor && PIN_COLORS[r.pinColor]?.bg
+                      ? PIN_COLORS[r.pinColor].bg
+                      : "#FFD43B";
+
+                  return (
+                    <div key={r.id} className="py-5 flex flex-col gap-2.5">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="w-9 h-9 rounded-full bg-[#ECEAF7] text-[#1B1650] font-bold text-sm flex items-center justify-center flex-none">
+                            {r.authorName.charAt(0)}
+                          </span>
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <b className="text-sm text-ink font-bold">{r.authorName}</b>
+                              <span
+                                className="w-2.5 h-2.5 rounded-full inline-block flex-none"
+                                style={{ background: pinBg }}
+                              />
+                            </div>
+                            <span className="text-xs text-ink/50">
+                              {formatReviewDate(r.createdAt)} · ikut jadwal {r.scheduleLabel || "Sabtu pagi"}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-amber-400 text-sm tracking-widest flex-none">
+                          {"★".repeat(r.rating)}
                         </span>
-                        <b className="text-ink">{r.authorName}</b>
                       </div>
-                      <span className="text-amber-500">{"★".repeat(r.rating)}</span>
+                      <p className="text-xs md:text-sm text-ink/85 m-0 leading-relaxed">
+                        {r.content}
+                      </p>
                     </div>
-                    <p className="text-xs md:text-sm text-ink/85 m-0 leading-relaxed pl-9">
-                      {r.content}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
 
@@ -365,36 +501,78 @@ export function ClassDetailClient({ classData }: { classData: any }) {
                 <span className="text-xs text-ink/60">{classData.comments.length} komentar</span>
               </div>
 
-              {/* Submit comment form */}
-              <form onSubmit={handleComment} className="flex flex-col gap-2.5 bg-ink/[0.02] p-4 rounded-xl border border-ink/10">
-                {commentSent ? (
-                  <div className="p-3 bg-emerald-50 text-emerald-700 text-xs rounded-lg font-medium">
-                    ✓ Pertanyaan kamu sudah terkirim! Coach kami akan segera membalas di sini.
+              {/* Submit comment form / Login required notice */}
+              {account === undefined ? (
+                <div className="h-28 bg-ink/[0.02] border border-ink/10 rounded-xl animate-pulse" />
+              ) : account === null ? (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-ink/[0.02] p-5 rounded-xl border border-ink/10">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-full bg-coral/10 text-coral flex items-center justify-center font-bold text-lg flex-none">
+                      💬
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-bold text-xs sm:text-sm text-ink">
+                        Punya pertanyaan seputar kelas ini?
+                      </span>
+                      <span className="text-xs text-ink/65">
+                        Silakan masuk terlebih dahulu untuk mengirim pertanyaan atau diskusi dengan coach.
+                      </span>
+                    </div>
                   </div>
-                ) : (
-                  <>
-                    <input
-                      placeholder="Nama kamu..."
-                      value={commentName}
-                      onChange={(e) => setCommentName(e.target.value)}
-                      className="bg-white border border-ink/15 rounded-lg px-3 py-2 text-xs text-ink outline-none"
-                    />
-                    <textarea
-                      rows={2}
-                      placeholder="Tulis pertanyaan atau komentar seputar kelas ini..."
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      className="bg-white border border-ink/15 rounded-lg px-3 py-2 text-xs text-ink outline-none resize-y"
-                    />
-                    <button
-                      type="submit"
-                      className="btn btn-coral px-4 py-2 rounded-full text-xs font-bold text-ink self-end tracking-button"
-                    >
-                      Kirim pertanyaan
-                    </button>
-                  </>
-                )}
-              </form>
+                  <Link
+                    href={`/masuk?next=${encodeURIComponent(pathname || `/kelas/${classData.slug}`)}`}
+                    className="btn btn-coral px-5 py-2.5 rounded-full text-xs font-bold text-ink whitespace-nowrap self-stretch sm:self-auto text-center tracking-button"
+                  >
+                    Masuk untuk Bertanya
+                  </Link>
+                </div>
+              ) : (
+                <form onSubmit={handleComment} className="flex flex-col gap-3 bg-ink/[0.02] p-4 rounded-xl border border-ink/10">
+                  {commentSent ? (
+                    <div className="flex items-center justify-between p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg font-medium">
+                      <span>✓ Pertanyaan kamu sudah terkirim! Coach kami akan segera membalas di sini.</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCommentSent(false);
+                          setCommentError(null);
+                        }}
+                        className="text-[11px] underline font-semibold text-emerald-800 hover:text-emerald-950 ml-2 cursor-pointer"
+                      >
+                        Tulis lagi
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2.5 pb-2 border-b border-ink/5">
+                        <Avatar name={account.name} photoUrl={account.photoUrl} size={28} />
+                        <span className="text-xs text-ink/70">
+                          Bertanya sebagai <b className="text-ink font-semibold">{account.name}</b>
+                        </span>
+                      </div>
+                      <textarea
+                        rows={2}
+                        placeholder="Tulis pertanyaan atau komentar seputar kelas ini..."
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        className="bg-white border border-ink/15 rounded-lg px-3 py-2 text-xs text-ink outline-none resize-y focus:border-indigo"
+                      />
+                      {commentError && (
+                        <div className="text-xs text-loss bg-loss/10 rounded-lg px-3 py-2 font-medium">
+                          {commentError}
+                        </div>
+                      )}
+                      <button
+                        type="submit"
+                        disabled={isSubmittingComment || !commentText.trim()}
+                        className="btn btn-coral px-4 py-2 rounded-full text-xs font-bold text-ink self-end tracking-button disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        {isSubmittingComment ? "Mengirim..." : "Kirim pertanyaan"}
+                      </button>
+                    </>
+                  )}
+                </form>
+              )}
 
               {/* Comments Thread */}
               <div className="flex flex-col divide-y divide-ink/10">
@@ -405,7 +583,12 @@ export function ClassDetailClient({ classData }: { classData: any }) {
                         {cm.authorName.charAt(0)}
                       </span>
                       <div className="flex flex-col gap-1">
-                        <b className="text-xs text-ink">{cm.authorName}</b>
+                        <div className="flex items-center gap-2">
+                          <b className="text-xs text-ink font-semibold">{cm.authorName}</b>
+                          <span className="text-[11px] text-ink/45">
+                            {formatRelativeTime(cm.createdAt)}
+                          </span>
+                        </div>
                         <p className="text-xs md:text-sm text-ink/85 m-0 leading-relaxed">
                           {cm.comment}
                         </p>
@@ -422,10 +605,15 @@ export function ClassDetailClient({ classData }: { classData: any }) {
                           L
                         </span>
                         <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <b className="text-ink">{rp.authorName}</b>
-                            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#1B1650] text-volt">
-                              Coach
+                          <div className="flex items-center gap-2 text-xs">
+                            <b className="text-ink font-semibold">{rp.authorName}</b>
+                            {rp.isCoachReply && (
+                              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#1B1650] text-volt">
+                                Coach
+                              </span>
+                            )}
+                            <span className="text-[11px] text-ink/45">
+                              {formatRelativeTime(rp.createdAt)}
                             </span>
                           </div>
                           <p className="text-xs text-ink/80 m-0 leading-relaxed">{rp.comment}</p>
@@ -439,7 +627,7 @@ export function ClassDetailClient({ classData }: { classData: any }) {
           </div>
 
           {/* Right Column (4 Cols): Sticky Booking Card */}
-          <aside className="lg:col-span-4 sticky top-6 flex flex-col gap-4">
+          <aside className="lg:col-span-4 lg:sticky lg:top-[104px] flex flex-col gap-4">
             <div className="bg-white border border-ink/10 rounded-2xl p-6 flex flex-col gap-5 shadow-lg">
               <div className="flex justify-between items-baseline gap-2">
                 <h3 className="font-display font-bold text-xl text-ink m-0">Daftar kelas</h3>
@@ -458,104 +646,81 @@ export function ClassDetailClient({ classData }: { classData: any }) {
                   Pilih jadwal
                 </span>
 
-                <div className="flex flex-col gap-2">
-                  {classData.schedules.map((s: any) => {
-                    const isSelected = s.id === selectedScheduleId;
-                    const isFull = s.status === "full";
-                    const rem = Math.max(0, s.capacity - s.registeredCount);
+                {classData.schedules.length === 0 ? (
+                  <div className="p-3.5 rounded-xl bg-ink/5 border border-dashed border-ink/15 text-xs text-ink/70 text-center leading-relaxed">
+                    Jadwal batch baru akan segera dibuka. Chat kami di WhatsApp untuk request jadwal atau private session.
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {classData.schedules.map((s: any) => {
+                      const isSelected = s.id === selectedScheduleId;
+                      const isFull = s.status === "full";
+                      const rem = Math.max(0, s.capacity - s.registeredCount);
 
-                    return (
-                      <label
-                        key={s.id}
-                        className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                          isFull
-                            ? "opacity-60 bg-ink/5 border-ink/10 cursor-not-allowed"
-                            : isSelected
-                            ? "border-[#1B1650] bg-[#1B1650]/5 shadow-sm"
-                            : "border-ink/15 hover:border-ink/30 bg-white"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="slot"
-                          disabled={isFull}
-                          checked={isSelected}
-                          onChange={() => setSelectedScheduleId(s.id)}
-                          className="w-4 h-4 accent-[#1B1650]"
-                        />
-                        <div className="flex-1">
-                          <div className="font-bold text-sm text-ink">{s.datesLabel}</div>
-                          <div className="text-xs text-ink/65 mt-0.5">{s.timeRange}</div>
-                        </div>
-                        <span
-                          className={`text-xs font-bold whitespace-nowrap ${
-                            isFull ? "text-ink/40" : rem <= 2 ? "text-coral" : "text-emerald-700"
+                      return (
+                        <label
+                          key={s.id}
+                          className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                            isFull
+                              ? "opacity-60 bg-ink/5 border-ink/10 cursor-not-allowed"
+                              : isSelected
+                              ? "border-[#1B1650] bg-[#1B1650]/5 shadow-sm"
+                              : "border-ink/15 hover:border-ink/30 bg-white"
                           }`}
                         >
-                          {isFull ? "Penuh" : `${rem} slot tersisa`}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
+                          <input
+                            type="radio"
+                            name="slot"
+                            disabled={isFull}
+                            checked={isSelected}
+                            onChange={() => setSelectedScheduleId(s.id)}
+                            className="w-4 h-4 accent-[#1B1650]"
+                          />
+                          <div className="flex-1">
+                            <div className="font-bold text-sm text-ink">{s.datesLabel}</div>
+                            <div className="text-xs text-ink/65 mt-0.5">{s.timeRange}</div>
+                          </div>
+                          <span
+                            className={`text-xs font-bold whitespace-nowrap ${
+                              isFull ? "text-ink/40" : rem <= 2 ? "text-coral" : "text-emerald-700"
+                            }`}
+                          >
+                            {isFull ? "Penuh" : `${rem} slot tersisa`}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              {/* Booking Form */}
-              {bookingSuccess ? (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col gap-2 text-center">
-                  <div className="text-emerald-800 font-bold text-sm">
-                    ✓ Pendaftaran Berhasil!
-                  </div>
-                  <p className="text-xs text-emerald-700 m-0">
-                    Tim Basecamp Padel akan segera mengirimkan konfirmasi dan instruksi pembayaran ke WhatsApp kamu ({bookingPhone}).
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleBooking} className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-2">
-                    <input
-                      required
-                      placeholder="Nama lengkap..."
-                      value={bookingName}
-                      onChange={(e) => setBookingName(e.target.value)}
-                      className="bg-ink/5 border border-ink/15 rounded-xl px-3.5 py-2.5 text-xs text-ink outline-none focus:border-ink"
-                    />
-                    <input
-                      required
-                      type="tel"
-                      placeholder="Nomor WhatsApp (mis. 08123456789)..."
-                      value={bookingPhone}
-                      onChange={(e) => setBookingPhone(e.target.value)}
-                      className="bg-ink/5 border border-ink/15 rounded-xl px-3.5 py-2.5 text-xs text-ink outline-none focus:border-ink"
-                    />
-                  </div>
-
-                  {bookingError && (
-                    <div className="text-xs text-coral font-medium">{bookingError}</div>
+              {/* Direct WhatsApp CTA Button */}
+              <div className="flex flex-col gap-2.5">
+                <a
+                  href={generateWhatsAppBookingUrl(
+                    "628123456789",
+                    classData.title,
+                    activeSchedule?.datesLabel
                   )}
+                  target="_blank"
+                  rel="noopener"
+                  className="bg-coral text-ink py-3.5 rounded-full font-bold text-sm tracking-button shadow-md hover:scale-[1.02] active:scale-[0.98] transition-transform text-center no-underline cursor-pointer block"
+                >
+                  Daftar &amp; bayar
+                </a>
 
-                  <button
-                    type="submit"
-                    disabled={bookingLoading}
-                    className="btn btn-coral py-3.5 rounded-full text-ink font-bold text-sm tracking-button shadow-md hover:scale-[1.02] active:scale-[0.98] transition-transform text-center cursor-pointer"
-                  >
-                    {bookingLoading ? "Memproses..." : "Daftar & bayar"}
-                  </button>
-
-                  <a
-                    href={generateWhatsAppBookingUrl(
-                      "628123456789",
-                      classData.title,
-                      activeSchedule?.datesLabel
-                    )}
-                    target="_blank"
-                    rel="noopener"
-                    className="text-center text-xs font-bold text-[#1B1650] hover:underline py-1 no-underline"
-                  >
-                    Tanya dulu via WhatsApp
-                  </a>
-                </form>
-              )}
+                <a
+                  href={generateWhatsAppBookingUrl(
+                    "628123456789",
+                    classData.title
+                  )}
+                  target="_blank"
+                  rel="noopener"
+                  className="text-center text-xs font-bold text-[#1B1650] hover:underline py-1 no-underline"
+                >
+                  Tanya dulu via WhatsApp
+                </a>
+              </div>
 
               <div className="text-[11px] text-ink/60 leading-normal border-t border-ink/10 pt-3">
                 Kelas jalan minimal 2 peserta. Kalau kurang, kamu bisa pindah jadwal atau refund penuh.
@@ -563,7 +728,99 @@ export function ClassDetailClient({ classData }: { classData: any }) {
             </div>
           </aside>
         </div>
-      </main>
-    </div>
+      </div>
+    </section>
+
+    {/* Lightbox Modal */}
+    {isLightboxOpen && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-md"
+        onClick={() => setIsLightboxOpen(false)}
+      >
+        {/* Top Bar with counter & close button */}
+        <div
+          className="w-full max-w-5xl flex items-center justify-between text-snow pb-3 px-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="font-sans font-bold text-sm text-snow/80">
+            Foto {lightboxIndex + 1} dari {galleryPhotos.length} · {classData.title}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsLightboxOpen(false)}
+            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-snow flex items-center justify-center cursor-pointer transition-colors border-0 text-xl font-bold"
+            aria-label="Tutup"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Main Full Photo View with Prev/Next Controls */}
+        <div
+          className="relative w-full max-w-5xl aspect-video max-h-[75vh] flex items-center justify-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <img
+            src={galleryPhotos[lightboxIndex]}
+            alt={`Foto ${lightboxIndex + 1}`}
+            className="w-full h-full object-contain rounded-xl select-none"
+          />
+
+          {/* Navigation buttons */}
+          {galleryPhotos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  setLightboxIndex((prev) =>
+                    prev === 0 ? galleryPhotos.length - 1 : prev - 1
+                  )
+                }
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-snow flex items-center justify-center cursor-pointer transition-transform hover:scale-105 border border-white/20 text-lg font-bold"
+                aria-label="Foto sebelumnya"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setLightboxIndex((prev) =>
+                    prev === galleryPhotos.length - 1 ? 0 : prev + 1
+                  )
+                }
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/60 hover:bg-black/90 text-snow flex items-center justify-center cursor-pointer transition-transform hover:scale-105 border border-white/20 text-lg font-bold"
+                aria-label="Foto selanjutnya"
+              >
+                →
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Bottom Thumbnails Strip */}
+        <div
+          className="flex items-center gap-3 pt-4 overflow-x-auto max-w-full px-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {galleryPhotos.map((url: string, idx: number) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setLightboxIndex(idx)}
+              className={`relative w-16 h-12 rounded-lg overflow-hidden border-2 transition-all p-0 cursor-pointer ${
+                lightboxIndex === idx
+                  ? "border-volt scale-110 shadow-lg ring-2 ring-volt/40"
+                  : "border-white/30 opacity-60 hover:opacity-100"
+              }`}
+            >
+              <img src={url} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
   );
 }

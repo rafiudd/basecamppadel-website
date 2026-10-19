@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { filterAndSortClasses, type FilterParams } from "@/lib/kelasRules";
+import { filterAndSortClasses, formatScheduleFriendly, type FilterParams } from "@/lib/kelasRules";
 
 export interface ClassDetailData {
   id: string;
@@ -188,7 +188,7 @@ export async function getClassBySlug(slug: string): Promise<ClassDetailData | nu
       id: s.id,
       datesLabel: s.dates_label,
       timeRange: s.time_range,
-      status: reg >= cap ? "full" : s.status,
+      status: s.status === "cancelled" ? "cancelled" : (reg >= cap ? "full" : "active"),
       startDate: s.start_date,
       coachId: s.coach_id,
       coachName: Array.isArray(s.coaches) ? s.coaches[0]?.name : (s.coaches as any)?.name ?? null,
@@ -198,10 +198,10 @@ export async function getClassBySlug(slug: string): Promise<ClassDetailData | nu
     };
   });
 
-  // Fetch reviews
+  // Fetch reviews with schedule & player details
   const { data: reviews } = await supabase
     .from("class_reviews")
-    .select("id, author_name, rating, content, coach_reply, created_at")
+    .select("id, author_name, rating, content, coach_reply, created_at, schedule_id, player_id, class_schedules (dates_label, time_range), players (level_color)")
     .eq("class_id", c.id)
     .eq("hidden", false)
     .order("created_at", { ascending: false });
@@ -277,14 +277,27 @@ export async function getClassBySlug(slug: string): Promise<ClassDetailData | nu
     isNew: c.is_new,
     sortOrder: c.sort_order,
     schedules: mappedSchedules,
-    reviews: (reviews ?? []).map((r) => ({
-      id: r.id,
-      authorName: r.author_name,
-      rating: r.rating,
-      content: r.content,
-      coachReply: r.coach_reply,
-      createdAt: r.created_at,
-    })),
+    reviews: (reviews ?? []).map((r: any, idx: number) => {
+      const sched = Array.isArray(r.class_schedules) ? r.class_schedules[0] : r.class_schedules;
+      const player = Array.isArray(r.players) ? r.players[0] : r.players;
+      const fallbackPin =
+        r.author_name === "Rendi"
+          ? "Biru"
+          : (c.suitable_pins && c.suitable_pins[idx % c.suitable_pins.length]) || "Kuning";
+
+      return {
+        id: r.id,
+        authorName: r.author_name,
+        rating: r.rating,
+        content: r.content,
+        coachReply: r.coach_reply,
+        createdAt: r.created_at,
+        scheduleLabel: sched?.dates_label
+          ? formatScheduleFriendly(sched.dates_label, sched.time_range)
+          : "Sabtu pagi",
+        pinColor: player?.level_color || fallbackPin,
+      };
+    }),
     comments: mappedComments,
     totalParticipants,
     averageRating: avgRating,

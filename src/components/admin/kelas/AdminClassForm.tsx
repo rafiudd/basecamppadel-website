@@ -29,12 +29,22 @@ export function AdminClassForm({
     ]
   );
 
-  const [sessionsBreakdown, setSessionsBreakdown] = useState<Array<{ title: string; desc: string }>>(
-    classData?.sessions_breakdown?.length ? classData.sessions_breakdown : [
-      { title: "Baca pantulan", desc: "Drill feed bola ke kaca, posisi badan & jarak" },
-      { title: "Balik nyerang", desc: "Dari kaca langsung lob / chiquita, lalu naik ke net" }
-    ]
+  const [totalSessions, setTotalSessions] = useState<number>(
+    classData?.total_sessions || classData?.sessions_breakdown?.length || 2
   );
+
+  const [sessionsBreakdown, setSessionsBreakdown] = useState<Array<{ title: string; desc: string }>>(() => {
+    const count = classData?.total_sessions || classData?.sessions_breakdown?.length || 2;
+    const existing = classData?.sessions_breakdown || [];
+    if (existing.length >= count) {
+      return existing.slice(0, count);
+    }
+    const extra = Array.from({ length: count - existing.length }, (_, i) => ({
+      title: existing.length + i === 0 ? "Dasar & Adaptasi" : `Lanjutan & Simulasi ${existing.length + i + 1}`,
+      desc: "Latihan teknik dan evaluasi drill.",
+    }));
+    return [...existing, ...extra];
+  });
 
   const [selectedPins, setSelectedPins] = useState<string[]>(
     classData?.suitable_pins || ["Kuning", "Biru"]
@@ -60,8 +70,20 @@ export function AdminClassForm({
     setLearningPoints(next);
   };
 
-  const addSession = () =>
-    setSessionsBreakdown((prev) => [...prev, { title: "", desc: "" }]);
+  const handleTotalSessionsChange = (val: number) => {
+    const nextCount = Math.max(1, val);
+    setTotalSessions(nextCount);
+    setSessionsBreakdown((prev) => {
+      if (prev.length < nextCount) {
+        const extra = Array.from({ length: nextCount - prev.length }, (_, i) => ({
+          title: `Sesi ${prev.length + i + 1}`,
+          desc: "",
+        }));
+        return [...prev, ...extra];
+      }
+      return prev.slice(0, nextCount);
+    });
+  };
 
   const updateSession = (idx: number, field: "title" | "desc", val: string) => {
     const next = [...sessionsBreakdown];
@@ -70,7 +92,7 @@ export function AdminClassForm({
   };
 
   return (
-    <form action={formAction} className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
+    <form action={formAction} className="flex flex-col gap-6 w-full">
       <input type="hidden" name="id" value={classData?.id || ""} />
       {/* Hidden pins array for FormData */}
       {selectedPins.map((p) => (
@@ -238,7 +260,8 @@ export function AdminClassForm({
               type="number"
               name="total_sessions"
               min="1"
-              defaultValue={classData?.total_sessions || 2}
+              value={totalSessions}
+              onChange={(e) => handleTotalSessionsChange(parseInt(e.target.value) || 1)}
               className="bg-snow/10 border-0 rounded-lg px-3 py-2.5 text-sm text-snow outline-none focus:ring-1 focus:ring-volt"
             />
           </label>
@@ -357,7 +380,14 @@ export function AdminClassForm({
 
         {/* Isi tiap sesi */}
         <div className="flex flex-col gap-2 pt-2 border-t border-snow/10">
-          <span className="text-xs uppercase tracking-wider text-snow/65">Isi tiap sesi</span>
+          <div className="flex justify-between items-center">
+            <span className="text-xs uppercase tracking-wider text-snow/65">
+              Isi tiap sesi (Wajib {totalSessions} sesi)
+            </span>
+            <span className="text-xs text-volt font-bold">
+              {sessionsBreakdown.length} dari {totalSessions} sesi
+            </span>
+          </div>
           <div className="flex flex-col gap-3">
             {sessionsBreakdown.map((sb, idx) => (
               <div key={idx} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-snow/[0.02] p-2.5 rounded-xl">
@@ -367,6 +397,7 @@ export function AdminClassForm({
                 <input
                   name="session_title"
                   value={sb.title}
+                  required
                   onChange={(e) => updateSession(idx, "title", e.target.value)}
                   placeholder="Judul sesi..."
                   className="md:col-span-4 bg-snow/10 border-0 rounded-lg px-3 py-2 text-sm text-snow outline-none focus:ring-1 focus:ring-volt"
@@ -374,6 +405,7 @@ export function AdminClassForm({
                 <input
                   name="session_desc"
                   value={sb.desc}
+                  required
                   onChange={(e) => updateSession(idx, "desc", e.target.value)}
                   placeholder="Deskripsi drill..."
                   className="md:col-span-6 bg-snow/10 border-0 rounded-lg px-3 py-2 text-sm text-snow outline-none focus:ring-1 focus:ring-volt"
@@ -381,13 +413,6 @@ export function AdminClassForm({
               </div>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={addSession}
-            className="self-start text-xs font-bold text-volt hover:underline mt-1 cursor-pointer"
-          >
-            + Tambah sesi drill
-          </button>
         </div>
       </section>
 
