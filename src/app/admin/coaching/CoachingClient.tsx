@@ -63,6 +63,15 @@ export function CoachingClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"belum" | "selesai">("belum");
 
+  // The coach dropdown's options are scoped to the active session — reset a stale selection
+  // (a coach from the previous session) back to "all" when the session changes, without an
+  // effect (https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
+  const [prevSessionId, setPrevSessionId] = useState(activeSessionId);
+  if (activeSessionId !== prevSessionId) {
+    setPrevSessionId(activeSessionId);
+    setSelectedCoachFilter("all");
+  }
+
   // Active player selection — by id (not index) so it survives the list reshuffling
   // when a status change moves a player between the "belum"/"selesai" tabs.
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -425,7 +434,6 @@ export function CoachingClient({
         sessionCounts={sessionCounts}
         sessionData={sessionData}
         activeSessionId={activeSessionId}
-        allCoaches={allCoaches}
         selectedCoachFilter={selectedCoachFilter}
         isAdmin={isAdmin}
         isPublishingAll={isPublishingAll}
