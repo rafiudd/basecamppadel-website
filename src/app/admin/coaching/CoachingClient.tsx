@@ -463,7 +463,6 @@ export function CoachingClient({
           {EMPTY_TAB_TEXT[sessionTab]}
         </p>
       )}
-      )}
 
       {showMasterTeknik && (
         <MasterTeknikModal
