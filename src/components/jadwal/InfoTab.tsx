@@ -108,10 +108,17 @@ export function InfoTab({ event }: { event: EventItem }) {
                   <span className="text-ink/70">Slot terisi</span>
                   <span className="font-bold text-base">{event.slots}</span>
                 </div>
-                <div className="w-full bg-ink/10 h-2 rounded-full overflow-hidden mt-1">
+                <div
+                  role="progressbar"
+                  aria-label="Slot terisi"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={event.slotsPercent ?? 0}
+                  className="w-full bg-ink/10 h-2 rounded-full overflow-hidden mt-1"
+                >
                   <div
                     className="bg-coral h-full rounded-full transition-all"
-                    style={{ width: `${event.slotsPercent || 70}%` }}
+                    style={{ width: `${event.slotsPercent ?? 0}%` }}
                   />
                 </div>
                 {event.deadline && (
