@@ -1,5 +1,6 @@
 "use client";
 
+import { unwrap } from "@/lib/actionState";
 import { useState, useEffect, useTransition, useMemo } from "react";
 import { useRouter } from "nextjs-toploader/app";
 import { useTopLoaderWhile } from "@/components/TopLoader";
@@ -15,6 +16,7 @@ import type {
 } from "@/lib/coaching-db";
 import {
   computePlayerLevel,
+  type SessionTab,
 } from "@/lib/coaching";
 import { generateRekapClinicExcel } from "@/lib/coaching-excel";
 import {
@@ -33,6 +35,8 @@ import { toast } from "@/components/ui/Toast";
 
 export function CoachingClient({
   sessions,
+  sessionTab,
+  sessionCounts,
   sessionData,
   activeSessionId,
   allSkills,
@@ -43,6 +47,8 @@ export function CoachingClient({
   isAdmin,
 }: {
   sessions: CoachingSessionSummary[];
+  sessionTab: SessionTab;
+  sessionCounts: Record<SessionTab, number>;
   sessionData: SessionFullData | null;
   activeSessionId: string;
   allSkills: CoachingSkill[];
@@ -170,7 +176,7 @@ export function CoachingClient({
 
     startTransition(async () => {
       try {
-        await saveAssessmentDraftAction({
+        unwrap(await saveAssessmentDraftAction({
           sessionId: sessionData.session.id,
           playerId: currentPlayerItem.player.id,
           coachId: currentPlayerItem.group?.coach_id || null,
@@ -180,7 +186,7 @@ export function CoachingClient({
           evaluation: ev,
           nextPractice: np,
           publishedToPlayer: pub,
-        });
+        }));
         setSaveStatus("Tersimpan otomatis");
       } catch {
         setSaveStatus("Gagal menyimpan otomatis");
@@ -195,7 +201,7 @@ export function CoachingClient({
     startTransition(async () => {
       setSaveStatus("Menyimpan draft...");
       try {
-        await saveAssessmentDraftAction({
+        unwrap(await saveAssessmentDraftAction({
           sessionId: sessionData.session.id,
           playerId: currentPlayerItem.player.id,
           coachId: currentPlayerItem.group?.coach_id || null,
@@ -205,7 +211,7 @@ export function CoachingClient({
           evaluation,
           nextPractice,
           publishedToPlayer,
-        });
+        }));
         setSaveStatus("Draft tersimpan");
         toast.success(`Draft penilaian ${currentPlayerItem.player.name} tersimpan`);
         router.refresh();
@@ -228,7 +234,7 @@ export function CoachingClient({
     startTransition(async () => {
       setSaveStatus("Mengirim...");
       try {
-        await submitAssessmentAction({
+        unwrap(await submitAssessmentAction({
           sessionId: sessionData.session.id,
           playerId: currentPlayerItem.player.id,
           coachId: currentPlayerItem.group?.coach_id || null,
@@ -238,7 +244,7 @@ export function CoachingClient({
           evaluation,
           nextPractice,
           publishedToPlayer,
-        });
+        }));
         setSaveStatus("Terkirim");
         toast.success(`Penilaian ${currentPlayerItem.player.name} berhasil disimpan & dikirim`);
 
@@ -263,7 +269,7 @@ export function CoachingClient({
     if (!confirm("Kirim semua penilaian draft dalam sesi ini ke pemain?")) return;
     setIsPublishingAll(true);
     try {
-      await publishAllSessionDraftsAction(sessionData.session.id);
+      unwrap(await publishAllSessionDraftsAction(sessionData.session.id));
       toast.success("Semua penilaian draft berhasil dikirim ke pemain");
       router.refresh();
     } catch (err: any) {
@@ -353,6 +359,8 @@ export function CoachingClient({
     <div className="flex flex-col gap-5 text-[#FBF7F1]">
       <CoachingHeader
         sessions={sessions}
+        sessionTab={sessionTab}
+        sessionCounts={sessionCounts}
         sessionData={sessionData}
         activeSessionId={activeSessionId}
         allCoaches={allCoaches}
@@ -365,79 +373,87 @@ export function CoachingClient({
         onPublishAll={handlePublishAll}
       />
 
-      <PlayerListTable
-        filteredPlayers={filteredPlayers}
-        belumCount={belumCount}
-        selesaiCount={selesaiCount}
-        searchQuery={searchQuery}
-        statusFilter={statusFilter}
-        onSearchChange={setSearchQuery}
-        onStatusFilterChange={setStatusFilter}
-        onSelectPlayer={(index) => {
-          setSelectedPlayerId(filteredPlayers[index].player.id);
-          setShowAssessment(true);
-        }}
-      />
+      {sessionData ? (
+        <>
+          <PlayerListTable
+            filteredPlayers={filteredPlayers}
+            belumCount={belumCount}
+            selesaiCount={selesaiCount}
+            searchQuery={searchQuery}
+            statusFilter={statusFilter}
+            onSearchChange={setSearchQuery}
+            onStatusFilterChange={setStatusFilter}
+            onSelectPlayer={(index) => {
+              setSelectedPlayerId(filteredPlayers[index].player.id);
+              setShowAssessment(true);
+            }}
+          />
 
-      {showAssessment && currentPlayerItem && (
-        <AssessmentEditor
-          currentPlayerItem={currentPlayerItem}
-          currentComputedLevel={currentComputedLevel}
-          scores={scores}
-          activeSkillIds={activeSkillIds}
-          allSkills={allSkills}
-          chosenTeknikSkills={chosenTeknikSkills}
-          chosenIngameSkills={chosenIngameSkills}
-          techniqueCategories={techniqueCategories}
-          ingameCategories={ingameCategories}
-          evaluation={evaluation}
-          nextPractice={nextPractice}
-          publishedToPlayer={publishedToPlayer}
-          saveStatus={saveStatus}
-          isPending={isPending}
-          busyAction={busyAction}
-          isAdmin={isAdmin}
-          positionLabel={`pemain ${activePlayerIndex + 1} dari ${filteredPlayers.length}`}
-          hasPrev={activePlayerIndex > 0}
-          hasNext={activePlayerIndex < filteredPlayers.length - 1}
-          onScoreClick={handleScoreClick}
-          onToggleSkillChip={handleToggleSkillChip}
-          onEvaluationChange={(val) => {
-            setEvaluation(val);
-            triggerAutoSave(scores, activeSkillIds, val, nextPractice, publishedToPlayer);
-          }}
-          onNextPracticeChange={(val) => {
-            setNextPractice(val);
-            triggerAutoSave(scores, activeSkillIds, evaluation, val, publishedToPlayer);
-          }}
-          onGenerated={(ev, np) => {
-            // one atomic update + one save with both new values — setting them via the two
-            // onChange handlers above back-to-back would race (each closes over the other's
-            // pre-AI value) and whichever autosave lands last would silently revert the other field
-            setEvaluation(ev);
-            setNextPractice(np);
-            triggerAutoSave(scores, activeSkillIds, ev, np, publishedToPlayer);
-          }}
-          onPublishedChange={(val) => {
-            setPublishedToPlayer(val);
-            triggerAutoSave(scores, activeSkillIds, evaluation, nextPractice, val);
-          }}
-          onSaveDraft={handleSaveDraft}
-          onSubmitAndNext={handleSubmitAndNext}
-          onOpenOverrideModal={() => {
-            if (currentPlayerItem) {
-              setOverridePlayerTarget(currentPlayerItem.player);
-              setShowOverrideModal(true);
-            }
-          }}
-          onClose={() => setShowAssessment(false)}
-          onPrev={() => {
-            if (activePlayerIndex > 0) setSelectedPlayerId(filteredPlayers[activePlayerIndex - 1].player.id);
-          }}
-          onNext={() => {
-            if (activePlayerIndex < filteredPlayers.length - 1) setSelectedPlayerId(filteredPlayers[activePlayerIndex + 1].player.id);
-          }}
-        />
+          {showAssessment && currentPlayerItem && (
+            <AssessmentEditor
+              currentPlayerItem={currentPlayerItem}
+              currentComputedLevel={currentComputedLevel}
+              scores={scores}
+              activeSkillIds={activeSkillIds}
+              allSkills={allSkills}
+              chosenTeknikSkills={chosenTeknikSkills}
+              chosenIngameSkills={chosenIngameSkills}
+              techniqueCategories={techniqueCategories}
+              ingameCategories={ingameCategories}
+              evaluation={evaluation}
+              nextPractice={nextPractice}
+              publishedToPlayer={publishedToPlayer}
+              saveStatus={saveStatus}
+              isPending={isPending}
+              busyAction={busyAction}
+              isAdmin={isAdmin}
+              positionLabel={`pemain ${activePlayerIndex + 1} dari ${filteredPlayers.length}`}
+              hasPrev={activePlayerIndex > 0}
+              hasNext={activePlayerIndex < filteredPlayers.length - 1}
+              onScoreClick={handleScoreClick}
+              onToggleSkillChip={handleToggleSkillChip}
+              onEvaluationChange={(val) => {
+                setEvaluation(val);
+                triggerAutoSave(scores, activeSkillIds, val, nextPractice, publishedToPlayer);
+              }}
+              onNextPracticeChange={(val) => {
+                setNextPractice(val);
+                triggerAutoSave(scores, activeSkillIds, evaluation, val, publishedToPlayer);
+              }}
+              onGenerated={(ev, np) => {
+                // one atomic update + one save with both new values — setting them via the two
+                // onChange handlers above back-to-back would race (each closes over the other's
+                // pre-AI value) and whichever autosave lands last would silently revert the other field
+                setEvaluation(ev);
+                setNextPractice(np);
+                triggerAutoSave(scores, activeSkillIds, ev, np, publishedToPlayer);
+              }}
+              onPublishedChange={(val) => {
+                setPublishedToPlayer(val);
+                triggerAutoSave(scores, activeSkillIds, evaluation, nextPractice, val);
+              }}
+              onSaveDraft={handleSaveDraft}
+              onSubmitAndNext={handleSubmitAndNext}
+              onOpenOverrideModal={() => {
+                if (currentPlayerItem) {
+                  setOverridePlayerTarget(currentPlayerItem.player);
+                  setShowOverrideModal(true);
+                }
+              }}
+              onClose={() => setShowAssessment(false)}
+              onPrev={() => {
+                if (activePlayerIndex > 0) setSelectedPlayerId(filteredPlayers[activePlayerIndex - 1].player.id);
+              }}
+              onNext={() => {
+                if (activePlayerIndex < filteredPlayers.length - 1) setSelectedPlayerId(filteredPlayers[activePlayerIndex + 1].player.id);
+              }}
+            />
+          )}
+        </>
+      ) : (
+        <p className="m-0 bg-[#221F30] rounded-2xl p-6 text-sm text-[#FBF7F1]/70 border border-[#FBF7F1]/5">
+          {sessionTab === "berjalan" ? "Belum ada sesi yang sedang berjalan. Buat sesi baru, atau lihat tab Selesai." : "Belum ada sesi yang selesai."}
+        </p>
       )}
 
       {showMasterTeknik && (

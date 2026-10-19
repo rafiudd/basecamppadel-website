@@ -17,6 +17,16 @@ export async function guard(fn: () => Promise<void>): Promise<ActionState> {
   }
 }
 
+/** guard() for actions called from code that hand data back: that data, or `{ error }`. */
+export async function guardResult<T extends object>(fn: () => Promise<T>): Promise<(T & { error?: undefined }) | { error: string }> {
+  try {
+    return await fn();
+  } catch (e) {
+    unstable_rethrow(e);
+    return { error: e instanceof Error ? friendly(e.message) : String(e) };
+  }
+}
+
 /** Database constraint names → messages an admin understands. */
 const CONSTRAINT_MESSAGES: Record<string, string> = {
   comp_team_players_event_id_player_id_key: "Pemain ini sudah ada di tim lain pada event ini.",

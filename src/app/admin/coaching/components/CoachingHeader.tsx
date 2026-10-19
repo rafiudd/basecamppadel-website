@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "nextjs-toploader/app";
 import type { Coach } from "@/lib/database.types";
 import type { CoachingSessionSummary, SessionFullData } from "@/lib/coaching-db";
+import type { SessionTab } from "@/lib/coaching";
 import {
   PlusIcon,
   EditIcon,
@@ -17,6 +18,8 @@ import {
 
 export function CoachingHeader({
   sessions,
+  sessionTab,
+  sessionCounts,
   sessionData,
   activeSessionId,
   allCoaches,
@@ -29,6 +32,8 @@ export function CoachingHeader({
   onPublishAll,
 }: {
   sessions: CoachingSessionSummary[];
+  sessionTab: SessionTab;
+  sessionCounts: Record<SessionTab, number>;
   sessionData: SessionFullData | null;
   activeSessionId: string;
   allCoaches: Coach[];
@@ -253,6 +258,9 @@ export function CoachingHeader({
         </div>
       </div>
 
+      {/* Berjalan / Selesai: draft & active sessions, and the finished ones */}
+      <SessionTabs active={sessionTab} counts={sessionCounts} />
+
       {/* ── 2. SESSION & FILTER HEADER BAR ── */}
 
       {/* Desktop Filter Bar (>= lg) */}
@@ -265,7 +273,7 @@ export function CoachingHeader({
           <select
             value={activeSessionId}
             onChange={(e) => {
-              router.push(`/admin/coaching?session=${e.target.value}`);
+              router.push(`/admin/coaching?when=${sessionTab}&session=${e.target.value}`);
             }}
             className="bg-[#FBF7F1]/10 border-0 rounded-lg px-3 py-2.5 min-h-11 font-sans text-[15px] text-[#FBF7F1] w-full box-border appearance-auto focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
           >
@@ -337,7 +345,7 @@ export function CoachingHeader({
           <select
             value={activeSessionId}
             onChange={(e) => {
-              router.push(`/admin/coaching?session=${e.target.value}`);
+              router.push(`/admin/coaching?when=${sessionTab}&session=${e.target.value}`);
             }}
             className="bg-[#FBF7F1]/10 border-0 rounded-lg px-2.5 py-2 font-sans text-xs sm:text-sm text-[#FBF7F1] w-full box-border appearance-auto focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
           >
@@ -398,5 +406,28 @@ export function CoachingHeader({
         </div>
       </div>
     </>
+  );
+}
+
+const TAB_LABELS: Record<SessionTab, string> = { berjalan: "Berjalan", selesai: "Selesai" };
+
+/** The two session tabs; each opens its own list (the first session in it). */
+function SessionTabs({ active, counts }: { active: SessionTab; counts: Record<SessionTab, number> }) {
+  return (
+    <nav aria-label="Sesi coaching" className="flex gap-1 p-1 rounded-xl bg-[#221F30] border border-[#FBF7F1]/5 self-start">
+      {(["berjalan", "selesai"] as const).map((t) => (
+        <Link
+          key={t}
+          href={`/admin/coaching?when=${t}`}
+          aria-current={active === t ? "page" : undefined}
+          className={`no-underline rounded-lg px-4 min-h-10 inline-flex items-center gap-2 text-sm font-bold transition-colors ${
+            active === t ? "bg-[#FFD43B] text-[#17151F]" : "text-[#FBF7F1]/75 hover:text-[#FBF7F1] hover:bg-[#FBF7F1]/5"
+          }`}
+        >
+          {TAB_LABELS[t]}
+          <span className={`rounded-full px-2 text-xs ${active === t ? "bg-[#17151F]/15" : "bg-[#FBF7F1]/10"}`}>{counts[t]}</span>
+        </Link>
+      ))}
+    </nav>
   );
 }
