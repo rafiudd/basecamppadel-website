@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "nextjs-toploader/app";
-import type { Coach } from "@/lib/database.types";
 import type { CoachingSessionSummary, SessionFullData } from "@/lib/coaching-db";
 import { SESSION_TABS, type SessionTab } from "@/lib/coaching";
 import {
@@ -22,7 +21,6 @@ export function CoachingHeader({
   sessionCounts,
   sessionData,
   activeSessionId,
-  allCoaches,
   selectedCoachFilter,
   isAdmin,
   isPublishingAll,
@@ -36,7 +34,6 @@ export function CoachingHeader({
   sessionCounts: Record<SessionTab, number>;
   sessionData: SessionFullData | null;
   activeSessionId: string;
-  allCoaches: Coach[];
   selectedCoachFilter: string;
   isAdmin: boolean;
   isPublishingAll: boolean;
@@ -48,6 +45,11 @@ export function CoachingHeader({
   const router = useRouter();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const activeSession = sessionData?.session;
+  // Only coaches actually assigned to a group in this session — not every coach in the system.
+  const sessionCoaches = useMemo(
+    () => sessions.find((s) => s.id === activeSessionId)?.coaches ?? [],
+    [sessions, activeSessionId],
+  );
 
   return (
     <>
@@ -298,7 +300,7 @@ export function CoachingHeader({
             <option value="all" className="bg-[#17151F] text-[#FBF7F1]">
               Semua Coach
             </option>
-            {allCoaches.map((c) => (
+            {sessionCoaches.map((c) => (
               <option key={c.id} value={c.id} className="bg-[#17151F] text-[#FBF7F1]">
                 {c.name}
               </option>
@@ -371,7 +373,7 @@ export function CoachingHeader({
               <option value="all" className="bg-[#17151F] text-[#FBF7F1]">
                 Semua Coach
               </option>
-              {allCoaches.map((c) => (
+              {sessionCoaches.map((c) => (
                 <option key={c.id} value={c.id} className="bg-[#17151F] text-[#FBF7F1]">
                   {c.name}
                 </option>
