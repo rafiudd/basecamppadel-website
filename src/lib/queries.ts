@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Player } from "@/lib/database.types";
-import { parseDateParts } from "@/lib/format";
+import { addHoursHHMM, eventDurationHours, eventPrice, parseDateParts } from "@/lib/format";
 import { WHATSAPP_URL } from "@/lib/config";
 
 /** The ON AIR match (the latest one if several), optionally only within one event / one court. */
@@ -175,8 +175,7 @@ export async function getNextUpcomingEvent(): Promise<NextSessionCardData | null
       : `${ev.mabar_format ? ev.mabar_format.replace("_", " ") : "Americano"} · semua level`;
 
     const startTime = ev.start_time ? ev.start_time.slice(0, 5) : "18:00";
-    const endHour = (Number(startTime.split(":")[0]) + (ev.type === "kompetisi" ? 3 : 2)) % 24;
-    const timeRange = `${startTime}–${String(endHour).padStart(2, "0")}:${startTime.split(":")[1] || "00"}`;
+    const timeRange = `${startTime}–${addHoursHHMM(startTime, eventDurationHours(ev))}`;
 
     const slotsText = ev.type === "kompetisi"
       ? `${currentCount}/${totalCount} tim`
@@ -194,7 +193,7 @@ export async function getNextUpcomingEvent(): Promise<NextSessionCardData | null
       subtitle,
       venue: venueObj?.name || "East Padel House",
       time: timeRange,
-      price: ev.price || (ev.type === "kompetisi" ? "Rp 85.000 / tim" : "Rp 50.000"),
+      price: eventPrice(ev),
       slots: slotsText,
       whatsappUrl: ev.whatsapp_url || WHATSAPP_URL,
       href: `/jadwal/${ev.slug || ev.id}`,
