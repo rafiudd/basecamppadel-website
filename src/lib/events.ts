@@ -3,7 +3,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import eventsData from "@/data/events.json";
 import matchesData from "@/data/event-matches.json";
 import { STAGE_LABEL, type KoStage } from "@/lib/competition";
-import { courtLabel, parseDateParts } from "@/lib/format";
+import { addHoursHHMM, courtLabel, eventDurationHours, eventPrice, parseDateParts } from "@/lib/format";
 import { WHATSAPP_URL, YOUTUBE_URL } from "@/lib/config";
 import type {
   CompEvent,
@@ -146,11 +146,8 @@ function formatCourtRange(names: string[]): string {
   return uniqueNames.map(courtLabel).join(", ") || "Court 1";
 }
 
-function formatTimeRangeStr(startHHMM: string, hours = 2): string {
-  const [h, m] = startHHMM.split(":").map(Number);
-  const endH = (h + hours) % 24;
-  const endStr = `${String(endH).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
-  return `${startHHMM}–${endStr} WIB`;
+function formatTimeRangeStr(startHHMM: string, hours: number): string {
+  return `${startHHMM}–${addHoursHHMM(startHHMM, hours)} WIB`;
 }
 
 export async function getEvents(): Promise<EventItem[]> {
@@ -209,8 +206,7 @@ export async function getEvents(): Promise<EventItem[]> {
           : `${e.mabar_format ? MABAR_FORMAT_LABEL[e.mabar_format] : "Americano"} · semua level`;
 
         const startTimeStr = e.start_time ? e.start_time.slice(0, 5) : "18:00";
-        const durationHours = e.type === "kompetisi" ? 3 : 2;
-        const time = formatTimeRangeStr(startTimeStr, durationHours);
+        const time = formatTimeRangeStr(startTimeStr, eventDurationHours(e));
 
         return {
           id: e.id,
@@ -229,7 +225,7 @@ export async function getEvents(): Promise<EventItem[]> {
           court: courtNames,
           venueFormatted: `${venueName} · ${courtNames}`,
           time,
-          price: e.price || (e.type === "kompetisi" ? "Rp 85.000 / tim" : "Rp 50.000"),
+          price: eventPrice(e),
           slots,
           slotsPercent,
           aboutText: e.description || (e.type === "kompetisi"
@@ -326,7 +322,7 @@ function mapCompetitionToEventItem(data: CompetitionData): EventItem {
   const slotsPercent = Math.min(100, Math.round((currentSlots / totalSlots) * 100));
 
   const startTimeStr = event.start_time ? event.start_time.slice(0, 5) : "18:00";
-  const time = formatTimeRangeStr(startTimeStr, 3);
+  const time = formatTimeRangeStr(startTimeStr, eventDurationHours(event));
 
   let liveScore: EventItem["liveScore"] | undefined;
   const liveM = matches.find((m) => m.is_live);
@@ -399,7 +395,7 @@ function mapCompetitionToEventItem(data: CompetitionData): EventItem {
     court: courtNames,
     venueFormatted: `${venueName} · ${courtNames}`,
     time,
-    price: event.price || "Rp 85.000 / tim",
+    price: eventPrice(event),
     slots: `${currentSlots}/${totalSlots} tim`,
     slotsPercent,
     aboutText: event.description || "Kompetisi pasangan tetap. Tim dibagi ke grup dan main round robin, lalu tim teratas tiap grup lolos ke babak gugur sampai final. Skor diperbarui langsung dari court.",
@@ -465,7 +461,7 @@ async function mapMabarToEventItem(supabase: any, event: CompEvent): Promise<Eve
   const slotsPercent = Math.min(100, Math.round((currentSlots / totalSlots) * 100));
 
   const startTimeStr = event.start_time ? event.start_time.slice(0, 5) : "08:00";
-  const time = formatTimeRangeStr(startTimeStr, 2);
+  const time = formatTimeRangeStr(startTimeStr, eventDurationHours(event));
 
   let podium: EventItem["podium"] | undefined;
   if (isFinished && roundsData && participants.length > 0) {
@@ -502,7 +498,7 @@ async function mapMabarToEventItem(supabase: any, event: CompEvent): Promise<Eve
     court: courtNames,
     venueFormatted: `${venueName} · ${courtNames}`,
     time,
-    price: event.price || "Rp 50.000",
+    price: eventPrice(event),
     slots: `${currentSlots}/${totalSlots} pemain`,
     slotsPercent,
     aboutText: event.description || "Mabar rutin komunitas dengan sistem rotasi per ronde. Kumpulkan poin individu dan skor tercatat secara real-time.",

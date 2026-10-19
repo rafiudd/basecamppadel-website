@@ -34,6 +34,29 @@ export function parseDateParts(isoDate: string) {
   };
 }
 
+/**
+ * Price shown on the public pages: `price_amount` (whole rupiah) when set, "/ tim" for a competition,
+ * else the free-text `price`, else "Hubungi admin" (never a made-up price).
+ */
+export function eventPrice(e: { type: string; price?: string | null; price_amount?: number | null }): string {
+  if (e.price_amount && e.price_amount > 0) {
+    return `Rp ${e.price_amount.toLocaleString("id-ID")}${e.type === "kompetisi" ? " / tim" : ""}`;
+  }
+  return e.price?.trim() || "Hubungi admin";
+}
+
+/** Event length in hours: `duration_hours` when set, else 3 for a competition and 2 for mabar. */
+export function eventDurationHours(e: { type: string; duration_hours?: number | null }): number {
+  return e.duration_hours && e.duration_hours > 0 ? e.duration_hours : e.type === "kompetisi" ? 3 : 2;
+}
+
+/** "18:00" + 1.5 -> "19:30" (wraps past midnight). */
+export function addHoursHHMM(startHHMM: string, hours: number): string {
+  const [h, m] = startHHMM.split(":").map(Number);
+  const end = (((h || 0) * 60 + (m || 0) + Math.round(hours * 60)) % 1440 + 1440) % 1440;
+  return `${String(Math.floor(end / 60)).padStart(2, "0")}:${String(end % 60).padStart(2, "0")}`;
+}
+
 /** "Rayhan / Andra" -> "RA", "Bob Hintama" -> "BH", "Nadia" -> "NA". */
 export function initials(name: string): string {
   const parts = name.includes("/") ? name.split("/") : name.trim().split(/\s+/);
