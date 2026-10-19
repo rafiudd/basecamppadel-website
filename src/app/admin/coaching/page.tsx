@@ -22,7 +22,7 @@ export default async function CoachingAdminPage({
 
   const supabase = await createClient();
 
-  // Coaching sessions split into the "Berjalan" (draft / active) and "Selesai" (finished) tabs
+  // Coaching sessions split into one tab per status: Draft, Berjalan (active), Selesai (finished)
   const split = splitSessionsByStatus(await getCoachingSessions());
   const tab = pickSessionTab(split, when, paramSessionId);
   const sessions = split[tab];
@@ -43,7 +43,7 @@ export default async function CoachingAdminPage({
     <CoachingClient
       sessions={sessions}
       sessionTab={tab}
-      sessionCounts={{ berjalan: split.berjalan.length, selesai: split.selesai.length }}
+      sessionCounts={{ draft: split.draft.length, berjalan: split.berjalan.length, selesai: split.selesai.length }}
       sessionData={sessionData}
       activeSessionId={activeSessionId}
       allSkills={allSkills}

@@ -207,25 +207,29 @@ export function computeScoreDelta(
   }
 }
 
-export type SessionTab = "berjalan" | "selesai";
+/** One tab per coaching session status, in lifecycle order. */
+export const SESSION_TABS = ["draft", "berjalan", "selesai"] as const;
+export type SessionTab = (typeof SESSION_TABS)[number];
 
-/**
- * "Selesai" = finished sessions, "Berjalan" = the rest (draft / active). Order follows the input.
- */
+const TAB_STATUS: Record<SessionTab, string> = { draft: "draft", berjalan: "active", selesai: "finished" };
+
+/** Sessions grouped by tab (= status). Order follows the input. */
 export function splitSessionsByStatus<T extends { status: string }>(sessions: T[]): Record<SessionTab, T[]> {
   return {
-    berjalan: sessions.filter((s) => s.status !== "finished"),
-    selesai: sessions.filter((s) => s.status === "finished"),
+    draft: sessions.filter((s) => s.status === TAB_STATUS.draft),
+    berjalan: sessions.filter((s) => s.status === TAB_STATUS.berjalan),
+    selesai: sessions.filter((s) => s.status === TAB_STATUS.selesai),
   };
 }
 
 /**
- * Which tab to open: the one asked for, else the one holding the asked session, else "Berjalan"
- * unless it is empty.
+ * Which tab to open: the one asked for, else the one holding the asked session, else the first
+ * non-empty of Berjalan, Draft, Selesai (Berjalan when all are empty).
  */
 export function pickSessionTab(split: Record<SessionTab, { id: string }[]>, asked?: string, sessionId?: string): SessionTab {
-  if (asked === "berjalan" || asked === "selesai") return asked;
-  if (sessionId && split.selesai.some((s) => s.id === sessionId)) return "selesai";
-  if (sessionId && split.berjalan.some((s) => s.id === sessionId)) return "berjalan";
-  return split.berjalan.length || !split.selesai.length ? "berjalan" : "selesai";
+  const asTab = SESSION_TABS.find((t) => t === asked);
+  if (asTab) return asTab;
+  const holding = sessionId && SESSION_TABS.find((t) => split[t].some((s) => s.id === sessionId));
+  if (holding) return holding;
+  return (["berjalan", "draft", "selesai"] as const).find((t) => split[t].length) ?? "berjalan";
 }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "nextjs-toploader/app";
 import type { Coach } from "@/lib/database.types";
 import type { CoachingSessionSummary, SessionFullData } from "@/lib/coaching-db";
-import type { SessionTab } from "@/lib/coaching";
+import { SESSION_TABS, type SessionTab } from "@/lib/coaching";
 import {
   PlusIcon,
   EditIcon,
@@ -230,7 +230,7 @@ export function CoachingHeader({
         </div>
       </div>
 
-      {/* Berjalan / Selesai: draft & active sessions, and the finished ones */}
+      {/* Draft / Berjalan / Selesai: one tab per session status */}
       <SessionTabs active={sessionTab} counts={sessionCounts} />
 
       {/* ── 2. SESSION & FILTER HEADER BAR ── */}
@@ -381,13 +381,13 @@ export function CoachingHeader({
   );
 }
 
-const TAB_LABELS: Record<SessionTab, string> = { berjalan: "Berjalan", selesai: "Selesai" };
+const TAB_LABELS: Record<SessionTab, string> = { draft: "Draft", berjalan: "Berjalan", selesai: "Selesai" };
 
-/** The two session tabs; each opens its own list (the first session in it). */
+/** The session tabs; each opens its own list (the first session in it). */
 function SessionTabs({ active, counts }: { active: SessionTab; counts: Record<SessionTab, number> }) {
   return (
     <nav aria-label="Sesi coaching" className="flex gap-1 p-1 rounded-xl bg-[#221F30] border border-[#FBF7F1]/5 self-start">
-      {(["berjalan", "selesai"] as const).map((t) => (
+      {SESSION_TABS.map((t) => (
         <Link
           key={t}
           href={`/admin/coaching?when=${t}`}
