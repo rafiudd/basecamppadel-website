@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/auth";
+import { accountHome } from "@/lib/accountRules";
 
 export default async function AdminHome() {
-  const { user, isAdmin, isCoach } = await getAdminUser();
-  if (!user || (!isAdmin && !isCoach)) redirect("/");
-  if (!isAdmin && isCoach) redirect("/admin/coaching");
-  redirect("/admin/events");
+  const { user, role } = await getAdminUser();
+  if (!user || !role) redirect("/");
+  redirect(accountHome(role));
 }

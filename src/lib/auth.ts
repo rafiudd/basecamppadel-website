@@ -6,19 +6,17 @@ export async function getAdminUser() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { user: null, isAdmin: false, isCoach: false, role: null as "admin" | "coach" | null, coachId: null as string | null };
-  const { data: isAdminRpc } = await supabase.rpc("is_admin");
-  const { data: isCoachRpc } = await supabase.rpc("is_coach");
   const { data: adminRow } = await supabase
     .from("admin_users")
     .select("role, coach_id")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // Access follows the database (is_admin / is_coach read admin_users), the same check RLS uses.
+  // Access follows admin_users.role, the same row is_admin() / is_coach() read for RLS.
   // A signed-in player without an admin_users row is neither; an admin also gets coach access.
   const role = (adminRow?.role as "admin" | "coach" | undefined) ?? null;
-  const isAdmin = !!isAdminRpc || role === "admin";
-  const isCoach = !!isCoachRpc || role === "coach" || isAdmin;
+  const isAdmin = role === "admin";
+  const isCoach = role === "coach" || isAdmin;
   return { user, isAdmin, isCoach, role, coachId: adminRow?.coach_id ?? null };
 }
 
