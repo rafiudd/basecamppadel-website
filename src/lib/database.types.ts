@@ -666,6 +666,7 @@ export type Database = {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_coach: { Args: Record<string, never>; Returns: boolean };
       has_admin_access: { Args: Record<string, never>; Returns: boolean };
+      coaching_apply_level: { Args: { p_player_id: string; p_level: string }; Returns: undefined };
       finalize_match: {
         Args: {
           p_match_id: string;

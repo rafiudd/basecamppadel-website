@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAccountChip } from "./account/useAccountChip";
 
 function Icon({ children }: { children: React.ReactNode }) {
   return (
@@ -63,15 +64,18 @@ const LINKS = [
 /** Phone tab bar, fixed to the bottom (hidden from md up, where the top nav's links show instead). */
 export function BottomNav() {
   const pathname = usePathname();
+  const account = useAccountChip();
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : href === "/akun" ? pathname.startsWith("/akun") || pathname.startsWith("/masuk") : pathname.startsWith(href);
+  // admin / coach: the Akun tab opens the admin area instead of the player profile
+  const links = account?.isStaff ? LINKS.map((l) => (l.href === "/akun" ? { ...l, href: account.href, label: "Admin" } : l)) : LINKS;
 
   return (
     <nav
       className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-ink border-t border-snow/10 flex items-stretch"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      {LINKS.map((l) => {
+      {links.map((l) => {
         const on = isActive(l.href);
         const Ico = l.icon;
         return (

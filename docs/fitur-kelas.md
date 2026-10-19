@@ -40,7 +40,7 @@ Dari inspeksi file mockup desktop dan mobile di `docs/UI/kelas/`, berikut rincia
 
 ## 3. Desain Basis Data (Database Schema)
 
-Menggunakan Supabase PostgreSQL dengan RLS (*Row Level Security*) dan konvensi migration file `supabase/migrations/0020_classes_system.sql`.
+Menggunakan Supabase PostgreSQL dengan RLS (*Row Level Security*) dan konvensi migration file `supabase/migrations/0021_classes_system.sql`.
 
 ### 3.1 Skema Tabel
 
@@ -257,7 +257,7 @@ Mengikuti format komunikasi yang ada di Basecamp Padel:
 ## 8. Rencana Tahapan Eksekusi (Implementation Milestones)
 
 - [ ] **Milestone 1: Database & Seed Data**
-  - Buat migration `supabase/migrations/0020_classes_system.sql`.
+  - Buat migration `supabase/migrations/0021_classes_system.sql`.
   - Masukkan 29 data kelas awal (seperti yang terdapat pada data array mockup) ke dalam seed script.
 - [ ] **Milestone 2: Aturan Bisnis & Unit Tests**
   - Implementasikan `src/lib/kelasRules.ts`.

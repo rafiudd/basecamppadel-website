@@ -20,6 +20,15 @@ const r2Host = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/liga-east",
+        destination: "/liga/east-padel-league-1teq",
+        permanent: false,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: supabaseHost },

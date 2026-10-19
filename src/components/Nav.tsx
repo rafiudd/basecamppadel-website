@@ -62,8 +62,9 @@ export function Nav() {
           </a>
           {account ? (
             <Link
-              href="/akun"
-              aria-current={pathname.startsWith("/akun") ? "page" : undefined}
+              href={account.href}
+              title={account.isStaff ? "Buka halaman admin" : undefined}
+              aria-current={!account.isStaff && pathname.startsWith("/akun") ? "page" : undefined}
               className="flex items-center gap-2.5 no-underline text-snow font-semibold text-sm hover:text-volt"
             >
               <Avatar name={account.name} photoUrl={account.photoUrl} size={36} />
