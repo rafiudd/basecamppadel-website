@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { sessionCookie } from "@/lib/supabase/cookies";
+import { accountHome } from "@/lib/accountRules";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -79,14 +80,9 @@ export async function updateSession(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (adminRow?.role === "admin") {
+    if (adminRow) {
       const url = request.nextUrl.clone();
-      url.pathname = "/admin";
-      url.search = "";
-      return NextResponse.redirect(url);
-    } else if (adminRow?.role === "coach") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/admin/coaching";
+      url.pathname = accountHome(adminRow.role);
       url.search = "";
       return NextResponse.redirect(url);
     }

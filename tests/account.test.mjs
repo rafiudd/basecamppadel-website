@@ -77,3 +77,11 @@ test("profilePhoto: saved photo, then chosen-none, then the Google picture", asy
   assert.equal(profilePhoto({ photo_url: null, photo_source: null }, g), g);
   assert.equal(profilePhoto({ photo_url: null }, null), null);
 });
+
+test("akun: admin ke /admin/events, coach ke /admin/coaching, pemain ke /akun", async () => {
+  const { accountHome } = await import("../src/lib/accountRules.ts");
+  assert.equal(accountHome("admin"), "/admin/events");
+  assert.equal(accountHome("coach"), "/admin/coaching");
+  assert.equal(accountHome(null), "/akun");
+  assert.equal(accountHome(undefined), "/akun");
+});

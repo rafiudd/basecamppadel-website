@@ -98,3 +98,11 @@ export function profilePhoto(p: { photo_url: string | null; photo_source?: Photo
   if (p.photo_url) return p.photo_url;
   return p.photo_source === "none" ? null : googleAvatar;
 }
+
+/**
+ * Where a signed-in account lands: the admin home for an admin_users role (coach only has the
+ * coaching area), else the player profile.
+ */
+export function accountHome(role: string | null | undefined): string {
+  return role === "admin" ? "/admin/events" : role === "coach" ? "/admin/coaching" : "/akun";
+}
