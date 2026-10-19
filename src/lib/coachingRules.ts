@@ -114,6 +114,54 @@ export function reportSummaries(skills: SkillDef[], reports: CoachReport[]): Map
   return out;
 }
 
+/** The next coaching session on the profile ("Sesi berikutnya"); `href` is where to sign up. */
+export type NextSession = { title: string; date: string; venue: string; href: string };
+
+export type CategoryAverage = { label: string; now: number; first: number | null };
+export type SkillMap = { axes: CategoryAverage[]; nowDate: string | null; firstDate: string | null };
+
+/**
+ * "Peta skill": per category rated at least once (board order: teknik, then in-game), the average of
+ * each skill's latest score (`now`) and of the first rated session's scores (`first`; null with a
+ * single rated session, or when that session didn't touch the category). `boards` = skillBoards().
+ */
+export function categoryAverages(boards: SkillBoard[], reports: CoachReport[]): SkillMap {
+  const rated = chronological(reports).filter((r) => r.ratings.length > 0);
+  const first = rated.length >= 2 ? new Map(rated[0].ratings.map((x) => [x.skill_key, Number(x.score)])) : null;
+  const axes = boards.flatMap((b) =>
+    b.groups.flatMap((g) => {
+      const now = averageScore(g.items.flatMap((i) => (i.score === null ? [] : [{ score: i.score }])));
+      if (now === null) return [];
+      const before = first ? g.items.flatMap((i) => (first.has(i.key) ? [{ score: first.get(i.key)! }] : [])) : [];
+      return [{ label: g.label, now, first: averageScore(before) }];
+    }),
+  );
+  return {
+    axes,
+    nowDate: rated.at(-1)?.session.session_date ?? null,
+    firstDate: first ? rated[0].session.session_date : null,
+  };
+}
+
+/**
+ * "Sering dibahas coach": skills scored under 3 in the most sessions (ties: lowest latest score, then
+ * board order), with how many of the rated sessions that was. `boards` = skillBoards().
+ */
+export function recurringWeakSkills(
+  boards: SkillBoard[],
+  reports: CoachReport[],
+  max = 3,
+): { label: string; sessions: number; total: number }[] {
+  const rated = reports.filter((r) => r.ratings.length > 0);
+  return boards
+    .flatMap((b) => b.groups.flatMap((g) => g.items))
+    .map((item, i) => ({ item, i, sessions: rated.filter((r) => r.ratings.some((x) => x.skill_key === item.key && Number(x.score) < 3)).length }))
+    .filter((x) => x.sessions > 0)
+    .sort((a, b) => b.sessions - a.sessions || (a.item.score ?? 5) - (b.item.score ?? 5) || a.i - b.i)
+    .slice(0, max)
+    .map((x) => ({ label: x.item.label, sessions: x.sessions, total: rated.length }));
+}
+
 // ---------------------------------------------------------------- rapor (D.6)
 
 const SCORE_WORDS = ["Belum bisa", "Mulai bisa", "Lumayan", "Bagus", "Mantap"];

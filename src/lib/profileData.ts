@@ -1,5 +1,5 @@
 import type { Supa } from "@/lib/server/action";
-import { splitNotes, type AwardRow, type CoachReport, type EventRow, type HistoryRow, type SkillDef } from "@/lib/coachingRules";
+import { splitNotes, type AwardRow, type CoachReport, type EventRow, type HistoryRow, type NextSession, type SkillDef } from "@/lib/coachingRules";
 import { COACHING_SKILLS } from "@/lib/coachingSkills";
 import { matchSection } from "@/lib/compLabels";
 
@@ -120,4 +120,25 @@ export async function loadEventHistory(supabase: Supa, playerId: string | null):
     awards: (awards ?? []).map((a) => ({ event_id: a.event_id, stage: a.stage, rank: a.rank, points: a.points, created_at: a.created_at })),
     events: events ?? [],
   };
+}
+
+/**
+ * "Sesi berikutnya": the nearest coaching session from today (WIB) that isn't finished; "Daftar
+ * sekarang" goes to its event when it has one, else the schedule.
+ */
+export async function loadNextCoachingSession(supabase: Supa): Promise<NextSession | null> {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+  const { data: s } = await supabase
+    .from("coaching_sessions")
+    .select("title, session_date, venue_name, event_id")
+    .neq("status", "finished")
+    .gte("session_date", today)
+    .order("session_date")
+    .limit(1)
+    .maybeSingle();
+  if (!s) return null;
+  const { data: event } = s.event_id
+    ? await supabase.from("events").select("slug").eq("id", s.event_id).maybeSingle()
+    : { data: null };
+  return { title: s.title, date: s.session_date, venue: s.venue_name, href: event?.slug ? `/jadwal/${event.slug}` : "/jadwal" };
 }

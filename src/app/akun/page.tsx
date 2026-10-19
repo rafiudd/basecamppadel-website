@@ -4,7 +4,7 @@ import { signOut } from "@/app/akun/actions";
 import { requireAccount } from "@/lib/account";
 import { googleIdentity } from "@/lib/accountRules";
 import { LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
-import { loadCoaching, loadEventHistory } from "@/lib/profileData";
+import { loadCoaching, loadEventHistory, loadNextCoachingSession } from "@/lib/profileData";
 
 export const metadata: Metadata = { title: "Profil saya — Basecamp Padel", robots: { index: false } };
 
@@ -30,7 +30,7 @@ export default async function AkunPage({
   const { supabase, user, profile } = await requireAccount("/akun");
   const googleAvatar = googleIdentity(user.user_metadata).avatarUrl;
 
-  const [{ data: player }, { data: claimed }, { skills, reports }, history] = await Promise.all([
+  const [{ data: player }, { data: claimed }, { skills, reports }, history, nextSession] = await Promise.all([
     profile.player_id
       ? supabase.from("players").select("name, points, wins, losses, level, level_color, level_overridden").eq("id", profile.player_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -39,6 +39,7 @@ export default async function AkunPage({
       : Promise.resolve({ data: null }),
     loadCoaching(supabase, profile.player_id),
     loadEventHistory(supabase, profile.player_id),
+    loadNextCoachingSession(supabase),
   ]);
 
   return (
@@ -54,6 +55,7 @@ export default async function AkunPage({
       reports={reports}
       level={profileLevel(player, reports.length > 0)}
       history={history}
+      nextSession={nextSession}
       points={player?.points ?? 0}
       playerName={player?.name}
       wins={player?.wins ?? 0}

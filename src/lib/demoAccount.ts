@@ -1,4 +1,4 @@
-import type { AwardRow, CoachReport, EventRow, HistoryRow } from "@/lib/coachingRules";
+import type { AwardRow, CoachReport, EventRow, HistoryRow, NextSession } from "@/lib/coachingRules";
 import type { Player, Profile } from "@/lib/database.types";
 
 /**
@@ -102,6 +102,8 @@ export const demoHistory: { history: HistoryRow[]; awards: AwardRow[]; events: E
 };
 
 export const demoRecord = { points: 45, wins: 2, losses: 1 };
+
+export const demoNextSession: NextSession = { title: "Mabar with Coach #2", date: "2026-10-26", venue: "Padel Hubz", href: "/jadwal" };
 
 export const demoCandidates: Pick<Player, "id" | "name" | "gender" | "region" | "points" | "photo_url">[] = [
   { id: "demo-legacy", name: "Nadia Putri", gender: "F", region: "Purwokerto", points: 45, photo_url: null },

@@ -5,22 +5,28 @@ import type { ActionState } from "@/lib/actionState";
 import type { Profile } from "@/lib/database.types";
 import { profilePhoto } from "@/lib/accountRules";
 import {
+  categoryAverages,
   eventHistory,
   filterReports,
+  recurringWeakSkills,
   reportFilterOptions,
   reportSummaries,
   sessionAverages,
   skillBoards,
+  strongestAndWeakest,
   type AwardRow,
   type CoachReport,
   type EventRow,
   type HistoryRow,
+  type NextSession,
   type SkillDef,
 } from "@/lib/coachingRules";
+import { LEVEL_PIN, type PlayerLevelName } from "@/lib/coaching";
 import { StatsTab } from "./StatsTab";
 import { NotesTab } from "./NotesTab";
 import { HistoryTab } from "./HistoryTab";
 import { ProfileAvatar } from "../ProfileAvatar";
+import type { ProfilePin } from "./SideCards";
 
 const HAND = { R: "Tangan kanan", L: "Tangan kiri" } as const;
 const POSITION = { right: "Posisi kanan", left: "Posisi kiri", both: "Posisi bebas" } as const;
@@ -56,17 +62,18 @@ function SignOutLabel() {
   );
 }
 
-/** D.1: the level's color next to the name, no level name on screen (it is the tooltip / screen-reader label). */
-function LevelBadge({ level }: { level: ProfileLevel | null | undefined }) {
-  if (!level) return null;
+/** Header tile value: the pin's color and its name ("Kuning"), or a dash before the first level. */
+function PinValue({ pin }: { pin: ProfilePin | null }) {
+  if (!pin) return <>–</>;
   return (
-    <span
-      role="img"
-      aria-label={`Level ${level.name}`}
-      title={`Level ${level.name}`}
-      className="w-5 h-5 md:w-6 md:h-6 rounded-full flex-none shadow-[inset_0_0_0_2px_rgb(251_247_241/0.5)]"
-      style={{ background: level.color }}
-    />
+    <span className="inline-flex items-center gap-2 min-w-0">
+      <span
+        aria-hidden
+        className="w-4 h-4 rounded-full flex-none shadow-[inset_0_0_0_1.5px_rgb(251_247_241/0.5)]"
+        style={{ background: pin.color }}
+      />
+      <span className="truncate">{pin.name}</span>
+    </span>
   );
 }
 
@@ -86,6 +93,7 @@ export function ProfileView({
   reports,
   level,
   history,
+  nextSession,
   points,
   wins,
   losses,
@@ -106,6 +114,8 @@ export function ProfileView({
   reports: CoachReport[];
   level?: ProfileLevel | null;
   history: { history: HistoryRow[]; awards: AwardRow[]; events: EventRow[] };
+  /** The nearest open coaching session ("Sesi berikutnya"). */
+  nextSession?: NextSession | null;
   /** The leaderboard's numbers (players.points / wins / losses). */
   points: number;
   wins: number;
@@ -119,6 +129,8 @@ export function ProfileView({
   signOutAction: (state: ActionState, fd: FormData) => Promise<ActionState>;
 }) {
   const boards = skillBoards(skills, reports);
+  const { best, weakest } = strongestAndWeakest(boards);
+  const pin: ProfilePin | null = level ? { name: LEVEL_PIN[level.name as PlayerLevelName] ?? level.name, color: level.color } : null;
   const averages = sessionAverages(reports);
   const latest = filterReports(reports, {})[0] ?? null;
   const events = eventHistory(history.history, history.awards, history.events, {
@@ -134,6 +146,7 @@ export function ProfileView({
     profile.position && POSITION[profile.position],
   ].filter(Boolean) as string[];
   const stats = [
+    { label: "Pin", value: <PinValue pin={pin} /> },
     { label: "Rata-rata", value: averages.at(-1)?.avg ?? "–" },
     { label: "Sesi coaching", value: reports.length },
     { label: "Event", value: events.length },
@@ -155,7 +168,6 @@ export function ProfileView({
               <div className="text-caption tracking-[0.12em] font-bold text-volt">PROFIL SAYA</div>
               <div className="flex items-center gap-3 min-w-0">
                 <h1 className="font-display font-bold text-[28px] md:text-5xl leading-none m-0 truncate">{displayName}</h1>
-                <LevelBadge level={level} />
               </div>
             </div>
             <Link href={`${basePath}/edit`} className={`${headerButton} hidden! md:inline-flex!`}>
@@ -168,7 +180,7 @@ export function ProfileView({
             ))}
           </div>
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-            <div className="grid grid-cols-3 gap-2.5 w-full max-w-135">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 w-full max-w-180">
               {stats.map((s) => (
                 <div key={s.label} className="bg-snow/8 rounded-tile px-3 py-2.5 md:px-3.5 md:py-3 min-w-0">
                   <div className="text-2xs uppercase tracking-tag text-snow/70 truncate">{s.label}</div>
@@ -227,7 +239,16 @@ export function ProfileView({
             </div>
           )}
 
-          {tab === "statistik" && <StatsTab boards={boards} averages={averages} latest={latest} basePath={basePath} />}
+          {tab === "statistik" && (
+            <StatsTab
+              boards={boards}
+              radar={categoryAverages(boards, reports)}
+              averages={averages}
+              latest={latest}
+              nextSession={nextSession}
+              basePath={basePath}
+            />
+          )}
           {tab === "catatan" && (
             <NotesTab
               shown={filterReports(reports, { coach, year })}
@@ -236,11 +257,16 @@ export function ProfileView({
               {...reportFilterOptions(reports)}
               coach={coach}
               year={year}
+              recurring={recurringWeakSkills(boards, reports)}
+              pin={pin}
+              best={best}
+              weakest={weakest}
+              nextSession={nextSession}
               basePath={basePath}
             />
           )}
           {tab === "riwayat" && (
-            <HistoryTab entries={events} points={points} wins={wins} losses={losses} coachingSessions={reports.length} basePath={basePath} />
+            <HistoryTab entries={events} points={points} wins={wins} losses={losses} coachingSessions={reports.length} nextSession={nextSession} basePath={basePath} />
           )}
 
         </div>
