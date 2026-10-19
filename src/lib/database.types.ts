@@ -582,12 +582,6 @@ export type Database = {
         Update: Partial<LeagueVolume>;
         Relationships: [];
       };
-      event_transactions: {
-        Row: EventTransaction;
-        Insert: Insert<EventTransaction, "event_id" | "type" | "label">;
-        Update: Partial<EventTransaction>;
-        Relationships: [];
-      };
     };
     Views: Record<string, never>;
     Functions: {

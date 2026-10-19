@@ -30,7 +30,6 @@ export function NewEventWizard({
   presets,
   hourRates,
   initialLeague,
-  hourRates,
 }: {
   players: PlayerSummary[];
   venues: Venue[];
@@ -38,7 +37,6 @@ export function NewEventWizard({
   presets: PresetSummary[];
   hourRates: CourtHourRate[];
   initialLeague?: import("./useEventWizard").InitialLeagueContext;
-  hourRates: CourtHourRate[];
 }) {
   const w = useEventWizard({ players, courts, initialLeague });
   const back = w.step > 1 && (
