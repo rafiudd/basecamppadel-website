@@ -1,5 +1,6 @@
 "use client";
 
+import { unwrap } from "@/lib/actionState";
 import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "nextjs-toploader/app";
@@ -290,7 +291,7 @@ export function SessionFormClient({
     run("save", async () => {
       try {
         if (isEdit && sessionId) {
-          await updateCoachingSessionAction({
+          unwrap(await updateCoachingSessionAction({
             sessionId,
             title: title.trim(),
             sessionDate,
@@ -309,11 +310,11 @@ export function SessionFormClient({
               playerId: pid,
               groupId: playerGroupMap[pid] || null,
             })),
-          });
+          }));
           toast.success(`Sesi "${title.trim()}" berhasil diperbarui`);
           router.push(`/admin/coaching?session=${sessionId}`);
         } else {
-          const res = await createCoachingSessionAction({
+          const res = unwrap(await createCoachingSessionAction({
             title: title.trim(),
             sessionDate,
             venueId: venueId || null,
@@ -326,7 +327,7 @@ export function SessionFormClient({
               coachId: g.coachId || null,
             })),
             playerIds: sessionPlayerIds,
-          });
+          }));
           toast.success(`Sesi "${title.trim()}" berhasil dibuat`);
           router.push(`/admin/coaching?session=${res.sessionId}`);
         }
@@ -345,7 +346,7 @@ export function SessionFormClient({
     }
     run("delete", async () => {
       try {
-        await deleteCoachingSessionAction(sessionId);
+        unwrap(await deleteCoachingSessionAction(sessionId));
         toast.success(`Sesi "${title}" berhasil dihapus`);
         router.push("/admin/coaching");
         router.refresh();

@@ -206,3 +206,26 @@ export function computeScoreDelta(
     return { delta: 0, symbol: "=", formatted: "= 0" };
   }
 }
+
+export type SessionTab = "berjalan" | "selesai";
+
+/**
+ * "Selesai" = finished sessions, "Berjalan" = the rest (draft / active). Order follows the input.
+ */
+export function splitSessionsByStatus<T extends { status: string }>(sessions: T[]): Record<SessionTab, T[]> {
+  return {
+    berjalan: sessions.filter((s) => s.status !== "finished"),
+    selesai: sessions.filter((s) => s.status === "finished"),
+  };
+}
+
+/**
+ * Which tab to open: the one asked for, else the one holding the asked session, else "Berjalan"
+ * unless it is empty.
+ */
+export function pickSessionTab(split: Record<SessionTab, { id: string }[]>, asked?: string, sessionId?: string): SessionTab {
+  if (asked === "berjalan" || asked === "selesai") return asked;
+  if (sessionId && split.selesai.some((s) => s.id === sessionId)) return "selesai";
+  if (sessionId && split.berjalan.some((s) => s.id === sessionId)) return "berjalan";
+  return split.berjalan.length || !split.selesai.length ? "berjalan" : "selesai";
+}

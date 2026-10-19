@@ -1,5 +1,6 @@
 "use client";
 
+import { unwrap } from "@/lib/actionState";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Modal";
 import type { CoachingSkill, Player } from "@/lib/database.types";
@@ -95,7 +96,7 @@ export function ImportRekapModal({
 
     startTransition(async () => {
       try {
-        await importRekapDraftsAction({
+        unwrap(await importRekapDraftsAction({
           sessionId,
           items: validRows.map((r) => ({
             playerId: r.matchedPlayerId!,
@@ -105,7 +106,7 @@ export function ImportRekapModal({
             groupName: r.groupName,
             coachName: r.coachName,
           })),
-        });
+        }));
         toast.success(`Berhasil mengimpor ${validRows.length} penilaian draft`);
         onSuccess();
         onClose();

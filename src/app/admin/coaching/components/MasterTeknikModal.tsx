@@ -1,5 +1,6 @@
 "use client";
 
+import { unwrap } from "@/lib/actionState";
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Modal";
 import type { CoachingSkill } from "@/lib/database.types";
@@ -47,7 +48,7 @@ export function MasterTeknikModal({
     );
     run(`toggle:${skill.id}`, async () => {
       try {
-        await toggleSkillActiveAction(skill.id, nextActive);
+        unwrap(await toggleSkillActiveAction(skill.id, nextActive));
         toast.success(nextActive ? `Teknik "${skill.name}" diaktifkan` : `Teknik "${skill.name}" dinonaktifkan`);
       } catch (err: any) {
         setMessage(err.message || "Gagal mengubah status");
@@ -72,7 +73,7 @@ export function MasterTeknikModal({
     const orderedIds = updatedSkills.map((s) => s.id);
     run(`move:${moved.id}:${dir}`, async () => {
       try {
-        await reorderSkillsAction(orderedIds);
+        unwrap(await reorderSkillsAction(orderedIds));
         toast.success("Urutan teknik berhasil diperbarui");
       } catch (err: any) {
         setMessage(err.message || "Gagal mengubah urutan");
@@ -88,12 +89,12 @@ export function MasterTeknikModal({
     run("save", async () => {
       try {
         if (editingSkill) {
-          await upsertSkillAction({
+          unwrap(await upsertSkillAction({
             id: editingSkill.id,
             name: formData.name,
             category: formData.category,
             type: formData.type,
-          });
+          }));
           setSkills((prev) =>
             prev.map((s) =>
               s.id === editingSkill.id
@@ -104,11 +105,11 @@ export function MasterTeknikModal({
           setEditingSkill(null);
           toast.success(`Teknik "${formData.name}" berhasil diperbarui`);
         } else {
-          await upsertSkillAction({
+          unwrap(await upsertSkillAction({
             name: formData.name,
             category: formData.category,
             type: formData.type,
-          });
+          }));
           toast.success(`Teknik "${formData.name}" berhasil ditambahkan`);
           window.location.reload();
         }
