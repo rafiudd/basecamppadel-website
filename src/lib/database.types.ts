@@ -380,6 +380,95 @@ export type CoachingAssessment = {
   created_at: string;
 };
 
+export type ClassCategory = "dasar" | "teknik" | "taktik" | "mf" | "khusus";
+
+export type ClassItem = {
+  id: string;
+  slug: string;
+  title: string;
+  category: ClassCategory;
+  description: string;
+  suitable_pins: string[];
+  video_url: string | null;
+  cover_image_url: string | null;
+  gallery_urls: string[];
+  total_sessions: number;
+  duration_per_session: number;
+  capacity: number;
+  price: number;
+  default_coach_id: string | null;
+  min_participants: number;
+  learning_points: string[];
+  sessions_breakdown: any;
+  requirements: string[];
+  published: boolean;
+  is_new: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClassScheduleStatus = "active" | "full" | "completed" | "cancelled";
+
+export type ClassSchedule = {
+  id: string;
+  class_id: string;
+  coach_id: string | null;
+  venue_id: string | null;
+  dates_label: string;
+  time_range: string;
+  start_date: string;
+  custom_capacity: number | null;
+  status: ClassScheduleStatus;
+  created_at: string;
+};
+
+export type ClassParticipantPaymentStatus = "pending" | "paid" | "refunded" | "cancelled";
+
+export type ClassParticipant = {
+  id: string;
+  schedule_id: string;
+  class_id: string;
+  player_id: string | null;
+  user_id: string | null;
+  name: string;
+  phone: string;
+  payment_status: ClassParticipantPaymentStatus;
+  attendance: any;
+  notes: string;
+  created_at: string;
+};
+
+export type ClassComment = {
+  id: string;
+  class_id: string;
+  user_id: string | null;
+  player_id: string | null;
+  author_name: string;
+  comment: string;
+  parent_id: string | null;
+  coach_id: string | null;
+  is_coach_reply: boolean;
+  hidden: boolean;
+  created_at: string;
+};
+
+export type ClassReview = {
+  id: string;
+  class_id: string;
+  schedule_id: string | null;
+  participant_id: string | null;
+  user_id: string | null;
+  player_id: string | null;
+  author_name: string;
+  rating: number;
+  content: string;
+  coach_reply: string | null;
+  coach_reply_at: string | null;
+  hidden: boolean;
+  created_at: string;
+};
+
 type Insert<T, Required extends keyof T> = Pick<T, Required> & Partial<Omit<T, Required>>;
 
 export type Database = {
@@ -539,6 +628,36 @@ export type Database = {
         Row: LeagueVolume;
         Insert: Insert<LeagueVolume, "league_id" | "volume_number">;
         Update: Partial<LeagueVolume>;
+        Relationships: [];
+      };
+      classes: {
+        Row: ClassItem;
+        Insert: Insert<ClassItem, "slug" | "title" | "category">;
+        Update: Partial<ClassItem>;
+        Relationships: [];
+      };
+      class_schedules: {
+        Row: ClassSchedule;
+        Insert: Insert<ClassSchedule, "class_id" | "dates_label" | "time_range">;
+        Update: Partial<ClassSchedule>;
+        Relationships: [];
+      };
+      class_participants: {
+        Row: ClassParticipant;
+        Insert: Insert<ClassParticipant, "schedule_id" | "class_id" | "name">;
+        Update: Partial<ClassParticipant>;
+        Relationships: [];
+      };
+      class_comments: {
+        Row: ClassComment;
+        Insert: Insert<ClassComment, "class_id" | "author_name" | "comment">;
+        Update: Partial<ClassComment>;
+        Relationships: [];
+      };
+      class_reviews: {
+        Row: ClassReview;
+        Insert: Insert<ClassReview, "class_id" | "author_name" | "rating" | "content">;
+        Update: Partial<ClassReview>;
         Relationships: [];
       };
     };
