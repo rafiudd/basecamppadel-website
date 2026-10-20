@@ -316,3 +316,36 @@ test("skillBoards: a skill added later to an existing category joins that catego
   ]);
   assert.equal(teknik.total, 4);
 });
+
+test("categoryAverages (Peta skill): latest per category vs the first rated session", async () => {
+  const { categoryAverages } = await import("../src/lib/coachingRules.ts");
+  const map = categoryAverages(skillBoards(skills, reports), reports);
+  assert.deepEqual(map.axes, [
+    { label: "Groundstroke", now: 3.5, first: 3 },
+    { label: "Di net", now: 3.5, first: null }, // not rated in the first session
+    { label: "Taktik", now: 2.5, first: null },
+  ]);
+  assert.equal(map.nowDate, "2026-10-05");
+  assert.equal(map.firstDate, "2026-09-12");
+  // one session: nothing to compare with
+  const one = categoryAverages(skillBoards(skills, [reports[0]]), [reports[0]]);
+  assert.equal(one.firstDate, null);
+  assert.ok(one.axes.every((a) => a.first === null));
+  assert.deepEqual(categoryAverages(skillBoards(skills, []), []).axes, []);
+});
+
+test("recurringWeakSkills (Sering dibahas coach): under 3 in the most sessions first", async () => {
+  const { recurringWeakSkills } = await import("../src/lib/coachingRules.ts");
+  assert.deepEqual(recurringWeakSkills(skillBoards(skills, reports), reports), [{ label: "Positioning", sessions: 1, total: 3 }]);
+  const more = [...reports, report("r4", "2026-10-12", "Lukman", { positioning: 2, backhand: 2.5 })];
+  assert.deepEqual(recurringWeakSkills(skillBoards(skills, more), more), [
+    { label: "Positioning", sessions: 2, total: 4 },
+    { label: "Backhand", sessions: 1, total: 4 },
+  ]);
+  assert.deepEqual(recurringWeakSkills(skillBoards(skills, more), more, 1).map((x) => x.label), ["Positioning"]);
+});
+
+test("LEVEL_PIN: every level has a pin color name", async () => {
+  const { LEVEL_NAMES, LEVEL_PIN } = await import("../src/lib/coaching.ts");
+  assert.deepEqual(LEVEL_NAMES.map((l) => LEVEL_PIN[l]), ["Putih", "Kuning", "Biru", "Merah", "Hitam"]);
+});

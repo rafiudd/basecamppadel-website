@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { matchHistory, type EventEntry, type EventKind } from "@/lib/coachingRules";
+import { matchHistory, type EventEntry, type EventKind, type NextSession } from "@/lib/coachingRules";
+import { NextSessionCard } from "./SideCards";
 import { FINAL_STAGE_LABEL, type FinalStage } from "@/lib/competition";
 import { formatDayMonthYear, formatPointsDelta, winRate } from "@/lib/format";
 import { primaryButton } from "@/components/account/styles";
@@ -45,6 +46,7 @@ export function HistoryTab({
   wins,
   losses,
   coachingSessions,
+  nextSession,
   basePath = "/akun",
 }: {
   entries: EventEntry[];
@@ -52,6 +54,7 @@ export function HistoryTab({
   wins: number;
   losses: number;
   coachingSessions: number;
+  nextSession?: NextSession | null;
   basePath?: string;
 }) {
   const matches = matchHistory(entries);
@@ -99,32 +102,35 @@ export function HistoryTab({
             ))}
           </section>
 
-          <section className={card}>
-            <h2 className="font-display font-bold text-xl m-0 pb-2.5">Riwayat match</h2>
-            {matches.length === 0 ? (
-              <p className={`${row} m-0 text-sm text-ink/60`}>Belum ada match yang tercatat.</p>
-            ) : (
-              matches.map((m) => (
-                <div key={m.id} className={row}>
-                  <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                    <span className="font-bold text-input truncate">{m.label}</span>
-                    <span className="text-caption text-ink/70 truncate">
-                      {m.partner && `bareng ${m.partner} · `}vs {m.opponent || "—"}
+          <div className="flex flex-col gap-5">
+            <section className={card}>
+              <h2 className="font-display font-bold text-xl m-0 pb-2.5">Riwayat match</h2>
+              {matches.length === 0 ? (
+                <p className={`${row} m-0 text-sm text-ink/60`}>Belum ada match yang tercatat.</p>
+              ) : (
+                matches.map((m) => (
+                  <div key={m.id} className={row}>
+                    <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                      <span className="font-bold text-input truncate">{m.label}</span>
+                      <span className="text-caption text-ink/70 truncate">
+                        {m.partner && `bareng ${m.partner} · `}vs {m.opponent || "—"}
+                      </span>
+                    </div>
+                    {m.score && <div className="flex-none font-display font-bold text-base">{m.score}</div>}
+                    <span
+                      aria-label={m.result === "W" ? "Menang" : "Kalah"}
+                      className={`flex-none w-7 h-7 rounded-lg inline-flex items-center justify-center font-bold text-caption ${
+                        m.result === "W" ? "bg-win/14 text-[#23794A]" : "bg-loss/12 text-loss"
+                      }`}
+                    >
+                      {m.result}
                     </span>
                   </div>
-                  {m.score && <div className="flex-none font-display font-bold text-base">{m.score}</div>}
-                  <span
-                    aria-label={m.result === "W" ? "Menang" : "Kalah"}
-                    className={`flex-none w-7 h-7 rounded-lg inline-flex items-center justify-center font-bold text-caption ${
-                      m.result === "W" ? "bg-win/14 text-[#23794A]" : "bg-loss/12 text-loss"
-                    }`}
-                  >
-                    {m.result}
-                  </span>
-                </div>
-              ))
-            )}
-          </section>
+                ))
+              )}
+            </section>
+            <NextSessionCard session={nextSession} />
+          </div>
         </div>
       )}
     </div>

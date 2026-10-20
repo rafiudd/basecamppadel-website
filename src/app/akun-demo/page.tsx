@@ -7,7 +7,7 @@ import { demoSignOut } from "./actions";
 import { ACCOUNT_DEMO } from "@/lib/config";
 import { COACHING_SKILLS } from "@/lib/coachingSkills";
 import { LEVEL_DEFINITIONS } from "@/lib/coaching";
-import { demoCandidates, demoHistory, demoProfile, demoRecord, demoReports } from "@/lib/demoAccount";
+import { demoCandidates, demoHistory, demoNextSession, demoProfile, demoRecord, demoReports } from "@/lib/demoAccount";
 
 export const metadata: Metadata = { title: "Demo profil — Basecamp Padel", robots: { index: false } };
 
@@ -33,6 +33,7 @@ export default async function AkunDemoPage({
       reports={empty ? [] : demoReports}
       level={empty ? null : { name: "Low Bronze", color: LEVEL_DEFINITIONS["Low Bronze"].color }}
       history={empty ? { history: [], awards: [], events: [] } : demoHistory}
+      nextSession={demoNextSession}
       points={empty ? 0 : demoRecord.points}
       playerName="Nadia"
       wins={empty ? 0 : demoRecord.wins}
