@@ -1,7 +1,7 @@
 "use client";
 
 import { unwrap } from "@/lib/actionState";
-import { useState, useEffect, useTransition, useMemo } from "react";
+import { useState, useEffect, useTransition, useMemo, useRef } from "react";
 import { useRouter } from "nextjs-toploader/app";
 import { useTopLoaderWhile } from "@/components/TopLoader";
 import type {
@@ -88,7 +88,53 @@ export function CoachingClient({
   const [isPublishingAll, setIsPublishingAll] = useState(false);
   /** Which footer button is running, so only that one shows the spinner. */
   const [busyAction, setBusyAction] = useState<"draft" | "submit" | null>(null);
-  useTopLoaderWhile(isPending || busyAction !== null || isPublishingAll);
+  useTopLoaderWhile(busyAction !== null || isPublishingAll);
+
+  // Debounce ref for auto-saving
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingPayloadRef = useRef<{
+    sessionId: string;
+    playerId: string;
+    coachId: string | null;
+    groupId: string | null;
+    scores: Record<string, number>;
+    activeSkillIds: string[];
+    evaluation: string;
+    nextPractice: string;
+    publishedToPlayer: boolean;
+  } | null>(null);
+
+  // Execute background save without triggering global topLoader
+  const executeAutoSave = async (payload: NonNullable<typeof pendingPayloadRef.current>) => {
+    setSaveStatus("Menyimpan draft...");
+    try {
+      unwrap(await saveAssessmentDraftAction(payload));
+      setSaveStatus("Tersimpan otomatis");
+    } catch {
+      setSaveStatus("Gagal menyimpan otomatis");
+    }
+  };
+
+  // Flush pending save immediately when switching player or clicking action
+  const flushPendingAutoSave = () => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+    if (pendingPayloadRef.current) {
+      const payload = pendingPayloadRef.current;
+      pendingPayloadRef.current = null;
+      executeAutoSave(payload);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
 
   // Filtered players list
   const filteredPlayers = useMemo(() => {
@@ -134,7 +180,7 @@ export function CoachingClient({
       setPublishedToPlayer(asm ? asm.published_to_player : true);
       setSaveStatus(asm?.updated_at ? "Tersimpan otomatis" : "Belum disimpan");
     }
-  }, [currentPlayerItem?.player.id, sessionData]);
+  }, [currentPlayerItem?.player.id, sessionData?.session.id]);
 
   // Handle Score Toggle / Click (scale 1 - 5, step 0.5)
   const handleScoreClick = (skillId: string, val: number) => {
@@ -145,7 +191,7 @@ export function CoachingClient({
       newScores[skillId] = val;
     }
     setScores(newScores);
-    triggerAutoSave(newScores, activeSkillIds, evaluation, nextPractice, publishedToPlayer);
+    triggerAutoSave(newScores, activeSkillIds, evaluation, nextPractice, publishedToPlayer, 1200);
   };
 
   // Toggle active skills chip
@@ -154,43 +200,54 @@ export function CoachingClient({
       ? activeSkillIds.filter((id) => id !== skillId)
       : [...activeSkillIds, skillId];
     setActiveSkillIds(newSkillIds);
-    triggerAutoSave(scores, newSkillIds, evaluation, nextPractice, publishedToPlayer);
+    triggerAutoSave(scores, newSkillIds, evaluation, nextPractice, publishedToPlayer, 1200);
   };
 
-  // Debounced Auto-save
+  // Debounced Auto-save (default jeda 3 detik untuk pengetikan teks)
   const triggerAutoSave = (
     s: Record<string, number>,
     aSkills: string[],
     ev: string,
     np: string,
-    pub: boolean
+    pub: boolean,
+    delayMs = 3000
   ) => {
     if (!currentPlayerItem || !sessionData) return;
-    setSaveStatus("Menyimpan draft...");
 
-    startTransition(async () => {
-      try {
-        unwrap(await saveAssessmentDraftAction({
-          sessionId: sessionData.session.id,
-          playerId: currentPlayerItem.player.id,
-          coachId: currentPlayerItem.group?.coach_id || null,
-          groupId: currentPlayerItem.group?.id || null,
-          scores: s,
-          activeSkillIds: aSkills,
-          evaluation: ev,
-          nextPractice: np,
-          publishedToPlayer: pub,
-        }));
-        setSaveStatus("Tersimpan otomatis");
-      } catch {
-        setSaveStatus("Gagal menyimpan otomatis");
-      }
-    });
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    setSaveStatus("Mengetik...");
+
+    const payload = {
+      sessionId: sessionData.session.id,
+      playerId: currentPlayerItem.player.id,
+      coachId: currentPlayerItem.group?.coach_id || null,
+      groupId: currentPlayerItem.group?.id || null,
+      scores: s,
+      activeSkillIds: aSkills,
+      evaluation: ev,
+      nextPractice: np,
+      publishedToPlayer: pub,
+    };
+    pendingPayloadRef.current = payload;
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSaveTimerRef.current = null;
+      pendingPayloadRef.current = null;
+      executeAutoSave(payload);
+    }, delayMs);
   };
 
   // Manual Simpan Draft
   const handleSaveDraft = () => {
     if (!currentPlayerItem || !sessionData) return;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+      pendingPayloadRef.current = null;
+    }
     setBusyAction("draft");
     startTransition(async () => {
       setSaveStatus("Menyimpan draft...");
@@ -221,6 +278,11 @@ export function CoachingClient({
   // Simpan & Kirim (Submit) lalu lanjut ke pemain berikutnya
   const handleSubmitAndNext = () => {
     if (!currentPlayerItem || !sessionData) return;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+      pendingPayloadRef.current = null;
+    }
     setBusyAction("submit");
     startTransition(async () => {
       setSaveStatus("Mengirim...");
@@ -368,8 +430,14 @@ export function CoachingClient({
             currentPlayerItem={currentPlayerItem}
             activePlayerIndex={activePlayerIndex}
             totalPlayers={filteredPlayers.length}
-            onPrevPlayer={() => setActivePlayerIndex(activePlayerIndex - 1)}
-            onNextPlayer={() => setActivePlayerIndex(activePlayerIndex + 1)}
+            onPrevPlayer={() => {
+              flushPendingAutoSave();
+              setActivePlayerIndex(activePlayerIndex - 1);
+            }}
+            onNextPlayer={() => {
+              flushPendingAutoSave();
+              setActivePlayerIndex(activePlayerIndex + 1);
+            }}
             onToggleMobilePicker={() => setShowMobilePlayerPicker(!showMobilePlayerPicker)}
           />
 
@@ -384,6 +452,7 @@ export function CoachingClient({
               onSearchChange={setSearchQuery}
               onStatusFilterChange={setStatusFilter}
               onSelectPlayer={(index) => {
+                flushPendingAutoSave();
                 setActivePlayerIndex(index);
                 setShowMobilePlayerPicker(false);
               }}
@@ -410,15 +479,15 @@ export function CoachingClient({
               onToggleSkillChip={handleToggleSkillChip}
               onEvaluationChange={(val) => {
                 setEvaluation(val);
-                triggerAutoSave(scores, activeSkillIds, val, nextPractice, publishedToPlayer);
+                triggerAutoSave(scores, activeSkillIds, val, nextPractice, publishedToPlayer, 3000);
               }}
               onNextPracticeChange={(val) => {
                 setNextPractice(val);
-                triggerAutoSave(scores, activeSkillIds, evaluation, val, publishedToPlayer);
+                triggerAutoSave(scores, activeSkillIds, evaluation, val, publishedToPlayer, 3000);
               }}
               onPublishedChange={(val) => {
                 setPublishedToPlayer(val);
-                triggerAutoSave(scores, activeSkillIds, evaluation, nextPractice, val);
+                triggerAutoSave(scores, activeSkillIds, evaluation, nextPractice, val, 1000);
               }}
               onSaveDraft={handleSaveDraft}
               onSubmitAndNext={handleSubmitAndNext}

@@ -199,6 +199,12 @@ export async function getSessionFullData(
 
   const playerIds = (sessionPlayers || []).map((sp) => sp.player_id);
 
+  // Direct fetch fallback for players in case adapter join was not populated
+  const { data: directPlayers } = playerIds.length > 0
+    ? await supabase.from("players").select("*").in("id", playerIds)
+    : { data: [] };
+  const playerMap = new Map((directPlayers || []).map((p) => [p.id, p]));
+
   // Previous submitted assessments for delta computation
   // Find submitted assessments before this session date
   const { data: pastAssessments } = playerIds.length > 0
@@ -242,7 +248,7 @@ export async function getSessionFullData(
   const playerItems: SessionPlayerItem[] = [];
 
   for (const sp of sessionPlayers || []) {
-    const p = sp.players as unknown as Player | null;
+    const p = (sp.players as unknown as Player | null) || (sp.player_id ? playerMap.get(sp.player_id) : null);
     if (!p) continue;
 
     const grp = sp.group_id ? groupMap.get(sp.group_id) || null : null;

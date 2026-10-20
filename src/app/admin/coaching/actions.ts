@@ -72,7 +72,8 @@ export async function saveAssessmentDraftAction(data: {
 
     if (error) throw new Error(error.message);
 
-    revalidatePath("/admin/coaching");
+    // Note: Do not revalidatePath here so auto-save is a fast, quiet background write
+    // that doesn't trigger Next.js page re-renders or router reload while typing.
     return { success: true, level: levelRes.level };
   });
 }
