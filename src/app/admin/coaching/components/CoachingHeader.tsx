@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "nextjs-toploader/app";
 import type { Coach } from "@/lib/database.types";
 import type { CoachingSessionSummary, SessionFullData } from "@/lib/coaching-db";
-import { SESSION_TABS, type SessionTab } from "@/lib/coaching";
+import { SESSION_TABS, TAB_STATUS, type SessionTab } from "@/lib/coaching";
+import { useTopLoaderWhile } from "@/components/TopLoader";
+import { toast } from "@/components/ui/Toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { setCoachingSessionStatusAction } from "../session-actions";
 import {
   PlusIcon,
   EditIcon,
@@ -257,6 +261,16 @@ export function CoachingHeader({
           </select>
         </label>
 
+        {/* Status of the session on screen: move it to another tab in one click */}
+        {activeSession && (
+          <div className="flex-none">
+            <span className="text-[12px] tracking-[0.08em] text-[#FBF7F1]/70 uppercase mb-2 block font-medium">
+              Status sesi
+            </span>
+            <SessionStatusSwitch sessionId={activeSession.id} current={sessionTab} />
+          </div>
+        )}
+
         {/* Coach filter */}
         <label className="block flex-1 min-w-44">
           <span className="text-[12px] tracking-[0.08em] text-[#FBF7F1]/70 uppercase mb-2 block font-medium">
@@ -329,6 +343,15 @@ export function CoachingHeader({
           </select>
         </div>
 
+        {activeSession && (
+          <div>
+            <span className="text-[11px] tracking-[0.08em] text-[#FBF7F1]/60 uppercase mb-1.5 block font-semibold">
+              Status sesi
+            </span>
+            <SessionStatusSwitch sessionId={activeSession.id} current={sessionTab} compact />
+          </div>
+        )}
+
         {/* Row 2: Coach filter & Progres Penilaian in 2-column layout */}
         <div className="grid grid-cols-2 gap-2.5 items-end">
           <div>
@@ -382,6 +405,83 @@ export function CoachingHeader({
 }
 
 const TAB_LABELS: Record<SessionTab, string> = { draft: "Draft", berjalan: "Berjalan", selesai: "Selesai" };
+
+/**
+ * The tab a status change is heading to. Module scope, not a ref: the action's redirect remounts
+ * the page (Next's RedirectBoundary), so the switch that arrives is a fresh instance.
+ */
+let movingTo: SessionTab | null = null;
+
+/**
+ * Draft / Berjalan / Selesai for the session on screen (admin and coach). The pick shows at once
+ * while the save and the new tab load behind the top bar (the action redirects there, inside the
+ * same transition); on an error it falls back to the saved status.
+ */
+function SessionStatusSwitch({ sessionId, current, compact = false }: { sessionId: string; current: SessionTab; compact?: boolean }) {
+  const [pending, startTransition] = useTransition();
+  const [shown, setShown] = useOptimistic(current);
+  const [asking, setAsking] = useState<SessionTab | null>(null);
+  useTopLoaderWhile(pending);
+
+  // the page has arrived on the picked tab (desktop and mobile both mount; the first one toasts)
+  useEffect(() => {
+    if (movingTo !== current) return;
+    movingTo = null;
+    toast.success(`Sesi dipindah ke ${TAB_LABELS[current]}`);
+  }, [current]);
+
+  const move = (tab: SessionTab) => {
+    setAsking(null);
+    movingTo = tab;
+    startTransition(async () => {
+      setShown(tab);
+      const res = await setCoachingSessionStatusAction(sessionId, TAB_STATUS[tab]);
+      // only an error comes back; success redirects
+      if (res?.error) {
+        movingTo = null;
+        toast.error(res.error);
+      }
+    });
+  };
+
+  return (
+    <div role="radiogroup" aria-label="Status sesi" className={`flex gap-1 p-1 rounded-lg bg-[#FBF7F1]/10 ${compact ? "w-full" : "min-h-11"}`}>
+      {SESSION_TABS.map((t) => {
+        const on = shown === t;
+        return (
+          <button
+            key={t}
+            type="button"
+            role="radio"
+            aria-checked={current === t}
+            disabled={pending}
+            data-loading={(pending && on) || undefined}
+            onClick={() => t !== shown && setAsking(t)}
+            className={`flex-1 border-0 rounded-md font-sans font-bold whitespace-nowrap cursor-pointer transition-colors disabled:cursor-wait ${
+              compact ? "min-h-9 px-2 text-xs" : "px-3.5 text-sm"
+            } ${on ? "bg-[#FFD43B] text-[#17151F]" : "bg-transparent text-[#FBF7F1]/75 hover:text-[#FBF7F1] hover:bg-[#FBF7F1]/8"}`}
+          >
+            {TAB_LABELS[t]}
+          </button>
+        );
+      })}
+      {asking && (
+        <ConfirmDialog
+          title="Ubah status sesi"
+          message={
+            <>
+              Pindahkan sesi ini dari <b>{TAB_LABELS[current]}</b> ke <b>{TAB_LABELS[asking]}</b>?
+              {asking === "selesai" && " Sesi yang selesai tidak lagi tampil sebagai Sesi berikutnya di profil pemain."}
+            </>
+          }
+          confirmLabel={`Ya, pindah ke ${TAB_LABELS[asking]}`}
+          onConfirm={() => move(asking)}
+          onCancel={() => setAsking(null)}
+        />
+      )}
+    </div>
+  );
+}
 
 /** The session tabs; each opens its own list (the first session in it). */
 function SessionTabs({ active, counts }: { active: SessionTab; counts: Record<SessionTab, number> }) {

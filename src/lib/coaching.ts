@@ -220,7 +220,15 @@ export function computeScoreDelta(
 export const SESSION_TABS = ["draft", "berjalan", "selesai"] as const;
 export type SessionTab = (typeof SESSION_TABS)[number];
 
-const TAB_STATUS: Record<SessionTab, string> = { draft: "draft", berjalan: "active", selesai: "finished" };
+export type SessionStatus = "draft" | "active" | "finished";
+
+/** coaching_sessions.status behind each tab. */
+export const TAB_STATUS: Record<SessionTab, SessionStatus> = { draft: "draft", berjalan: "active", selesai: "finished" };
+
+/** The tab a session with this status sits in. */
+export function statusTab(status: SessionStatus): SessionTab {
+  return SESSION_TABS.find((t) => TAB_STATUS[t] === status) ?? "draft";
+}
 
 /** Sessions grouped by tab (= status). Order follows the input. */
 export function splitSessionsByStatus<T extends { status: string }>(sessions: T[]): Record<SessionTab, T[]> {

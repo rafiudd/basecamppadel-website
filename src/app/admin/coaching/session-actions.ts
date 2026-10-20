@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { guardResult } from "@/lib/server/action";
-import { requireAdmin } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { requireAdmin, requireAdminOrCoach } from "@/lib/auth";
+import { statusTab, type SessionStatus } from "@/lib/coaching";
 
 export async function createCoachingSessionAction(data: {
   title: string;
@@ -233,5 +235,22 @@ export async function deleteCoachingSessionAction(sessionId: string) {
     if (error) throw new Error(error.message);
     revalidatePath("/admin/coaching");
     return { success: true };
+  });
+}
+
+/**
+ * Moves a session to Draft / Berjalan / Selesai, for admin and coach, through
+ * coaching_set_session_status (0021): coaching_sessions is admin-write only under RLS. Then opens
+ * the session in its new tab in the same round trip, so the old tab (no longer holding it) never
+ * renders in between. Returns only on error.
+ */
+export async function setCoachingSessionStatusAction(sessionId: string, status: SessionStatus) {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("coaching_set_session_status", { p_session_id: sessionId, p_status: status });
+    if (error) throw new Error(error.message);
+    revalidatePath(`/admin/coaching/sessions/${sessionId}`);
+    redirect(`/admin/coaching?when=${statusTab(status)}&session=${sessionId}`);
   });
 }
