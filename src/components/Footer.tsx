@@ -5,7 +5,7 @@ const linkClass = "font-sans text-sm text-snow/60 no-underline hover:text-volt t
 
 export function Footer() {
   return (
-    <footer className="bg-ink text-snow/60 px-6 md:px-12 pt-10 pb-24 md:py-10 flex items-center justify-between flex-wrap gap-4 mt-auto">
+    <footer className="bg-ink text-snow/60 px-6 md:px-12 pt-10 pb-[calc(6rem+env(safe-area-inset-bottom))] md:py-10 flex items-center justify-between flex-wrap gap-4 mt-auto">
       <div className="flex items-center gap-3">
         <MountainMark size={24} />
         <div className="font-display font-bold text-sm text-snow">BASECAMP PADEL</div>

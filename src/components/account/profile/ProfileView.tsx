@@ -207,7 +207,7 @@ export function ProfileView({
         </div>
       </section>
 
-      <nav aria-label="Profil" className="bg-white border-b border-ink/8 px-4 md:px-12 sticky top-14 md:top-[88px] z-20">
+      <nav aria-label="Profil" className="bg-white border-b border-ink/8 px-4 md:px-12 sticky top-[calc(3.5rem+env(safe-area-inset-top))] md:top-[88px] z-20">
         <div className="max-w-276 mx-auto flex overflow-x-auto">
           {TABS.map((t) => (
             <Link
