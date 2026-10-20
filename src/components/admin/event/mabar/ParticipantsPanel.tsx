@@ -8,7 +8,7 @@ import { SearchSelect } from "@/components/ui/SearchSelect";
 import { toast } from "@/components/ui/Toast";
 import { Spinner } from "@/components/ui/Spinner";
 import { addMabarWalkIn, removeMabarParticipant, setMabarCheckIn, substituteMabarPlayer } from "@/app/admin/events/mabar-actions";
-import { isFixedFormat } from "@/lib/events";
+import { isFixedFormat } from "@/lib/eventFormats";
 import { mabarUnits } from "@/lib/mabar";
 import type { CompEvent, GenParticipant } from "@/lib/database.types";
 

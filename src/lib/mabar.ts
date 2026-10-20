@@ -1,5 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
-import { isFixedFormat } from "@/lib/events";
+import { isFixedFormat } from "@/lib/eventFormats";
 import { shuffle } from "@/lib/competition";
 import { mabarStandings, type MabarResult, type MabarStanding } from "@/lib/mabarRules";
 import type { CompEvent, Court, GenFormat, GenMatch, GenParticipant, GenRound, Match } from "@/lib/database.types";

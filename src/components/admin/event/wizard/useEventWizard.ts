@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { groupLabel, planFormat, shuffle, splitIntoGroups, STAGE_LABEL } from "@/lib/competition";
-import { isAmericanoFormat, isFixedFormat } from "@/lib/events";
+import { isAmericanoFormat, isFixedFormat } from "@/lib/eventFormats";
 import { previewRoundOne } from "@/lib/mabar";
 import { courtLabel } from "@/lib/format";
 import type { Court, EventType, GenFormat, ScoreMode } from "@/lib/database.types";

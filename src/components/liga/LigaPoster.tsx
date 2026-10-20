@@ -10,7 +10,8 @@ interface Props {
  */
 export function LigaPoster({ name, className = "", size = "card" }: Props) {
   // Extract words for styling (e.g. "EAST", "LEAGUE", "PADEL")
-  const words = name.trim().split(/\s+/);
+  const safeName = (name || "").trim();
+  const words = safeName.split(/\s+/);
   const w1 = words[0] || "EAST";
   const w2 = words[1] || "LEAGUE";
   const w3 = words.slice(2).join(" ") || "PADEL";

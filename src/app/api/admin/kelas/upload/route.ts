@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { requireAdmin } from "@/lib/auth";
 
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
@@ -18,13 +18,23 @@ const ALLOWED_VIDEO_TYPES: Record<string, string> = {
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100 MB
 
-function getAdminStorage() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) {
-    throw new Error("Supabase credentials belum dikonfigurasi di server.");
+function getR2Client() {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    throw new Error("Kredensial Cloudflare R2 belum dikonfigurasi di server.");
   }
-  return createClient(url, serviceKey);
+
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -80,23 +90,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Jenis file tidak valid." }, { status: 400 });
     }
 
-    const key = `${folder}/${crypto.randomUUID()}.${ext}`;
+    const key = `classes/${folder}/${crypto.randomUUID()}.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    const supabase = getAdminStorage();
-    const { data, error } = await supabase.storage.from("classes").upload(key, buffer, {
-      contentType: file.type,
-      upsert: false,
-    });
+    const s3 = getR2Client();
+    const bucket = process.env.R2_BUCKET || "basecamp-padel";
 
-    if (error) {
-      console.error("Storage upload error:", error);
-      return NextResponse.json({ error: `Upload gagal: ${error.message}` }, { status: 500 });
-    }
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: file.type,
+      })
+    );
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("classes").getPublicUrl(key);
+    const publicBase = (
+      process.env.NEXT_PUBLIC_R2_PUBLIC_URL ||
+      process.env.STORAGE_WORKER_URL ||
+      ""
+    ).replace(/\/+$/, "");
+
+    const publicUrl = `${publicBase}/${key}`;
 
     return NextResponse.json({
       success: true,

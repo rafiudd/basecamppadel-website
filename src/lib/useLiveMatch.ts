@@ -49,40 +49,37 @@ export function useLiveMatch(initial: Match | null, matchId?: string, eventId?: 
       follow(await offAirFallback(supabase, eventId, courtId));
     };
 
-    const channel = supabase
-      .channel(`matches-${matchId ?? (eventId ? `event-${eventId}${courtId ? `-${courtId}` : ""}` : "live")}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "matches",
-          ...(matchId ? { filter: `id=eq.${matchId}` } : eventId ? { filter: `event_id=eq.${eventId}` } : {}),
-        },
-        (payload) => {
-          if (payload.eventType === "DELETE") {
-            refetch();
-            return;
-          }
-          const row = payload.new as Match;
-          if (matchId) {
-            follow(row);
-            return;
-          }
-          const fits = row.is_live && (!courtId || row.court_id === courtId);
-          if (row.id === followedLive.current) {
-            // The row we follow: keep it while it fits, else look for another ON AIR one.
-            if (fits) follow(row);
-            else refetch();
-          } else if (fits && !followedLive.current) {
-            follow(row);
-          }
-        },
-      )
-      .subscribe();
+    let cancelled = false;
+    const pollLive = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (matchId) params.set("matchId", matchId);
+        if (eventId) params.set("eventId", eventId);
+        if (courtId) params.set("courtId", courtId);
+
+        const res = await fetch(`/api/live/match?${params.toString()}`);
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (cancelled) return;
+
+        if (json.match) {
+          follow(json.match);
+        } else if (!matchId && eventId) {
+          follow(await offAirFallback(supabase, eventId, courtId));
+        } else if (!matchId) {
+          follow(null);
+        }
+      } catch {
+        // network error: keep current state
+      }
+    };
+
+    pollLive();
+    const intervalId = setInterval(pollLive, 1500);
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      clearInterval(intervalId);
     };
   }, [matchId, eventId, courtId]);
 
@@ -101,17 +98,19 @@ export function usePolledLiveMatches(initial: Match[], intervalMs = 8000) {
   const [matches, setMatches] = useState<Match[]>(initial);
 
   useEffect(() => {
-    const supabase = createClient();
     let cancelled = false;
 
     const fetchLive = async () => {
-      const { data, error } = await supabase
-        .from("matches")
-        .select("*")
-        .eq("is_live", true)
-        .order("updated_at", { ascending: false })
-        .limit(MAX_POLLED);
-      if (!cancelled && !error) setMatches(data ?? []);
+      try {
+        const res = await fetch(`/api/live/match?limit=${MAX_POLLED}`);
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        if (!cancelled && Array.isArray(json.matches)) {
+          setMatches(json.matches);
+        }
+      } catch {
+        // network error: keep current state
+      }
     };
 
     fetchLive();

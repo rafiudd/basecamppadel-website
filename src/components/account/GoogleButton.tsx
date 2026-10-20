@@ -15,16 +15,7 @@ export function GoogleButton({ next }: { next: string }) {
       toast.error(message);
       setBusy(false);
     };
-    // A disabled provider would otherwise land the player on Supabase's raw JSON error page.
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`, {
-        headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
-      });
-      const settings = (await res.json()) as { external?: { google?: boolean } };
-      if (settings.external?.google === false) return fail("Login Google belum diaktifkan. Hubungi admin Basecamp.");
-    } catch {
-      // settings unreachable: try the login anyway
-    }
+    // Direct OAuth redirect
 
     const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",

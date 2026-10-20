@@ -1,5 +1,5 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
+import { MABAR_FORMAT_LABEL, scoreModeBox } from "./eventFormats";
 import eventsData from "@/data/events.json";
 import matchesData from "@/data/event-matches.json";
 import { STAGE_LABEL, type KoStage } from "@/lib/competition";
@@ -116,18 +116,14 @@ export interface EventMatchesData {
   unitSchedules?: Record<string, { name: string; rows: UnitMatchRow[] }>;
 }
 
-/** Get Supabase client suitable for current runtime. */
-function getPublicClient() {
+/** Get client suitable for current runtime. */
+function getPublicClient(): any {
   if (typeof window !== "undefined") {
-    return createBrowserClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
+    return createBrowserClient();
   }
-  return createSupabaseClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { MongoClientAdapter } = require("@/lib/server/mongoAdapter");
+  return new MongoClientAdapter();
 }
 
 function formatCourtRange(names: string[]): string {
@@ -169,11 +165,11 @@ export async function getEvents(): Promise<EventItem[]> {
         supabase.from("gen_participants").select("id, event_id").eq("active", true),
       ]);
 
-      const venueMap = new Map((venues ?? []).map((v) => [v.id, v.name]));
-      const courtMap = new Map((courts ?? []).map((c) => [c.id, c.name]));
-      const liveEventIds = new Set((liveMatches ?? []).map((m) => m.event_id).filter(Boolean));
+      const venueMap = new Map((venues ?? []).map((v: any) => [v.id, v.name]));
+      const courtMap = new Map((courts ?? []).map((c: any) => [c.id, c.name]));
+      const liveEventIds = new Set((liveMatches ?? []).map((m: any) => m.event_id).filter(Boolean));
 
-      const items: EventItem[] = dbEvents.map((e) => {
+      const items: EventItem[] = dbEvents.map((e: any) => {
         const isLive = liveEventIds.has(e.id) || e.status === "active";
         const isFinished = e.status === "finished";
         const status = isFinished ? "finished" : isLive ? "live" : "open";
@@ -184,12 +180,12 @@ export async function getEvents(): Promise<EventItem[]> {
 
         const venueName = (e.venue_id && venueMap.get(e.venue_id)) || "East Padel House";
         const courtNames = e.court_ids && e.court_ids.length > 0
-          ? formatCourtRange(e.court_ids.map((id) => courtMap.get(id)).filter(Boolean) as string[])
+          ? formatCourtRange(e.court_ids.map((id: string) => courtMap.get(id)).filter(Boolean) as string[])
           : "Court 1";
 
-        const teamCount = (teams ?? []).filter((t) => t.event_id === e.id).length;
+        const teamCount = (teams ?? []).filter((t: any) => t.event_id === e.id).length;
         const partCount = e.gen_event_id
-          ? (participants ?? []).filter((p) => p.event_id === e.gen_event_id).length
+          ? (participants ?? []).filter((p: any) => p.event_id === e.gen_event_id).length
           : 0;
 
         const totalSlots = e.type === "kompetisi"
@@ -201,9 +197,10 @@ export async function getEvents(): Promise<EventItem[]> {
           ? `${currentSlots}/${totalSlots} tim`
           : `${currentSlots}/${totalSlots} pemain`;
 
+        const koLabel = e.ko_start ? (STAGE_LABEL[e.ko_start as KoStage]?.toLowerCase() || "knockout") : "knockout";
         const subtitle = e.type === "kompetisi"
-          ? `Fase grup + ${STAGE_LABEL[e.ko_start]?.toLowerCase() || "knockout"} · ${totalSlots} tim`
-          : `${e.mabar_format ? MABAR_FORMAT_LABEL[e.mabar_format] : "Americano"} · semua level`;
+          ? `Fase grup + ${koLabel} · ${totalSlots} tim`
+          : `${e.mabar_format ? MABAR_FORMAT_LABEL[e.mabar_format as GenFormat] : "Americano"} · semua level`;
 
         const startTimeStr = e.start_time ? e.start_time.slice(0, 5) : "18:00";
         const time = formatTimeRangeStr(startTimeStr, eventDurationHours(e));
@@ -235,12 +232,12 @@ export async function getEvents(): Promise<EventItem[]> {
             ? [
                 { val: String(e.num_groups), label: "Grup" },
                 { val: `Top ${e.advance_per_group}`, label: "Lolos per grup" },
-                { val: STAGE_LABEL[e.ko_start] || "8 besar", label: "Knockout mulai" },
+                { val: e.ko_start ? (STAGE_LABEL[e.ko_start as KoStage] || "8 besar") : "8 besar", label: "Knockout mulai" },
                 { val: "1 set", label: "Per match" },
               ]
             : [
                 { val: String(totalSlots), label: "Pemain" },
-                { val: e.mabar_format ? MABAR_FORMAT_LABEL[e.mabar_format] : "Americano", label: "Format" },
+                { val: e.mabar_format ? MABAR_FORMAT_LABEL[e.mabar_format as GenFormat] : "Americano", label: "Format" },
                 { val: String(e.rounds || 7), label: "Ronde main" },
                 scoreModeBox(e.score_mode || "points", e.points_target || 24),
               ],
@@ -739,67 +736,4 @@ function mapMabarToMatchesData(event: CompEvent, roundsData: any): EventMatchesD
   };
 }
 
-/** Shared event helpers (labels, point presets). No I/O. */
-
-export const MABAR_FORMAT_LABEL: Record<GenFormat, string> = {
-  americano: "Americano",
-  mexicano: "Mexicano",
-  fixed_americano: "Fixed partner Americano",
-  fixed_mexicano: "Fixed partner Mexicano",
-};
-
-/** The "Format" box on the public Info tab, mode-specific: a target count means something different each way. */
-export function scoreModeBox(mode: ScoreMode, target: number): { val: string; label: string } {
-  if (mode === "best_of") return { val: `Best of ${target}`, label: "Cara menang" };
-  if (mode === "race_to") return { val: `Race to ${target}`, label: "Cara menang" };
-  return { val: String(target), label: "Poin per game" };
-}
-
-export const isFixedFormat = (f: GenFormat | null | undefined) => f === "fixed_americano" || f === "fixed_mexicano";
-/** Americano formats plan every round up front; Mexicano builds each round from the table. */
-export const isAmericanoFormat = (f: GenFormat | null | undefined) => f === "americano" || f === "fixed_americano";
-
-export function eventFormatLabel(e: Pick<CompEvent, "type" | "mabar_format" | "ko_start">): string {
-  if (e.type === "mabar") return e.mabar_format ? MABAR_FORMAT_LABEL[e.mabar_format] : "Mabar";
-  return `Fase grup + ${STAGE_LABEL[e.ko_start].toLowerCase()}`;
-}
-
-const DEFAULT_EVENT_POINTS: EventPoints = { champion: 80, runner_up: 50, sf: 30, qf: 15, r16: 10, group: 5 };
-const DEFAULT_MABAR_POINTS: MabarPoints = { ranks: [30, 20, 10], participant: 5 };
-
-const pts = (c: PointCategoryItem) => (c.checked && typeof c.points === "number" ? c.points : 0);
-
-function presetToEventPoints(items: PointCategoryItem[]): EventPoints {
-  const out: EventPoints = { champion: 0, runner_up: 0, sf: 0, qf: 0, r16: 0, group: 0 };
-  for (const c of items) {
-    const n = c.name.toLowerCase().trim();
-    if (n === "juara" || n === "champion") out.champion = pts(c);
-    else if (n.startsWith("runner")) out.runner_up = pts(c);
-    else if (n.startsWith("semifinal")) out.sf = pts(c);
-    else if (n.includes("fase grup") || n.includes("partisipasi") || n.includes("peserta")) out.group = pts(c);
-    else {
-      if (n.includes("8 besar") || n.includes("quarter")) out.qf = pts(c);
-      if (n.includes("16 besar") || n.includes("lolos grup")) out.r16 = pts(c);
-    }
-  }
-  return out;
-}
-
-function presetToMabarPoints(items: PointCategoryItem[]): MabarPoints {
-  const ranks: number[] = [];
-  let participant = 0;
-  for (const c of items) {
-    const n = c.name.toLowerCase().trim();
-    const m = n.match(/^juara\s*(\d+)$/);
-    if (m) ranks[Number(m[1]) - 1] = pts(c);
-    else if (n.startsWith("ikut")) participant = pts(c);
-  }
-  return { ranks: Array.from(ranks, (v) => v ?? 0), participant };
-}
-
-export function presetPoints(rules: PointPresetRules | null | undefined) {
-  return {
-    points: rules ? presetToEventPoints(rules.kompetisi ?? []) : DEFAULT_EVENT_POINTS,
-    mabar_points: rules ? presetToMabarPoints(rules.mabar ?? []) : DEFAULT_MABAR_POINTS,
-  };
-}
+export * from "./eventFormats";

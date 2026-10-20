@@ -1,28 +1,11 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { MongoClientAdapter } from "@/lib/server/mongoAdapter";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import { sessionCookie } from "@/lib/supabase/cookies";
 
-export async function createClient() {
-  const cookieStore = await cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, sessionCookie(options)),
-            );
-          } catch {
-            // Called from a Server Component — session refresh is handled by proxy.ts
-          }
-        },
-      },
-    },
-  );
+/**
+ * Returns a MongoDB-backed database client with the same API interface
+ * used across Server Components and Server Actions.
+ */
+export async function createClient(): Promise<SupabaseClient<Database>> {
+  return new MongoClientAdapter() as unknown as SupabaseClient<Database>;
 }

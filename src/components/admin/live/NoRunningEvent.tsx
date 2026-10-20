@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { EventTypeBadge, StatusBadge } from "@/components/ui/Badge";
 import { TrophyIcon } from "@/components/ui/icons";
-import { eventFormatLabel } from "@/lib/events";
+import { eventFormatLabel } from "@/lib/eventFormats";
 import type { CompEvent } from "@/lib/database.types";
 
 /** Live page when no event is running: how to start one, and the drafts that are ready. */

@@ -1,7 +1,7 @@
 import { ActionForm } from "@/components/admin/ActionForm";
 import { finishMabar, nextMabarRound, regenerateMabarSchedule, startMabar } from "@/app/admin/events/mabar-actions";
 import type { CompEvent, GenParticipant } from "@/lib/database.types";
-import { isAmericanoFormat, isFixedFormat } from "@/lib/events";
+import { isAmericanoFormat, isFixedFormat } from "@/lib/eventFormats";
 import { americanoCoverage } from "@/lib/mabarRules";
 import type { mabarProgress } from "@/lib/mabar";
 

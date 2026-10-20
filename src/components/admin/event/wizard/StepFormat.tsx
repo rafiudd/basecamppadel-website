@@ -1,6 +1,6 @@
 import { Field, inputClass, invalidIf, labelClass } from "@/components/ui/Field";
 import { STAGE_LABEL } from "@/lib/competition";
-import { MABAR_FORMAT_LABEL, isAmericanoFormat } from "@/lib/events";
+import { MABAR_FORMAT_LABEL, isAmericanoFormat } from "@/lib/eventFormats";
 import type { GenFormat, ScoreMode } from "@/lib/database.types";
 import type { EventWizard } from "./useEventWizard";
 import { Counter, RadioCard, StepSection } from "./parts";

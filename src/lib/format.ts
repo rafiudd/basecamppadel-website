@@ -11,9 +11,10 @@ export function formatSessionDay(isoDate: string): string {
 }
 
 /** "2026-10-24" -> "Sab, 24 Okt" */
-export function formatDateShortIndo(isoDate: string | null | undefined): string {
+export function formatDateShortIndo(isoDate: string | Date | null | undefined): string {
   if (!isoDate) return "";
-  const [y, m, d] = (isoDate ?? "").slice(0, 10).split("-").map(Number);
+  const str = isoDate instanceof Date ? isoDate.toISOString().slice(0, 10) : String(isoDate).slice(0, 10);
+  const [y, m, d] = str.split("-").map(Number);
   if (!y || !m || !d) return "";
   const date = new Date(Date.UTC(y, m - 1, d));
   const daysShort = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
