@@ -11,6 +11,8 @@
     "db:seed": "node --env-file=.env.local scripts/db.mjs seed",
     "db:admin": "node --env-file=.env.local scripts/db.mjs admin",
     "db:setup": "node --env-file=.env.local scripts/db.mjs setup",
+    "db:classes:seed": "node --env-file=.env scripts/seed-classes.mjs",
+    "db:classes:clean": "node --env-file=.env scripts/seed-classes.mjs --clean",
     "photos:r2": "node --env-file=.env.local scripts/photos-to-r2.mjs",
     "test": "node --experimental-strip-types --no-warnings --test tests/*.test.mjs",
     "test:liga": "node --experimental-strip-types --env-file=.env scripts/test-liga-flow.mjs"
@@ -32,6 +34,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "pg": "^8.23.0",
+    "puppeteer-core": "^25.14.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

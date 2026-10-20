@@ -43,13 +43,23 @@ const UserIcon = () => (
   </Icon>
 );
 
+const AcademicCapIcon = () => (
+  <Icon>
+    <path d="M2 9l10-5 10 5-10 5z" />
+    <path d="M6 11v5c0 1.6 2.7 3 6 3s6-1.4 6-3v-5" />
+    <line x1="22" y1="9" x2="22" y2="14" />
+  </Icon>
+);
+
 const LINKS = [
   { href: "/", label: "Home", icon: HomeIcon },
   { href: "/jadwal", label: "Jadwal", icon: CalendarIcon },
+  { href: "/kelas", label: "Kelas", icon: AcademicCapIcon },
   { href: "/leaderboard", label: "Leaderboard", icon: TrophyIcon },
   // signed out, /akun sends the visitor through /masuk first
   { href: "/akun", label: "Akun", icon: UserIcon },
 ];
+
 
 /** Phone tab bar, fixed to the bottom (hidden from md up, where the top nav's links show instead). */
 export function BottomNav() {

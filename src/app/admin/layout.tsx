@@ -41,10 +41,11 @@ async function AdminContent({ children }: { children: React.ReactNode }) {
 
   const isCoachOnly = !isAdmin && isCoach;
 
-  // Coach hanya boleh mengakses area coaching
-  if (isCoachOnly && pathname && !pathname.startsWith("/admin/coaching")) {
+  // Coach hanya boleh mengakses area coaching & kelas
+  if (isCoachOnly && pathname && !pathname.startsWith("/admin/coaching") && !pathname.startsWith("/admin/kelas")) {
     redirect("/admin/coaching");
   }
+
 
   return (
     <div className="min-h-screen bg-ink text-snow font-sans flex flex-col">

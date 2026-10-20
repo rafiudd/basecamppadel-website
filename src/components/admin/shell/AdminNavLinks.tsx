@@ -8,8 +8,9 @@ import { ADMIN_NAV, isActive } from "./nav";
 export function AdminNavLinks({ isCoachOnly }: { isCoachOnly?: boolean }) {
   const pathname = usePathname();
   const navItems = isCoachOnly
-    ? ADMIN_NAV.filter((l) => l.href.startsWith("/admin/coaching"))
+    ? ADMIN_NAV.filter((l) => l.href.startsWith("/admin/coaching") || l.href.startsWith("/admin/kelas"))
     : ADMIN_NAV;
+
 
   return (
     <nav className="flex items-center gap-1 overflow-x-auto min-w-0 max-w-full">

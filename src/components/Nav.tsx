@@ -11,8 +11,10 @@ const LINKS = [
   { href: "/", label: "Home" },
   { href: "/jadwal", label: "Jadwal" },
   { href: "/liga", label: "Liga" },
+  { href: "/kelas", label: "Kelas" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
+
 
 export function Nav() {
   const pathname = usePathname();
