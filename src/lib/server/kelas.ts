@@ -108,9 +108,9 @@ export async function getPublicClasses(filters: FilterParams = {}) {
 
   const mapped = rawClasses.map((c) => {
     const rev = reviewMap[c.id];
-    const avg = rev && rev.count > 0 ? Math.round((rev.sum / rev.count) * 10) / 10 : 4.8; // default benchmark
+    const avg = rev && rev.count > 0 ? Math.round((rev.sum / rev.count) * 10) / 10 : 0;
     const totalReviews = rev ? rev.count : 0;
-    const totalParticipants = (participantMap[c.id] || 0) + 15; // include baseline seed participants
+    const totalParticipants = participantMap[c.id] || 0;
 
     return {
       id: c.id,
@@ -301,7 +301,7 @@ export async function getClassBySlug(slug: string): Promise<ClassDetailData | nu
     comments: mappedComments,
     totalParticipants,
     averageRating: avgRating,
-    totalReviews: reviews?.length ?? 32,
+    totalReviews: reviews?.length ?? 0,
   };
 }
 
@@ -319,7 +319,17 @@ export async function getAdminClasses() {
     .order("sort_order", { ascending: true });
 
   if (error || !classes) {
-    return { classes: [], stats: { activeCount: 0, draftCount: 0, monthlyParticipants: 64, avgRating: 4.8, unansweredComments: 3 } };
+    return {
+      classes: [],
+      stats: {
+        activeCount: 0,
+        draftCount: 0,
+        monthlyParticipants: 0,
+        avgRating: 0,
+        totalReviews: 0,
+        unansweredComments: 0,
+      },
+    };
   }
 
   // Fetch upcoming schedules
@@ -336,7 +346,14 @@ export async function getAdminClasses() {
   // Fetch comments to count unreplied
   const { data: comments } = await supabase
     .from("class_comments")
-    .select("id, class_id, parent_id");
+    .select("id, class_id, parent_id")
+    .eq("hidden", false);
+
+  // Fetch reviews to calculate actual average rating
+  const { data: allReviews } = await supabase
+    .from("class_reviews")
+    .select("class_id, rating")
+    .eq("hidden", false);
 
   const scheduleMap: Record<string, any[]> = {};
   for (const s of schedules ?? []) {
@@ -348,6 +365,18 @@ export async function getAdminClasses() {
   for (const p of participants ?? []) {
     partMap[p.schedule_id] = (partMap[p.schedule_id] || 0) + 1;
   }
+
+  const reviewMap: Record<string, { sum: number; count: number }> = {};
+  let totalRatingSum = 0;
+  for (const r of allReviews ?? []) {
+    if (!reviewMap[r.class_id]) reviewMap[r.class_id] = { sum: 0, count: 0 };
+    reviewMap[r.class_id].sum += r.rating;
+    reviewMap[r.class_id].count += 1;
+    totalRatingSum += r.rating;
+  }
+  const totalReviewsCount = allReviews?.length ?? 0;
+  const overallAvgRating =
+    totalReviewsCount > 0 ? Math.round((totalRatingSum / totalReviewsCount) * 10) / 10 : 0;
 
   const commentParents = new Set((comments ?? []).filter((c) => !c.parent_id).map((c) => c.id));
   const commentReplied = new Set((comments ?? []).filter((c) => !!c.parent_id).map((c) => c.parent_id));
@@ -368,6 +397,9 @@ export async function getAdminClasses() {
       computedStatus = isFull ? "Penuh" : "Aktif";
     }
 
+    const cRev = reviewMap[c.id];
+    const cRating = cRev && cRev.count > 0 ? (cRev.sum / cRev.count).toFixed(1) : "–";
+
     return {
       id: c.id,
       slug: c.slug,
@@ -384,7 +416,7 @@ export async function getAdminClasses() {
       nextSchedule: nextSched ? `${nextSched.dates_label} · ${nextSched.time_range}` : "Belum ada jadwal",
       slotRatio: nextSched ? `${regCount}/${cap}` : "–",
       slotPercentage: nextSched ? Math.min(100, Math.round((regCount / cap) * 100)) : 0,
-      rating: "4.8",
+      rating: cRating,
     };
   });
 
@@ -396,9 +428,10 @@ export async function getAdminClasses() {
     stats: {
       activeCount,
       draftCount,
-      monthlyParticipants: 64,
-      avgRating: 4.8,
-      unansweredComments: Math.max(3, unrepliedTotal),
+      monthlyParticipants: participants?.length ?? 0,
+      avgRating: overallAvgRating,
+      totalReviews: totalReviewsCount,
+      unansweredComments: unrepliedTotal,
     },
   };
 }

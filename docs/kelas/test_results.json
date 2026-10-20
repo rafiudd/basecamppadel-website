@@ -1,0 +1,206 @@
+[
+  {
+    "id": "TC-PUB-DT-01",
+    "name": "Katalog Publik (Desktop)",
+    "status": "PASS",
+    "detail": "90 kelas aktif"
+  },
+  {
+    "id": "TC-PUB-DT-02",
+    "name": "Filter Kategori Teknik (Desktop)",
+    "status": "PASS",
+    "detail": "33 kelas cocok"
+  },
+  {
+    "id": "TC-PUB-DT-03",
+    "name": "Empty Search State (Desktop)",
+    "status": "PASS",
+    "detail": "Empty state alert tampil"
+  },
+  {
+    "id": "TC-PUB-DT-04",
+    "name": "Detail Kelas Hero (Desktop)",
+    "status": "PASS",
+    "detail": "Title & video preview"
+  },
+  {
+    "id": "TC-PUB-DT-05",
+    "name": "Detail Silabus & Coach (Desktop)",
+    "status": "PASS",
+    "detail": "Checklist materi"
+  },
+  {
+    "id": "TC-PUB-DT-06",
+    "name": "Detail Jadwal & Booking (Desktop)",
+    "status": "PASS",
+    "detail": "Slot kuota & WhatsApp CTA"
+  },
+  {
+    "id": "TC-PUB-DT-07",
+    "name": "Detail Ulasan & Diskusi (Desktop)",
+    "status": "PASS",
+    "detail": "Histogram rating & Q&A"
+  },
+  {
+    "id": "TC-ADM-DT-01",
+    "name": "Admin Katalog & KPI Dashboard (Desktop)",
+    "status": "PASS",
+    "detail": "4 Kartu KPI"
+  },
+  {
+    "id": "TC-ADM-DT-02",
+    "name": "Admin Filter Pencarian (Desktop)",
+    "status": "PASS",
+    "detail": "Search Firstimer"
+  },
+  {
+    "id": "TC-ADM-DT-03",
+    "name": "Admin Form Kelas Baru (Desktop)",
+    "status": "PASS",
+    "detail": "Form 4 section"
+  },
+  {
+    "id": "TC-ADM-DT-04",
+    "name": "Admin Submit Kelas Baru (Desktop)",
+    "status": "PASS",
+    "detail": "Created ID: 9dae8c45-dc18-4628-8d76-9d0a84322703"
+  },
+  {
+    "id": "TC-ADM-DT-05",
+    "name": "Admin Buka Form Tambah Jadwal (Desktop)",
+    "status": "PASS",
+    "detail": "Modal form jadwal"
+  },
+  {
+    "id": "TC-ADM-DT-06",
+    "name": "Admin Tambah Jadwal Berhasil (Desktop)",
+    "status": "PASS",
+    "detail": "Sab, 28 Nov & 5 Des"
+  },
+  {
+    "id": "TC-ADM-DT-07",
+    "name": "Admin Form Edit Kelas (Desktop)",
+    "status": "PASS",
+    "detail": "Data form terisi"
+  },
+  {
+    "id": "TC-ADM-DT-08",
+    "name": "Admin Submit Edit Kelas (Desktop)",
+    "status": "PASS",
+    "detail": "Harga Rp 380.000"
+  },
+  {
+    "id": "TC-E2E-DT-01",
+    "name": "Verifikasi Katalog Publik (Desktop)",
+    "status": "PASS",
+    "detail": "QA Mastering Bandeja 7501"
+  },
+  {
+    "id": "TC-E2E-DT-02",
+    "name": "Verifikasi Detail Publik (Desktop)",
+    "status": "PASS",
+    "detail": "Slug: qa-mastering-bandeja-7501"
+  },
+  {
+    "id": "TC-PUB-MB-01",
+    "name": "Katalog Publik (Mobile)",
+    "status": "PASS",
+    "detail": "Header & card responsive"
+  },
+  {
+    "id": "TC-PUB-MB-02",
+    "name": "Filter Kategori Teknik (Mobile)",
+    "status": "PASS",
+    "detail": "Filter responsive"
+  },
+  {
+    "id": "TC-PUB-MB-03",
+    "name": "Empty Search State (Mobile)",
+    "status": "PASS",
+    "detail": "Empty state card tampil"
+  },
+  {
+    "id": "TC-PUB-MB-04",
+    "name": "Detail Kelas Hero (Mobile)",
+    "status": "PASS",
+    "detail": "Hero & video preview"
+  },
+  {
+    "id": "TC-PUB-MB-05",
+    "name": "Detail Silabus & Coach (Mobile)",
+    "status": "PASS",
+    "detail": "Checklist materi"
+  },
+  {
+    "id": "TC-PUB-MB-06",
+    "name": "Detail Jadwal & Booking (Mobile)",
+    "status": "PASS",
+    "detail": "Slot kuota & WhatsApp CTA"
+  },
+  {
+    "id": "TC-PUB-MB-07",
+    "name": "Detail Ulasan & Diskusi (Mobile)",
+    "status": "PASS",
+    "detail": "Histogram rating & Q&A"
+  },
+  {
+    "id": "TC-ADM-MB-01",
+    "name": "Admin Katalog & KPI Dashboard (Mobile)",
+    "status": "PASS",
+    "detail": "KPI Cards & Bottom Nav"
+  },
+  {
+    "id": "TC-ADM-MB-02",
+    "name": "Admin Filter Pencarian (Mobile)",
+    "status": "PASS",
+    "detail": "Search Firstimer"
+  },
+  {
+    "id": "TC-ADM-MB-03",
+    "name": "Admin Form Kelas Baru (Mobile)",
+    "status": "PASS",
+    "detail": "Form 4 section"
+  },
+  {
+    "id": "TC-ADM-MB-04",
+    "name": "Admin Detail Operasional (Mobile)",
+    "status": "PASS",
+    "detail": "Detail ID: 9dae8c45-dc18-4628-8d76-9d0a84322703"
+  },
+  {
+    "id": "TC-ADM-MB-05",
+    "name": "Admin Buka Form Tambah Jadwal (Mobile)",
+    "status": "PASS",
+    "detail": "Form jadwal"
+  },
+  {
+    "id": "TC-ADM-MB-06",
+    "name": "Admin Jadwal Terdaftar (Mobile)",
+    "status": "PASS",
+    "detail": "Jadwal aktif"
+  },
+  {
+    "id": "TC-ADM-MB-07",
+    "name": "Admin Form Edit Kelas (Mobile)",
+    "status": "PASS",
+    "detail": "Form edit"
+  },
+  {
+    "id": "TC-ADM-MB-08",
+    "name": "Admin Detail Edit Disimpan (Mobile)",
+    "status": "PASS",
+    "detail": "Harga Rp 380.000"
+  },
+  {
+    "id": "TC-E2E-MB-01",
+    "name": "Verifikasi Katalog Publik (Mobile)",
+    "status": "PASS",
+    "detail": "QA Mastering Bandeja 7501"
+  },
+  {
+    "id": "TC-E2E-MB-02",
+    "name": "Verifikasi Detail Publik (Mobile)",
+    "status": "PASS",
+    "detail": "Slug: qa-mastering-bandeja-7501"
+  }
+]

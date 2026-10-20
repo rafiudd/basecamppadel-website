@@ -29,6 +29,7 @@ interface StatsSummary {
   draftCount: number;
   monthlyParticipants: number;
   avgRating: number;
+  totalReviews?: number;
   unansweredComments: number;
 }
 
@@ -86,16 +87,27 @@ export function AdminClassListClient({
         <div className="bg-[#221F30] rounded-2xl p-4 md:px-4.5 md:py-4 flex flex-col gap-1">
           <div className="font-display font-bold text-2xl text-snow">{stats.monthlyParticipants}</div>
           <div className="text-xs md:text-sm text-snow/70">Peserta bulan ini</div>
-          <div className="text-xs text-snow/55 mt-0.5">▲ 12 dari Sep</div>
+          <div className="text-xs text-snow/55 mt-0.5">
+            {stats.monthlyParticipants > 0 ? "Bulan berjalan" : "Belum ada peserta"}
+          </div>
         </div>
         <div className="bg-[#221F30] rounded-2xl p-4 md:px-4.5 md:py-4 flex flex-col gap-1">
-          <div className="font-display font-bold text-2xl text-snow">{stats.avgRating}</div>
+          <div className="font-display font-bold text-2xl text-snow">
+            {stats.avgRating > 0 ? stats.avgRating.toFixed(1) : "0"}
+          </div>
           <div className="text-xs md:text-sm text-snow/70">Rating rata-rata</div>
-          <div className="text-xs text-snow/55 mt-0.5">dari 512 ulasan</div>
+          <div className="text-xs text-snow/55 mt-0.5">
+            {stats.totalReviews && stats.totalReviews > 0
+              ? `dari ${stats.totalReviews} ulasan`
+              : "Belum ada ulasan"}
+          </div>
         </div>
         <div className="bg-[#221F30] rounded-2xl p-4 md:px-4.5 md:py-4 flex flex-col gap-1">
           <div className="font-display font-bold text-2xl text-snow">{stats.unansweredComments}</div>
           <div className="text-xs md:text-sm text-snow/70">Komentar belum dibalas</div>
+          <div className="text-xs text-snow/55 mt-0.5">
+            {stats.unansweredComments > 0 ? "Perlu ditanggapi" : "Semua terjawab"}
+          </div>
         </div>
       </div>
 

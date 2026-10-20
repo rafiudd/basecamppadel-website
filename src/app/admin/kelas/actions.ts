@@ -29,6 +29,8 @@ export async function saveClass(prevState: any, fd: FormData) {
   const defaultCoachId = str(fd, "default_coach_id") || null;
   const minParticipants = int(fd, "min_participants", 2);
   const videoUrl = str(fd, "video_url") || null;
+  const coverImageUrl = str(fd, "cover_image_url") || null;
+  const galleryUrls = fd.getAll("gallery_urls").map(String).filter((u) => u.trim() !== "");
   const published = fd.get("published") === "on" || fd.get("published") === "true";
 
   // Dynamic learning points
@@ -71,6 +73,8 @@ export async function saveClass(prevState: any, fd: FormData) {
       default_coach_id: defaultCoachId,
       min_participants: minParticipants,
       video_url: videoUrl,
+      cover_image_url: coverImageUrl || (galleryUrls.length > 0 ? galleryUrls[0] : null),
+      gallery_urls: galleryUrls,
       learning_points: learningPoints,
       sessions_breakdown: sessionsBreakdown,
       published,

@@ -250,9 +250,9 @@ const CLASSES_DATA = [
       { datesLabel: "Sab, 14 & 21 Nov", timeRange: "09.00–10.30", status: "active" }
     ],
     reviews: [
-      { author: "Sari", rating: 5, date: "12 Okt 2026", content: "Akhirnya ngerti kenapa selalu telat di kaca belakang. Drill-nya repetitif tapi kerasa banget hasilnya di mabar minggu depannya." },
-      { author: "Rendi", rating: 5, date: "28 Sep 2026", content: "Coach Lukman sabar, tiap orang dikoreksi satu-satu. 4 orang per coach pas banget." },
-      { author: "Tasya", rating: 4, date: "14 Sep 2026", content: "Materinya mantap. Sesi 2 agak cepat buat aku, tapi dapat rekaman video buat latihan sendiri." }
+      { author: "Sari", rating: 5, date: "2026-10-12T08:00:00.000Z", content: "Akhirnya ngerti kenapa selalu telat di kaca belakang. Drill-nya repetitif tapi kerasa banget hasilnya di mabar minggu depannya." },
+      { author: "Rendi", rating: 5, date: "2026-09-28T08:00:00.000Z", content: "Coach Lukman sabar, tiap orang dikoreksi satu-satu. 4 orang per coach pas banget." },
+      { author: "Tasya", rating: 4, date: "2026-09-14T08:00:00.000Z", content: "Materinya mantap. Sesi 2 agak cepat buat aku, tapi dapat rekaman video buat latihan sendiri." }
     ],
     comments: [
       { author: "Dimas", comment: "Jadwal Selasa malam masih bisa buat 2 orang? Aku sama partner.", reply: null },
@@ -955,7 +955,30 @@ async function seedClasses() {
   await client.end();
 }
 
-seedClasses().catch((err) => {
-  console.error("Error seeding classes:", err);
+async function cleanClasses() {
+  await client.connect();
+  console.log("Menghapus semua data kelas...");
+  const delParticipants = await client.query("delete from public.class_participants");
+  const delReviews = await client.query("delete from public.class_reviews");
+  const delComments = await client.query("delete from public.class_comments");
+  const delSchedules = await client.query("delete from public.class_schedules");
+  const delClasses = await client.query("delete from public.classes");
+
+  console.log("✓ Data kelas berhasil dihapus:");
+  console.log(`  - classes: ${delClasses.rowCount}`);
+  console.log(`  - class_schedules: ${delSchedules.rowCount}`);
+  console.log(`  - class_participants: ${delParticipants.rowCount}`);
+  console.log(`  - class_reviews: ${delReviews.rowCount}`);
+  console.log(`  - class_comments: ${delComments.rowCount}`);
+  await client.end();
+}
+
+const isClean = process.argv.includes("--clean") || process.argv.includes("--truncate") || process.argv.includes("--reset");
+
+const runner = isClean ? cleanClasses : seedClasses;
+
+runner().catch((err) => {
+  console.error("Error:", err);
   process.exit(1);
 });
+

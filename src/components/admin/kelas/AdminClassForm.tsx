@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { saveClass } from "@/app/admin/kelas/actions";
 import { PIN_COLORS } from "@/lib/kelasRules";
+import { ClassMediaUploader } from "./ClassMediaUploader";
 
 interface CoachOption {
   id: string;
@@ -208,38 +209,11 @@ export function AdminClassForm({
       </section>
 
       {/* Section 2: Foto & Video */}
-      <section className="bg-[#221F30] rounded-2xl p-5 md:p-6 flex flex-col gap-4">
-        <div className="flex gap-3 items-center">
-          <span className="w-7 h-7 rounded-full bg-[#1B1650] text-volt flex items-center justify-center font-display font-bold text-sm">
-            2
-          </span>
-          <div>
-            <h2 className="font-display font-bold text-lg text-snow m-0">Foto & video</h2>
-            <p className="text-xs text-snow/70 m-0">Cover muncul di kartu kelas. Video preview diputar di halaman detail.</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs uppercase tracking-wider text-snow/65">Tautan Video Preview (YouTube/MP4)</span>
-            <input
-              name="video_url"
-              defaultValue={classData?.video_url || ""}
-              placeholder="https://www.youtube.com/watch?v=..."
-              className="bg-snow/10 border-0 rounded-lg px-3 py-2.5 text-sm text-snow outline-none focus:ring-1 focus:ring-volt"
-            />
-            <span className="text-xs text-snow/55">Video pendek 1–2 menit demonstrasi drill</span>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs uppercase tracking-wider text-snow/65">Foto Cover & Galeri</span>
-            <div className="border border-dashed border-snow/25 rounded-xl p-4 flex flex-col items-center justify-center text-center bg-snow/[0.02]">
-              <span className="text-xs font-bold text-snow">Galeri Foto Lapangan</span>
-              <span className="text-[11px] text-snow/60 mt-1">Menggunakan galeri default atau upload via R2</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <ClassMediaUploader
+        initialVideoUrl={classData?.video_url}
+        initialCoverUrl={classData?.cover_image_url}
+        initialGalleryUrls={classData?.gallery_urls}
+      />
 
       {/* Section 3: Format & Harga */}
       <section className="bg-[#221F30] rounded-2xl p-5 md:p-6 flex flex-col gap-4">
