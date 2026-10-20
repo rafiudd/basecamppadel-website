@@ -86,7 +86,7 @@ export function Nav() {
 
       {/* Mobile top bar: just branding — nav lives in the bottom tab bar instead */}
       <nav
-        className="md:hidden sticky top-0 z-30 flex items-center justify-center px-4 h-14 bg-ink border-b border-snow/10"
+        className="md:hidden sticky top-0 z-30 flex items-center justify-center px-4 h-14 box-content bg-ink border-b border-snow/10"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <Link href="/" className="flex items-center gap-2 no-underline">
