@@ -150,3 +150,9 @@ test("Sesi: satu tab per status (Draft / Berjalan / Selesai), urutan input tetap
   assert.equal(pickSessionTab({ draft: [s("a", "draft")], berjalan: [], selesai: [s("b", "finished")] }), "draft");
   assert.equal(pickSessionTab({ draft: [], berjalan: [], selesai: [] }), "berjalan");
 });
+
+test("Status sesi: TAB_STATUS dan statusTab saling balik (redirect setelah pindah status)", async () => {
+  const { SESSION_TABS, TAB_STATUS, statusTab } = await import("../src/lib/coaching.ts");
+  assert.deepEqual(SESSION_TABS.map((t) => TAB_STATUS[t]), ["draft", "active", "finished"]);
+  for (const t of SESSION_TABS) assert.equal(statusTab(TAB_STATUS[t]), t);
+});

@@ -21,17 +21,23 @@ async function loadSkills(supabase: Supa): Promise<SkillDef[]> {
  * The skill list plus the player's submitted, published coaching assessments (oldest-first order
  * is up to the rules). RLS already limits a player to their own sent ones (0014); the explicit
  * filters keep an admin or coach who is also a player from seeing everyone's here.
+ * `publishedOnly: false` (admin / coach rapor) also takes submitted ones not yet sent to the player.
  */
-export async function loadCoaching(supabase: Supa, playerId: string | null): Promise<{ skills: SkillDef[]; reports: CoachReport[] }> {
+export async function loadCoaching(
+  supabase: Supa,
+  playerId: string | null,
+  { publishedOnly = true }: { publishedOnly?: boolean } = {},
+): Promise<{ skills: SkillDef[]; reports: CoachReport[] }> {
   const skills = await loadSkills(supabase);
   if (!playerId) return { skills, reports: [] };
 
-  const { data: rows } = await supabase
+  let query = supabase
     .from("coaching_assessments")
     .select("id, session_id, coach_id, group_id, scores, evaluation, next_practice")
     .eq("player_id", playerId)
-    .eq("status", "submitted")
-    .eq("published_to_player", true);
+    .eq("status", "submitted");
+  if (publishedOnly) query = query.eq("published_to_player", true);
+  const { data: rows } = await query;
   if (!rows?.length) return { skills, reports: [] };
 
   const groupIds = [...new Set(rows.map((r) => r.group_id).filter((id): id is string => !!id))];
