@@ -5,8 +5,8 @@
  *   DELETE /<key>   remove it        (same auth)
  *   GET    /<key>   serve it         (public, cached for a year: keys are random and never reused)
  *
- * Keys must live under players/ (admin player photos) or avatars/<user id>/ (profile photos). The
- * Next.js app decides the key; this worker only checks the secret, the folder, the type and the size.
+ * Keys must live under players/ (admin player photos), avatars/<user id>/ (profile photos),
+ * or classes/(photos|videos) (academy class media).
  */
 
 interface Env {
@@ -14,9 +14,9 @@ interface Env {
   STORAGE_SECRET: string;
 }
 
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 10 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-const KEY = /^(players|avatars\/[0-9a-f-]{36})\/[0-9a-f-]{36}\.(jpe?g|png|webp|gif)$/;
+const KEY = /^(players|avatars\/[0-9a-f-]{36}|classes\/(photos|videos))\/[0-9a-f-]{36}\.(jpe?g|png|webp|gif|mp4|webm|mov)$/;
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -56,10 +56,10 @@ export default {
     const type = (request.headers.get("content-type") ?? "").split(";")[0].trim();
     if (!IMAGE_TYPES.has(type)) return json(415, { error: "Only JPG, PNG, WebP or GIF" });
     const size = Number(request.headers.get("content-length") ?? "0");
-    if (!size || size > MAX_BYTES) return json(413, { error: "Max 5 MB" });
+    if (!size || size > MAX_BYTES) return json(413, { error: "Max 10 MB" });
 
     const body = await request.arrayBuffer();
-    if (body.byteLength === 0 || body.byteLength > MAX_BYTES) return json(413, { error: "Max 5 MB" });
+    if (body.byteLength === 0 || body.byteLength > MAX_BYTES) return json(413, { error: "Max 10 MB" });
     await env.BUCKET.put(key, body, { httpMetadata: { contentType: type, cacheControl: "public, max-age=31536000, immutable" } });
     return json(201, { key });
   },

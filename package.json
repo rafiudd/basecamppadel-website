@@ -19,7 +19,8 @@
     "db:mongo:migrate": "node --env-file=.env scripts/migrate-supabase-to-mongo.mjs",
     "db:mongo:migrate:dev": "node --env-file=.env scripts/migrate-supabase-to-mongo.mjs --target=dev",
     "db:mongo:migrate:prod": "node --env-file=.env scripts/migrate-supabase-to-mongo.mjs --target=prod --confirm-prod",
-    "db:mongo:indexes": "node --env-file=.env scripts/optimize-mongo-indexes.mjs"
+    "db:mongo:indexes": "node --env-file=.env scripts/optimize-mongo-indexes.mjs",
+    "db:mongo:admin": "node --env-file=.env scripts/create-mongo-admin.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1153.0",

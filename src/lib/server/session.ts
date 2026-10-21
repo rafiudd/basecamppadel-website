@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 
 const SESSION_COOKIE_NAME = "basecamp_session";
-const SESSION_SECRET = process.env.STORAGE_WORKER_SECRET || "basecamp-padel-secret-session-key";
 const MAX_AGE = 30 * 24 * 60 * 60; // 30 days
 
 export type SessionPayload = {
@@ -36,10 +35,21 @@ function base64urlDecode(str: string): Uint8Array {
   return bytes;
 }
 
+/** Own secret only: a guessable or shared fallback would let anyone forge an admin session. */
+function sessionSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (secret && secret.length >= 32) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET belum di-set (minimal 32 karakter).");
+  }
+  console.warn("⚠️ SESSION_SECRET is not set; using an insecure dev-only secret");
+  return "dev-only-insecure-session-secret-change-me";
+}
+
 async function getHmacKey(): Promise<CryptoKey> {
   return await crypto.subtle.importKey(
     "raw",
-    encoder.encode(SESSION_SECRET),
+    encoder.encode(sessionSecret()),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign", "verify"]

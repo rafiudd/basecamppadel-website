@@ -82,13 +82,20 @@ export function createClient(): any {
       },
 
       signInWithOAuth: async ({ provider, options }: { provider: string; options?: any }) => {
-        const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        if (sbUrl) {
-          const redirect = options?.redirectTo ? encodeURIComponent(options.redirectTo) : "";
-          window.location.href = `${sbUrl}/auth/v1/authorize?provider=google&redirect_to=${redirect}&prompt=select_account`;
+        if (provider === "google") {
+          let next = "";
+          if (options?.redirectTo) {
+            try {
+              const url = new URL(options.redirectTo, window.location.origin);
+              next = url.searchParams.get("next") || "";
+            } catch {
+              next = options.redirectTo;
+            }
+          }
+          window.location.href = `/api/auth/google${next ? `?next=${encodeURIComponent(next)}` : ""}`;
           return { error: null };
         }
-        return { error: { message: "Google OAuth provider belum dikonfigurasi." } };
+        return { error: { message: "OAuth provider tidak didukung." } };
       },
 
       signOut: async () => {
