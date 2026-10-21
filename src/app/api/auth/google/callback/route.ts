@@ -184,7 +184,8 @@ export async function GET(request: NextRequest) {
 
     // Player flow
     const profile = await db.collection("profiles").findOne({
-      $or: [{ user_id: userId }, { user_id: userId }] } as any);
+      $or: [{ _id: userId }, { user_id: userId }],
+    } as any);
 
     if (profile) {
       try {
@@ -205,7 +206,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const destination = stepPath(accountStep(profile as any), next);
+    const destination = stepPath(
+      accountStep(profile as any),
+      isAdmin ? "/akun" : next
+    );
     return NextResponse.redirect(`${origin}${destination}`);
   } catch (err: any) {
     console.error("Google OAuth callback exception:", err);

@@ -1,9 +1,13 @@
-import pg from "pg";
+import { MongoClient } from "mongodb";
+import crypto from "node:crypto";
 
-const client = new pg.Client({
-  connectionString: process.env.SUPABASE_DB_URL,
-  ssl: /localhost|127\.0\.0\.1/.test(process.env.SUPABASE_DB_URL) ? false : { rejectUnauthorized: false },
-});
+const uri = process.env.MONGODB_URI;
+if (!uri) {
+  console.error("MONGODB_URI not found in environment.");
+  process.exit(1);
+}
+const dbName = process.env.MONGODB_DB_NAME || process.env.MONGODB_DB_DEV || "DEV";
+const client = new MongoClient(uri);
 
 const CLASSES_DATA = [
   {
@@ -776,18 +780,19 @@ const CLASSES_DATA = [
 
 async function seedClasses() {
   await client.connect();
-  console.log("Seeding classes data...");
+  const db = client.db(dbName);
+  console.log(`Seeding classes data into MongoDB [${dbName}]...`);
 
   // Get coach ids
-  const coachRes = await client.query("select id, name from public.coaches");
+  const coachDocs = await db.collection("coaches").find({}).toArray();
   const coachMap = {};
-  for (const c of coachRes.rows) {
-    coachMap[c.name] = c.id;
+  for (const c of coachDocs) {
+    coachMap[c.name] = String(c.id || c._id);
   }
 
   // Get first venue if available
-  const venueRes = await client.query("select id from public.venues limit 1");
-  const defaultVenueId = venueRes.rows[0]?.id || null;
+  const venueDoc = await db.collection("venues").findOne({});
+  const defaultVenueId = venueDoc ? String(venueDoc.id || venueDoc._id) : null;
 
   for (const c of CLASSES_DATA) {
     const coachId = c.coachName ? (coachMap[c.coachName] || null) : null;
@@ -807,61 +812,49 @@ async function seedClasses() {
       defaultPhotos[(photoIdx + 2) % defaultPhotos.length],
     ];
 
-    const res = await client.query(
-      `insert into public.classes (
-        slug, title, category, description, suitable_pins, video_url, cover_image_url, gallery_urls,
-        total_sessions, duration_per_session, capacity, price, default_coach_id,
-        min_participants, learning_points, sessions_breakdown, requirements,
-        published, is_new, sort_order
-      ) values (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
-      )
-      on conflict (slug) do update set
-        title = excluded.title,
-        category = excluded.category,
-        description = excluded.description,
-        suitable_pins = excluded.suitable_pins,
-        cover_image_url = excluded.cover_image_url,
-        gallery_urls = excluded.gallery_urls,
-        total_sessions = excluded.total_sessions,
-        duration_per_session = excluded.duration_per_session,
-        capacity = excluded.capacity,
-        price = excluded.price,
-        default_coach_id = excluded.default_coach_id,
-        learning_points = excluded.learning_points,
-        sessions_breakdown = excluded.sessions_breakdown,
-        requirements = excluded.requirements,
-        published = excluded.published,
-        is_new = excluded.is_new,
-        sort_order = excluded.sort_order
-      returning id;`,
-      [
-        c.slug,
-        c.title,
-        c.category,
-        c.desc,
-        c.suitablePins,
-        c.hasVideo ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : null,
-        coverUrl,
-        galleryUrls,
-        c.sessions,
-        c.duration,
-        c.capacity,
-        c.price,
-        coachId,
-        2,
-        c.learningPoints || [],
-        JSON.stringify(c.sessionsBreakdown || []),
-        c.requirements || ["Raket sendiri (bisa pinjam, bilang pas daftar)", "Sepatu olahraga", "Datang 10 menit sebelum mulai"],
-        true, // published
-        c.isNew,
-        c.sortOrder
-      ]
+    const now = new Date();
+    const existingClass = await db.collection("classes").findOne({ slug: c.slug });
+    const classId = existingClass ? String(existingClass.id || existingClass._id) : crypto.randomUUID();
+
+    await db.collection("classes").updateOne(
+      { slug: c.slug },
+      {
+        $set: {
+          slug: c.slug,
+          title: c.title,
+          category: c.category,
+          description: c.desc,
+          suitable_pins: c.suitablePins,
+          video_url: c.hasVideo ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : null,
+          cover_image_url: coverUrl,
+          gallery_urls: galleryUrls,
+          total_sessions: c.sessions,
+          duration_per_session: c.duration,
+          capacity: c.capacity,
+          price: c.price,
+          default_coach_id: coachId,
+          min_participants: 2,
+          learning_points: c.learningPoints || [],
+          sessions_breakdown: c.sessionsBreakdown || [],
+          requirements: c.requirements || [
+            "Raket sendiri (bisa pinjam, bilang pas daftar)",
+            "Sepatu olahraga",
+            "Datang 10 menit sebelum mulai",
+          ],
+          published: true,
+          is_new: c.isNew,
+          sort_order: c.sortOrder,
+          updated_at: now,
+        },
+        $setOnInsert: {
+          _id: classId,
+          id: classId,
+          created_at: now,
+        },
+      },
+      { upsert: true }
     );
 
-    const classId = res.rows[0].id;
-
-    // Seed schedules strictly matching c.sessions
     const generateDefaultSchedules = (sessions) => {
       if (sessions === 1) {
         return [
@@ -901,76 +894,93 @@ async function seedClasses() {
 
     let firstScheduleId = null;
     for (const s of schedulesToInsert) {
-      const schedRes = await client.query(
-        `insert into public.class_schedules (
-          class_id, coach_id, venue_id, dates_label, time_range, status
-        ) values ($1, $2, $3, $4, $5, $6)
-        on conflict do nothing
-        returning id;`,
-        [classId, coachId, defaultVenueId, s.datesLabel, s.timeRange, s.status]
-      );
-      if (!firstScheduleId && schedRes.rows[0]?.id) {
-        firstScheduleId = schedRes.rows[0].id;
-      }
+      const sid = crypto.randomUUID();
+      await db.collection("class_schedules").insertOne({
+        _id: sid,
+        id: sid,
+        class_id: classId,
+        coach_id: coachId,
+        venue_id: defaultVenueId,
+        dates_label: s.datesLabel,
+        time_range: s.timeRange,
+        status: s.status,
+        created_at: now,
+        updated_at: now,
+      });
+      if (!firstScheduleId) firstScheduleId = sid;
     }
 
-    // Seed sample reviews if any
     if (c.reviews && c.reviews.length > 0) {
       for (const r of c.reviews) {
-        await client.query(
-          `insert into public.class_reviews (
-            class_id, author_name, rating, content, created_at, schedule_id
-          ) values ($1, $2, $3, $4, $5, $6)
-          on conflict do nothing;`,
-          [classId, r.author, r.rating, r.content, r.date || new Date().toISOString(), firstScheduleId]
-        );
+        const rid = crypto.randomUUID();
+        await db.collection("class_reviews").insertOne({
+          _id: rid,
+          id: rid,
+          class_id: classId,
+          author_name: r.author,
+          rating: r.rating,
+          content: r.content,
+          schedule_id: firstScheduleId,
+          created_at: r.date ? new Date(r.date) : now,
+        });
       }
     }
 
-    // Seed sample comments if any
     if (c.comments && c.comments.length > 0) {
       for (const cm of c.comments) {
-        const parentRes = await client.query(
-          `insert into public.class_comments (
-            class_id, author_name, comment
-          ) values ($1, $2, $3)
-          returning id;`,
-          [classId, cm.author, cm.comment]
-        );
-        const parentId = parentRes.rows[0]?.id;
+        const parentId = crypto.randomUUID();
+        await db.collection("class_comments").insertOne({
+          _id: parentId,
+          id: parentId,
+          class_id: classId,
+          author_name: cm.author,
+          comment: cm.comment,
+          parent_id: null,
+          hidden: false,
+          is_coach_reply: false,
+          created_at: now,
+        });
 
-        if (cm.reply && parentId) {
-          await client.query(
-            `insert into public.class_comments (
-              class_id, author_name, comment, parent_id, coach_id, is_coach_reply
-            ) values ($1, $2, $3, $4, $5, true);`,
-            [classId, `Coach ${c.coachName || "Lukman"}`, cm.reply, parentId, coachId]
-          );
+        if (cm.reply) {
+          const replyId = crypto.randomUUID();
+          await db.collection("class_comments").insertOne({
+            _id: replyId,
+            id: replyId,
+            class_id: classId,
+            author_name: `Coach ${c.coachName || "Lukman"}`,
+            comment: cm.reply,
+            parent_id: parentId,
+            coach_id: coachId,
+            hidden: false,
+            is_coach_reply: true,
+            created_at: now,
+          });
         }
       }
     }
   }
 
   console.log(`✓ Berhasil seeding ${CLASSES_DATA.length} kelas.`);
-  await client.end();
+  await client.close();
 }
 
 async function cleanClasses() {
   await client.connect();
-  console.log("Menghapus semua data kelas...");
-  const delParticipants = await client.query("delete from public.class_participants");
-  const delReviews = await client.query("delete from public.class_reviews");
-  const delComments = await client.query("delete from public.class_comments");
-  const delSchedules = await client.query("delete from public.class_schedules");
-  const delClasses = await client.query("delete from public.classes");
+  const db = client.db(dbName);
+  console.log(`Menghapus semua data kelas di [${dbName}]...`);
+  const delParticipants = await db.collection("class_participants").deleteMany({});
+  const delReviews = await db.collection("class_reviews").deleteMany({});
+  const delComments = await db.collection("class_comments").deleteMany({});
+  const delSchedules = await db.collection("class_schedules").deleteMany({});
+  const delClasses = await db.collection("classes").deleteMany({});
 
   console.log("✓ Data kelas berhasil dihapus:");
-  console.log(`  - classes: ${delClasses.rowCount}`);
-  console.log(`  - class_schedules: ${delSchedules.rowCount}`);
-  console.log(`  - class_participants: ${delParticipants.rowCount}`);
-  console.log(`  - class_reviews: ${delReviews.rowCount}`);
-  console.log(`  - class_comments: ${delComments.rowCount}`);
-  await client.end();
+  console.log(`  - classes: ${delClasses.deletedCount}`);
+  console.log(`  - class_schedules: ${delSchedules.deletedCount}`);
+  console.log(`  - class_participants: ${delParticipants.deletedCount}`);
+  console.log(`  - class_reviews: ${delReviews.deletedCount}`);
+  console.log(`  - class_comments: ${delComments.deletedCount}`);
+  await client.close();
 }
 
 const isClean = process.argv.includes("--clean") || process.argv.includes("--truncate") || process.argv.includes("--reset");

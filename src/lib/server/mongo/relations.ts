@@ -1,9 +1,38 @@
 import type { Db } from "mongodb";
-import { normalizeDoc } from "./utils";
+import { normalizeDoc } from "./utils.ts";
+
+async function populateManyToOne(
+  db: Db,
+  docs: any[],
+  fkField: string,
+  targetCollection: string,
+  targetProp: string
+) {
+  const ids = Array.from(new Set(docs.map((d) => d[fkField]).filter(Boolean)));
+  if (ids.length === 0) {
+    for (const d of docs) {
+      if (d[targetProp] === undefined) d[targetProp] = null;
+    }
+    return;
+  }
+
+  const targetDocs = await db
+    .collection(targetCollection)
+    .find({ $or: [{ _id: { $in: ids } }, { id: { $in: ids } }] } as any)
+    .toArray();
+  const map = new Map(
+    targetDocs.map((t) => [String(t.id || t._id), normalizeDoc(t)])
+  );
+
+  for (const d of docs) {
+    const fkVal = d[fkField];
+    d[targetProp] = fkVal ? map.get(String(fkVal)) || null : null;
+  }
+}
 
 /**
  * Handles relational population (emulating Supabase foreign key joins)
- * on raw documents returned from MongoQueryBuilder.
+ * on normalized documents returned from MongoQueryBuilder.
  */
 export async function populateRelations(
   collectionName: string,
@@ -11,91 +40,102 @@ export async function populateRelations(
   rawFields: string,
   db: Db
 ): Promise<void> {
-  if (docs.length === 0) return;
+  if (!docs || docs.length === 0 || !rawFields) return;
 
-  // 1. leagues -> point_presets (point_preset_id)
-  if (rawFields.includes("point_presets") && collectionName === "leagues") {
-    const presetIds = docs.map((d) => d.point_preset_id).filter(Boolean);
-    if (presetIds.length > 0) {
-      const presets = await db.collection("point_presets").find({
-        $or: [{ _id: { $in: presetIds } }, { id: { $in: presetIds } }],
-      } as any).toArray();
-      const pMap = new Map(presets.map((p) => [String(p.id || p._id), p]));
+  // 1. leagues -> point_presets (point_preset_id) & league_volumes (1-to-many)
+  if (collectionName === "leagues") {
+    if (rawFields.includes("point_presets")) {
+      await populateManyToOne(db, docs, "point_preset_id", "point_presets", "point_presets");
+    }
+    if (rawFields.includes("league_volumes")) {
+      const leagueIds = docs.map((d) => String(d.id || d._id)).filter(Boolean);
+      const volumes = await db
+        .collection("league_volumes")
+        .find({ league_id: { $in: leagueIds } })
+        .toArray();
+      const normVolumes = volumes.map((v) => normalizeDoc(v));
+      if (rawFields.includes("events") && normVolumes.length > 0) {
+        await populateManyToOne(db, normVolumes, "event_id", "events", "events");
+      }
       for (const d of docs) {
-        const found = pMap.get(d.point_preset_id);
-        d.point_presets = found ? { name: found.name } : null;
+        const lid = String(d.id || d._id);
+        d.league_volumes = normVolumes.filter((v) => v.league_id === lid);
       }
     }
   }
 
   // 2. league_volumes -> events (event_id)
-  if (rawFields.includes("events") && collectionName === "league_volumes") {
-    const eventIds = docs.map((d) => d.event_id).filter(Boolean);
-    if (eventIds.length > 0) {
-      const events = await db.collection("events").find({
-        $or: [{ _id: { $in: eventIds } }, { id: { $in: eventIds } }],
-      } as any).toArray();
-      const evMap = new Map(events.map((e) => [String(e.id || e._id), e]));
-      for (const d of docs) {
-        const ev = evMap.get(d.event_id);
-        d.events = ev ? normalizeDoc(ev) : null;
-      }
-    }
+  if (collectionName === "league_volumes" && rawFields.includes("events")) {
+    await populateManyToOne(db, docs, "event_id", "events", "events");
   }
 
   // 3. coaching_session_players -> players (player_id)
-  if (rawFields.includes("players") && collectionName === "coaching_session_players") {
-    const playerIds = docs.map((d) => d.player_id).filter(Boolean);
-    if (playerIds.length > 0) {
-      const players = await db.collection("players").find({
-        $or: [{ _id: { $in: playerIds } }, { id: { $in: playerIds } }],
-      } as any).toArray();
-      const pMap = new Map(players.map((p) => [String(p.id || p._id), normalizeDoc(p)]));
-      for (const d of docs) {
-        d.players = d.player_id ? pMap.get(d.player_id) || null : null;
-      }
-    }
+  if (collectionName === "coaching_session_players" && rawFields.includes("players")) {
+    await populateManyToOne(db, docs, "player_id", "players", "players");
   }
 
   // 4. coaching_groups -> coaches (coach_id)
-  if (rawFields.includes("coaches") && collectionName === "coaching_groups") {
-    const coachIds = docs.map((d) => d.coach_id).filter(Boolean);
-    if (coachIds.length > 0) {
-      const coaches = await db.collection("coaches").find({
-        $or: [{ _id: { $in: coachIds } }, { id: { $in: coachIds } }],
-      } as any).toArray();
-      const cMap = new Map(coaches.map((c) => [String(c.id || c._id), normalizeDoc(c)]));
-      for (const d of docs) {
-        d.coaches = d.coach_id ? cMap.get(d.coach_id) || null : null;
-      }
-    }
+  if (collectionName === "coaching_groups" && rawFields.includes("coaches")) {
+    await populateManyToOne(db, docs, "coach_id", "coaches", "coaches");
   }
 
-  // 5. coaching_assessments -> coaching_sessions (session_id)
-  if (rawFields.includes("coaching_sessions") && collectionName === "coaching_assessments") {
-    const sessionIds = docs.map((d) => d.session_id).filter(Boolean);
-    if (sessionIds.length > 0) {
-      const sessions = await db.collection("coaching_sessions").find({
-        $or: [{ _id: { $in: sessionIds } }, { id: { $in: sessionIds } }],
-      } as any).toArray();
-      const sMap = new Map(sessions.map((s) => [String(s.id || s._id), normalizeDoc(s)]));
-      for (const d of docs) {
-        d.coaching_sessions = d.session_id ? sMap.get(d.session_id) || null : null;
-      }
+  // 5. coaching_assessments -> coaching_sessions (session_id) & coaches (coach_id)
+  if (collectionName === "coaching_assessments") {
+    if (rawFields.includes("coaching_sessions")) {
+      await populateManyToOne(
+        db,
+        docs,
+        "session_id",
+        "coaching_sessions",
+        "coaching_sessions"
+      );
+    }
+    if (rawFields.includes("coaches")) {
+      await populateManyToOne(db, docs, "coach_id", "coaches", "coaches");
     }
   }
 
   // 6. sessions -> venues (venue_id)
-  if (rawFields.includes("venues") && collectionName === "sessions") {
-    const venueIds = docs.map((d) => d.venue_id).filter(Boolean);
-    if (venueIds.length > 0) {
-      const venues = await db.collection("venues").find({
-        $or: [{ _id: { $in: venueIds } }, { id: { $in: venueIds } }],
-      } as any).toArray();
-      const vMap = new Map(venues.map((v) => [String(v.id || v._id), normalizeDoc(v)]));
-      for (const d of docs) {
-        d.venues = d.venue_id ? vMap.get(d.venue_id) || null : null;
-      }
+  if (collectionName === "sessions" && rawFields.includes("venues")) {
+    await populateManyToOne(db, docs, "venue_id", "venues", "venues");
+  }
+
+  // 7. events -> venues (venue_id)
+  if (collectionName === "events" && rawFields.includes("venues")) {
+    await populateManyToOne(db, docs, "venue_id", "venues", "venues");
+  }
+
+  // 8. classes -> coaches (default_coach_id)
+  if (collectionName === "classes" && rawFields.includes("coaches")) {
+    await populateManyToOne(db, docs, "default_coach_id", "coaches", "coaches");
+  }
+
+  // 9. class_schedules -> coaches (coach_id), venues (venue_id), classes (class_id)
+  if (collectionName === "class_schedules") {
+    if (rawFields.includes("coaches")) {
+      await populateManyToOne(db, docs, "coach_id", "coaches", "coaches");
+    }
+    if (rawFields.includes("venues")) {
+      await populateManyToOne(db, docs, "venue_id", "venues", "venues");
+    }
+    if (rawFields.includes("classes")) {
+      await populateManyToOne(db, docs, "class_id", "classes", "classes");
+    }
+  }
+
+  // 10. class_reviews -> class_schedules (schedule_id), players (player_id)
+  if (collectionName === "class_reviews") {
+    if (rawFields.includes("class_schedules")) {
+      await populateManyToOne(
+        db,
+        docs,
+        "schedule_id",
+        "class_schedules",
+        "class_schedules"
+      );
+    }
+    if (rawFields.includes("players")) {
+      await populateManyToOne(db, docs, "player_id", "players", "players");
     }
   }
 }

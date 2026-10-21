@@ -11,19 +11,19 @@
  * 7. Stores all data in Supabase so the user can view and screenshot every screen.
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { MongoQueryBuilder } from "../src/lib/server/mongo/queryBuilder.ts";
+import { getMongoClient } from "../src/lib/mongodb.ts";
 import assert from "node:assert/strict";
 import { computeLeagueStandings } from "../src/lib/leagueRules.ts";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error("Missing SUPABASE credentials in environment.");
+if (!process.env.MONGODB_URI) {
+  console.error("Missing MONGODB_URI in environment.");
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = {
+  from: (table) => new MongoQueryBuilder(table),
+};
 
 // Pure helpers
 function determineLiveStage(matches) {
@@ -575,7 +575,7 @@ async function run() {
   assert.equal(jamal.totalPoints, 30, "Jamaludin total points must be 30*.");
 
   console.log("==================================================================");
-  console.log("🎉 ALL TESTS PASSED! DATA HAS BEEN STORED IN SUPABASE.");
+  console.log("🎉 ALL TESTS PASSED! DATA HAS BEEN STORED IN MONGODB.");
   console.log("==================================================================");
   console.log("\nYou can now open your browser and screenshot these URLs:");
   console.log("1. Public Liga Detail (Live View):");
@@ -589,6 +589,8 @@ async function run() {
   console.log("5. Completed Event Detail (Vol. 1):");
   console.log(`   👉 http://localhost:3000/jadwal/${vol1Slug}`);
   console.log("==================================================================\n");
+  const cli = await getMongoClient();
+  await cli.close();
 }
 
 run().catch((err) => {

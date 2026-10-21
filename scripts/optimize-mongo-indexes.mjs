@@ -7,11 +7,16 @@ if (!uri) {
 }
 
 const targetDb = process.argv.includes("--prod")
-  ? (process.env.MONGODB_DB_PROD || "PROD")
-  : (process.env.MONGODB_DB_DEV || "DEV");
+  ? process.env.MONGODB_DB_PROD || "PROD"
+  : process.env.MONGODB_DB_DEV || "DEV";
 
-if (targetDb === (process.env.MONGODB_DB_PROD || "PROD") && !process.argv.includes("--confirm-prod")) {
-  console.error("⛔ PROD database protection active. Pass --confirm-prod if you really intend to index PROD.");
+if (
+  targetDb === (process.env.MONGODB_DB_PROD || "PROD") &&
+  !process.argv.includes("--confirm-prod")
+) {
+  console.error(
+    "⛔ PROD database protection active. Pass --confirm-prod if you really intend to index PROD."
+  );
   process.exit(1);
 }
 
@@ -25,22 +30,65 @@ async function run() {
     {
       collection: "profiles",
       indexes: [
-        { key: { user_id: 1 }, options: { name: "idx_profiles_user_id", unique: true, sparse: true } },
-        { key: { player_id: 1 }, options: { name: "idx_profiles_player_id", sparse: true } },
+        {
+          key: { user_id: 1 },
+          options: {
+            name: "idx_profiles_user_id",
+            unique: true,
+            partialFilterExpression: { user_id: { $type: "string" } },
+          },
+        },
+        {
+          key: { player_id: 1 },
+          options: {
+            name: "profiles_player_id_key",
+            unique: true,
+            partialFilterExpression: { player_id: { $type: "string" } },
+          },
+        },
+        {
+          key: { whatsapp: 1 },
+          options: {
+            name: "profiles_whatsapp_key",
+            unique: true,
+            partialFilterExpression: { whatsapp: { $type: "string" } },
+          },
+        },
       ],
     },
     {
       collection: "admin_users",
       indexes: [
-        { key: { user_id: 1 }, options: { name: "idx_admin_users_user_id", unique: true, sparse: true } },
+        {
+          key: { user_id: 1 },
+          options: {
+            name: "idx_admin_users_user_id",
+            unique: true,
+            partialFilterExpression: { user_id: { $type: "string" } },
+          },
+        },
         { key: { role: 1 }, options: { name: "idx_admin_users_role" } },
       ],
     },
     {
       collection: "auth_users",
       indexes: [
-        { key: { email: 1 }, options: { name: "idx_auth_users_email", sparse: true } },
-        { key: { id: 1 }, options: { name: "idx_auth_users_id", unique: true, sparse: true } },
+        {
+          key: { email: 1 },
+          options: {
+            name: "idx_auth_users_email",
+            unique: true,
+            partialFilterExpression: { email: { $type: "string" } },
+          },
+        },
+        {
+          key: { id: 1 },
+          options: {
+            name: "idx_auth_users_id",
+            unique: true,
+            partialFilterExpression: { id: { $type: "string" } },
+          },
+        },
       ],
     },
     {
@@ -49,14 +97,32 @@ async function run() {
         { key: { event_id: 1, is_live: 1 }, options: { name: "idx_matches_event_live" } },
         { key: { is_live: 1, updated_at: -1 }, options: { name: "idx_matches_live_updated" } },
         { key: { id: 1 }, options: { name: "idx_matches_id", sparse: true } },
-        { key: { event_id: 1, starts_at: 1 }, options: { name: "idx_matches_event_starts" } },
+        { key: { event_id: 1, scheduled_order: 1 }, options: { name: "idx_matches_event_order" } },
+        {
+          key: { court_id: 1 },
+          options: {
+            name: "matches_one_on_air_per_court",
+            unique: true,
+            partialFilterExpression: {
+              is_live: true,
+              court_id: { $type: "string" },
+            },
+          },
+        },
       ],
     },
     {
       collection: "events",
       indexes: [
         { key: { id: 1 }, options: { name: "idx_events_id", sparse: true } },
-        { key: { slug: 1 }, options: { name: "idx_events_slug", sparse: true } },
+        {
+          key: { slug: 1 },
+          options: {
+            name: "events_slug_key",
+            unique: true,
+            partialFilterExpression: { slug: { $type: "string" } },
+          },
+        },
         { key: { status: 1, event_date: -1 }, options: { name: "idx_events_status_date" } },
         { key: { venue_id: 1 }, options: { name: "idx_events_venue_id" } },
         { key: { league_id: 1 }, options: { name: "idx_events_league_id" } },
@@ -68,6 +134,72 @@ async function run() {
         { key: { id: 1 }, options: { name: "idx_players_id", sparse: true } },
         { key: { points: -1 }, options: { name: "idx_players_points" } },
         { key: { name: 1 }, options: { name: "idx_players_name" } },
+        {
+          key: { whatsapp: 1 },
+          options: {
+            name: "players_whatsapp_key",
+            unique: true,
+            partialFilterExpression: { whatsapp: { $type: "string" } },
+          },
+        },
+      ],
+    },
+    {
+      collection: "match_history",
+      indexes: [
+        { key: { player_id: 1, match_date: -1 }, options: { name: "idx_match_history_player" } },
+        { key: { match_id: 1 }, options: { name: "idx_match_history_match" } },
+        { key: { event_id: 1 }, options: { name: "idx_match_history_event" } },
+      ],
+    },
+    {
+      collection: "player_awards",
+      indexes: [
+        { key: { player_id: 1 }, options: { name: "idx_player_awards_player" } },
+        {
+          key: { event_id: 1, player_id: 1 },
+          options: {
+            name: "player_awards_event_id_player_id_key",
+            unique: true,
+          },
+        },
+      ],
+    },
+    {
+      collection: "comp_teams",
+      indexes: [
+        { key: { event_id: 1 }, options: { name: "idx_comp_teams_event" } },
+      ],
+    },
+    {
+      collection: "comp_team_players",
+      indexes: [
+        { key: { team_id: 1, slot: 1 }, options: { name: "idx_comp_team_players_team_slot" } },
+        {
+          key: { event_id: 1, player_id: 1 },
+          options: {
+            name: "comp_team_players_event_id_player_id_key",
+            unique: true,
+          },
+        },
+      ],
+    },
+    {
+      collection: "gen_rounds",
+      indexes: [
+        {
+          key: { event_id: 1, round_no: 1 },
+          options: {
+            name: "gen_rounds_event_id_round_no_key",
+            unique: true,
+          },
+        },
+      ],
+    },
+    {
+      collection: "gen_participants",
+      indexes: [
+        { key: { event_id: 1, player_id: 1 }, options: { name: "idx_gen_participants_event_player" } },
       ],
     },
     {
@@ -79,7 +211,15 @@ async function run() {
     {
       collection: "classes",
       indexes: [
-        { key: { published: 1, date: 1 }, options: { name: "idx_classes_published_date" } },
+        { key: { published: 1, sort_order: 1 }, options: { name: "idx_classes_published_sort" } },
+        {
+          key: { slug: 1 },
+          options: {
+            name: "classes_slug_key",
+            unique: true,
+            partialFilterExpression: { slug: { $type: "string" } },
+          },
+        },
       ],
     },
     {
@@ -91,22 +231,67 @@ async function run() {
       ],
     },
     {
+      collection: "coaching_session_players",
+      indexes: [
+        {
+          key: { session_id: 1, player_id: 1 },
+          options: {
+            name: "coaching_session_players_session_id_player_id_key",
+            unique: true,
+          },
+        },
+      ],
+    },
+    {
+      collection: "coaching_assessments",
+      indexes: [
+        {
+          key: { session_id: 1, player_id: 1 },
+          options: {
+            name: "coaching_assessments_session_id_player_id_key",
+            unique: true,
+          },
+        },
+      ],
+    },
+    {
       collection: "league_volumes",
       indexes: [
-        { key: { league_id: 1, volume_number: 1 }, options: { name: "idx_league_volumes_league_vol" } },
+        {
+          key: { league_id: 1, volume_number: 1 },
+          options: {
+            name: "league_volumes_league_id_volume_number_key",
+            unique: true,
+          },
+        },
       ],
     },
     {
       collection: "leagues",
       indexes: [
         { key: { id: 1 }, options: { name: "idx_leagues_id", sparse: true } },
-        { key: { slug: 1 }, options: { name: "idx_leagues_slug", sparse: true } },
+        {
+          key: { slug: 1 },
+          options: {
+            name: "leagues_slug_key",
+            unique: true,
+            partialFilterExpression: { slug: { $type: "string" } },
+          },
+        },
       ],
     },
     {
       collection: "venues",
       indexes: [
         { key: { id: 1 }, options: { name: "idx_venues_id", sparse: true } },
+        {
+          key: { name: 1 },
+          options: {
+            name: "venues_name_key",
+            unique: true,
+            partialFilterExpression: { name: { $type: "string" } },
+          },
+        },
       ],
     },
     {
@@ -122,14 +307,34 @@ async function run() {
     for (const idx of item.indexes) {
       try {
         await coll.createIndex(idx.key, idx.options);
-        console.log(`  ✓ ${item.collection} -> ${idx.options.name || JSON.stringify(idx.key)}`);
+        console.log(
+          `  ✓ ${item.collection} -> ${idx.options.name || JSON.stringify(idx.key)}`
+        );
       } catch (err) {
-        console.warn(`  ⚠️ Failed to create index on ${item.collection}: ${err.message}`);
+        if (err.codeName === "IndexOptionsConflict" || err.code === 85 || err.code === 86) {
+          try {
+            try {
+              await coll.dropIndex(idx.options.name);
+            } catch {
+              await coll.dropIndex(idx.key);
+            }
+            await coll.createIndex(idx.key, idx.options);
+            console.log(`  ↻ Recreated ${item.collection} -> ${idx.options.name}`);
+          } catch (dropErr) {
+            console.warn(
+              `  ⚠️ Failed to recreate index on ${item.collection}: ${dropErr.message}`
+            );
+          }
+        } else {
+          console.warn(
+            `  ⚠️ Failed to create index on ${item.collection}: ${err.message}`
+          );
+        }
       }
     }
   }
 
-  console.log("✅ All performance indexes created successfully!");
+  console.log("✅ All unique & performance indexes created successfully!");
   await client.close();
 }
 

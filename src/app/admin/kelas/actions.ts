@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminOrCoach } from "@/lib/auth";
 import { guard, str, int, intOrNull } from "@/lib/server/action";
 import type { ClassCategory } from "@/lib/database.types";
 
@@ -57,6 +58,7 @@ export async function saveClass(prevState: any, fd: FormData) {
 
   let finalId = id;
   const res = await guard(async () => {
+    await requireAdminOrCoach();
     const supabase = await createClient();
     const slug = slugify(title);
 
@@ -117,6 +119,7 @@ export async function addClassSchedule(prevState: any, fd: FormData) {
   }
 
   return await guard(async () => {
+    await requireAdminOrCoach();
     const supabase = await createClient();
     const { error } = await supabase.from("class_schedules").insert({
       class_id: classId,
@@ -145,6 +148,7 @@ export async function updateParticipantAttendance(fd: FormData) {
   if (!participantId || !sessionNum) return { error: "Data peserta tidak valid" };
 
   return await guard(async () => {
+    await requireAdminOrCoach();
     const supabase = await createClient();
     const { data: p } = await supabase
       .from("class_participants")
@@ -177,6 +181,7 @@ export async function replyClassComment(prevState: any, fd: FormData) {
   }
 
   return await guard(async () => {
+    await requireAdminOrCoach();
     const supabase = await createClient();
     const { error } = await supabase.from("class_comments").insert({
       class_id: classId,
@@ -198,6 +203,7 @@ export async function toggleHideComment(fd: FormData) {
   const classId = str(fd, "class_id");
 
   return await guard(async () => {
+    await requireAdminOrCoach();
     const supabase = await createClient();
     const { error } = await supabase
       .from("class_comments")
@@ -221,6 +227,7 @@ export async function addClassParticipant(prevState: any, fd: FormData) {
   }
 
   return await guard(async () => {
+    await requireAdminOrCoach();
     const supabase = await createClient();
 
     // 1. Fetch player info
@@ -299,6 +306,7 @@ export async function removeClassParticipant(fd: FormData) {
   if (!participantId) return { error: "ID peserta tidak valid" };
 
   return await guard(async () => {
+    await requireAdminOrCoach();
     const supabase = await createClient();
 
     // Find schedule id before deleting

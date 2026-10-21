@@ -1,5 +1,5 @@
-// Hand-written types matching supabase/migrations/0001_init.sql.
-// Regenerate with `supabase gen types typescript` once the project is linked.
+// Domain & collection schema types for Basecamp Padel (MongoDB Atlas).
+// Kept compatible with the query adapter and application layer.
 
 import type { FinalStage, KoStage, Stage } from "@/lib/competition";
 import type { PhotoSource, PlayDuration, SelfLevel } from "@/lib/accountRules";

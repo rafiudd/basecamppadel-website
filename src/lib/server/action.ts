@@ -34,11 +34,21 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
   players_whatsapp_key: "Nomor WA ini sudah dipakai pemain lain.",
   profiles_whatsapp_key: "Nomor WA ini sudah dipakai akun lain.",
   profiles_player_id_key: "Data pemain ini sudah tersambung ke akun lain.",
+  venues_name_key: "Nama venue ini sudah dipakai.",
+  events_slug_key: "Slug event ini sudah dipakai.",
+  leagues_slug_key: "Slug liga ini sudah dipakai.",
+  classes_slug_key: "Slug kelas ini sudah dipakai.",
+  gen_rounds_event_id_round_no_key: "Nomor ronde sudah ada pada event ini.",
+  player_awards_event_id_player_id_key: "Penghargaan untuk pemain ini pada event tersebut sudah tercatat.",
 };
 
 export function friendly(message: string) {
   const hit = Object.keys(CONSTRAINT_MESSAGES).find((k) => message.includes(k));
-  return hit ? CONSTRAINT_MESSAGES[hit] : message;
+  if (hit) return CONSTRAINT_MESSAGES[hit];
+  if (message.includes("E11000 duplicate key error")) {
+    return "Data dengan nilai unik yang sama sudah ada.";
+  }
+  return message;
 }
 
 // ---------------------------------------------------------------- FormData readers

@@ -1,108 +1,78 @@
 #!/usr/bin/env node
 /**
- * Basecamp Padel — DB CLI
+ * Basecamp Padel — MongoDB CLI
  *
- *   npm run db:migrate        jalankan supabase/migrations/*.sql
- *   npm run db:seed           jalankan supabase/seed.sql (data contoh)
- *   npm run db:admin          bikin user admin (ADMIN_EMAIL / ADMIN_PASSWORD) + masukkan ke admin_users
- *   npm run db:setup          migrate + seed + admin sekaligus
- *
- * Env (di .env.local):
- *   SUPABASE_DB_URL             Settings → Database → Connection string (URI, pakai Session pooler / direct)
- *   SUPABASE_SERVICE_ROLE_KEY   Settings → API → service_role (hanya untuk db:admin, JANGAN di-commit)
- *   NEXT_PUBLIC_SUPABASE_URL
- *   ADMIN_EMAIL, ADMIN_PASSWORD
+ *   npm run db:migrate        buat/optimasi semua index & unique constraints di MongoDB
+ *   npm run db:seed           cek status koleksi di MongoDB
+ *   npm run db:admin          buat/update akun admin di MongoDB (ADMIN_EMAIL / ADMIN_PASSWORD)
+ *   npm run db:setup          indexes + admin + status sekaligus
  */
-import { readFileSync, readdirSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
-import pg from "pg";
+import { MongoClient } from "mongodb";
 
-const cmd = process.argv[2];
+const cmd = process.argv[2] || "status";
 const root = resolve(import.meta.dirname, "..");
-const need = (k) => {
-  const v = process.env[k];
-  if (!v) {
-    console.error(`✗ Env ${k} belum diisi di .env.local`);
+
+function runScript(relPath, extraArgs = []) {
+  const res = spawnSync(process.execPath, [resolve(root, relPath), ...extraArgs], {
+    stdio: "inherit",
+    env: process.env,
+  });
+  if (res.status !== 0) {
+    process.exit(res.status || 1);
+  }
+}
+
+async function status() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    console.error("✗ Env MONGODB_URI belum diisi di .env");
     process.exit(1);
   }
-  return v;
-};
-
-async function withDb(fn) {
-  const client = new pg.Client({
-    connectionString: need("SUPABASE_DB_URL"),
-    ssl: /localhost|127\.0\.0\.1/.test(process.env.SUPABASE_DB_URL) ? false : { rejectUnauthorized: false },
-  });
+  const dbName = process.env.MONGODB_DB_NAME || process.env.MONGODB_DB_DEV || "DEV";
+  const client = new MongoClient(uri);
   await client.connect();
   try {
-    return await fn(client);
+    const db = client.db(dbName);
+    const collections = await db.listCollections().toArray();
+    console.log(`📊 MongoDB Database [${dbName}] (${collections.length} koleksi):`);
+    for (const c of collections.sort((a, b) => a.name.localeCompare(b.name))) {
+      const count = await db.collection(c.name).countDocuments();
+      console.log(`  - ${c.name.padEnd(28)}: ${count} dokumen`);
+    }
   } finally {
-    await client.end();
+    await client.close();
   }
 }
 
-async function migrate() {
-  const dir = resolve(root, "supabase/migrations");
-  const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
-  await withDb(async (db) => {
-    for (const f of files) {
-      process.stdout.write(`→ ${f} … `);
-      await db.query(readFileSync(resolve(dir, f), "utf8"));
-      console.log("ok");
-    }
-  });
-}
-
-async function seed() {
-  await withDb(async (db) => {
-    const { rows } = await db.query("select count(*)::int as n from public.players");
-    if (rows[0].n > 0 && !process.argv.includes("--force")) {
-      console.log(`↷ seed dilewati: tabel players sudah ada ${rows[0].n} baris (pakai --force untuk tetap jalan)`);
-      return;
-    }
-    process.stdout.write("→ seed.sql … ");
-    await db.query(readFileSync(resolve(root, "supabase/seed.sql"), "utf8"));
-    console.log("ok");
-  });
+async function indexes() {
+  runScript("scripts/optimize-mongo-indexes.mjs", process.argv.slice(3));
 }
 
 async function admin() {
-  const { createClient } = await import("@supabase/supabase-js");
-  const url = need("NEXT_PUBLIC_SUPABASE_URL");
-  const key = need("SUPABASE_SERVICE_ROLE_KEY");
-  const email = need("ADMIN_EMAIL");
-  const password = need("ADMIN_PASSWORD");
-  const sb = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
-
-  process.stdout.write(`→ user ${email} … `);
-  let userId;
-  const { data, error } = await sb.auth.admin.createUser({ email, password, email_confirm: true });
-  if (error) {
-    if (!/already|exists|registered/i.test(error.message)) throw error;
-    // sudah ada → cari id-nya
-    const { data: list, error: e2 } = await sb.auth.admin.listUsers({ perPage: 1000 });
-    if (e2) throw e2;
-    userId = list.users.find((u) => u.email?.toLowerCase() === email.toLowerCase())?.id;
-    if (!userId) throw new Error("user ada tapi tidak ketemu di listUsers");
-    console.log("sudah ada");
-  } else {
-    userId = data.user.id;
-    console.log("dibuat");
-  }
-
-  process.stdout.write("→ admin_users … ");
-  const { error: e3 } = await sb.from("admin_users").upsert({ user_id: userId }, { onConflict: "user_id" });
-  if (e3) throw e3;
-  console.log("ok");
-  console.log(`\n✓ Login di /admin/login pakai ${email}`);
+  runScript("scripts/create-mongo-admin.mjs", process.argv.slice(3));
 }
 
-const run = { migrate, seed, admin, setup: async () => { await migrate(); await seed(); await admin(); } }[cmd];
-if (!run) {
-  console.error("usage: node scripts/db.mjs <migrate|seed|admin|setup> [--force]");
+const handlers = {
+  indexes,
+  migrate: indexes,
+  status,
+  seed: status,
+  admin,
+  setup: async () => {
+    await indexes();
+    await admin();
+    await status();
+  },
+};
+
+const fn = handlers[cmd];
+if (!fn) {
+  console.error("usage: node scripts/db.mjs <indexes|status|admin|setup>");
   process.exit(1);
 }
-run().catch((e) => {
+fn().catch((e) => {
   console.error("✗", e.message ?? e);
   process.exit(1);
 });

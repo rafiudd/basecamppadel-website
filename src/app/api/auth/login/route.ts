@@ -29,11 +29,18 @@ export async function POST(req: NextRequest) {
       $or: [{ user_id: userId }, { _id: userId }],
     } as any);
 
+    if (!adminRow || (adminRow.role !== "admin" && adminRow.role !== "coach")) {
+      return NextResponse.json(
+        { error: "Akun Anda tidak memiliki hak akses admin atau coach." },
+        { status: 403 }
+      );
+    }
+
     await setSessionCookie({
       id: userId,
       email: user.email,
-      role: adminRow?.role || "authenticated",
-      coach_id: adminRow?.coach_id || null,
+      role: adminRow.role,
+      coach_id: adminRow.coach_id || null,
       user_metadata: user.raw_user_meta_data || {},
     });
 

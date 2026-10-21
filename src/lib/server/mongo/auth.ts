@@ -63,62 +63,11 @@ export function createMongoAuthAdapter() {
       };
     },
 
-    exchangeCodeForSession: async (code: string) => {
-      const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (!sbUrl || !anonKey) {
-        return { data: { user: null }, error: { message: "Auth provider not configured" } };
-      }
-
-      try {
-        const res = await fetch(`${sbUrl}/auth/v1/token?grant_type=pkce`, {
-          method: "POST",
-          headers: {
-            apikey: anonKey,
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({ auth_code: code }),
-        });
-
-        const tokenData = await res.json();
-        if (!res.ok || !tokenData?.user) {
-          return { data: { user: null }, error: { message: tokenData?.error_description || "Exchange failed" } };
-        }
-
-        const sbUser = tokenData.user;
-        const db = await getDb();
-
-        await db.collection("auth_users").updateOne(
-          { $or: [{ _id: sbUser.id }, { id: sbUser.id }] } as any,
-          {
-            $set: {
-              id: sbUser.id,
-              email: sbUser.email,
-              role: "authenticated",
-              raw_user_meta_data: sbUser.user_metadata || {},
-              updated_at: new Date(),
-            },
-            $setOnInsert: { created_at: new Date() },
-          },
-          { upsert: true }
-        );
-
-        const adminRow = await db.collection("admin_users").findOne({
-          $or: [{ user_id: sbUser.id }, { _id: sbUser.id }],
-        } as any);
-
-        await setSessionCookie({
-          id: sbUser.id,
-          email: sbUser.email,
-          role: adminRow?.role || "authenticated",
-          coach_id: adminRow?.coach_id || null,
-          user_metadata: sbUser.user_metadata || {},
-        });
-
-        return { data: { user: sbUser }, error: null };
-      } catch (err: any) {
-        return { data: { user: null }, error: err };
-      }
+    exchangeCodeForSession: async (_code: string) => {
+      return {
+        data: { user: null },
+        error: { message: "Use /api/auth/google/callback for Google OAuth." },
+      };
     },
 
     signOut: async () => {

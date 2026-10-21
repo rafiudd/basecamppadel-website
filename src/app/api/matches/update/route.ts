@@ -3,35 +3,48 @@ import { getDb } from "@/lib/mongodb";
 import { getSessionUser } from "@/lib/server/session";
 
 const ALLOWED_MATCH_FIELDS = new Set([
-  "team_a_games",
-  "team_b_games",
-  "team_a_sets",
-  "team_b_sets",
-  "points_a",
-  "points_b",
-  "serving_team",
+  "team_a",
+  "team_b",
+  "team_a_game",
+  "team_b_game",
+  "games_a",
+  "games_b",
+  "set_label",
+  "serve",
   "is_live",
-  "status",
+  "timer_start",
+  "timer_base_seconds",
   "timer_running",
-  "timer_seconds",
   "court_id",
-  "stream_url",
-  "started_at",
+  "winner",
+  "winner_team_id",
+  "is_wo",
   "finished_at",
-  "wo",
-  "winner_team",
+  "scheduled_order",
 ]);
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getSessionUser();
-    if (!user || (user.role !== "admin" && user.role !== "coach")) {
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const db = await getDb();
+    const adminRow = await db.collection("admin_users").findOne({
+      $or: [{ _id: user.id }, { user_id: user.id }],
+    } as any);
+
+    if (adminRow?.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const { id, patch } = await req.json();
     if (!id || !patch || typeof patch !== "object") {
-      return NextResponse.json({ error: "Missing match id or patch data." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing match id or patch data." },
+        { status: 400 }
+      );
     }
 
     const sanitizedPatch: Record<string, any> = {};
@@ -42,10 +55,36 @@ export async function POST(req: NextRequest) {
     }
 
     if (Object.keys(sanitizedPatch).length === 0) {
-      return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
+      return NextResponse.json(
+        { error: "No valid fields to update." },
+        { status: 400 }
+      );
     }
 
-    const db = await getDb();
+    if (sanitizedPatch.is_live === true) {
+      const existing = await db.collection("matches").findOne({
+        $or: [{ _id: id }, { id }],
+      } as any);
+      const courtId = sanitizedPatch.court_id ?? existing?.court_id;
+      if (courtId) {
+        const conflict = await db.collection("matches").findOne({
+          court_id: courtId,
+          is_live: true,
+          _id: { $ne: existing?._id ?? id },
+          id: { $ne: id },
+        } as any);
+        if (conflict) {
+          return NextResponse.json(
+            {
+              error:
+                "Court ini baru saja di-ON AIR-kan operator lain. Muat ulang lalu coba lagi.",
+            },
+            { status: 409 }
+          );
+        }
+      }
+    }
+
     const updateData = {
       ...sanitizedPatch,
       updated_at: new Date(),

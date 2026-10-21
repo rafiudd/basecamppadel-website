@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionToken } from "@/lib/server/session";
 import { accountHome } from "@/lib/accountRules";
+import { getDb } from "@/lib/mongodb";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -13,6 +14,21 @@ export async function updateSession(request: NextRequest) {
   const user = sessionToken ? await verifySessionToken(sessionToken) : null;
 
   const isAdminArea = path.startsWith("/admin") && !path.startsWith("/admin/login");
+  const isAdminLogin = path.startsWith("/admin/login");
+
+  // Always verify current admin/coach role from DB on admin routes so role revocation takes effect immediately
+  let liveRole: string | null = null;
+  if (user && (isAdminArea || isAdminLogin)) {
+    try {
+      const db = await getDb();
+      const adminRow = await db.collection("admin_users").findOne({
+        $or: [{ _id: user.id }, { user_id: user.id }],
+      } as any);
+      liveRole = (adminRow?.role as string | undefined) || null;
+    } catch {
+      liveRole = user.role || null;
+    }
+  }
 
   if (isAdminArea) {
     if (!user) {
@@ -22,16 +38,19 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    const role = user.role;
-    if (role !== "admin" && role !== "coach") {
-      // User biasa: dilarang mengakses halaman admin
+    if (liveRole !== "admin" && liveRole !== "coach") {
+      // User biasa atau akses admin sudah dicabut: dilarang mengakses halaman admin
       const url = request.nextUrl.clone();
       url.pathname = "/";
       url.search = "";
       return NextResponse.redirect(url);
     }
 
-    if (role === "coach" && !path.startsWith("/admin/coaching")) {
+    if (
+      liveRole === "coach" &&
+      !path.startsWith("/admin/coaching") &&
+      !path.startsWith("/admin/kelas")
+    ) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/coaching";
       url.search = "";
@@ -48,10 +67,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (path.startsWith("/admin/login") && user) {
-    if (user.role === "admin" || user.role === "coach") {
+  if (isAdminLogin && user) {
+    if (liveRole === "admin" || liveRole === "coach") {
       const url = request.nextUrl.clone();
-      url.pathname = accountHome(user.role);
+      url.pathname = accountHome(liveRole);
       url.search = "";
       return NextResponse.redirect(url);
     }
