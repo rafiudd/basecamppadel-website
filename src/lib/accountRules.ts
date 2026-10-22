@@ -59,6 +59,7 @@ export const PLAY_DURATIONS = [
   { value: "gt2y", label: "Lebih dari 2 tahun" },
 ] as const;
 export type PlayDuration = (typeof PLAY_DURATIONS)[number]["value"];
+export const PLAY_DURATION_VALUES = PLAY_DURATIONS.map((d) => d.value) as readonly PlayDuration[];
 
 /** "Level (perkiraan sendiri)": the coach's assessment refines it later. */
 export const SELF_LEVELS = ["Pemula", "Beginner", "Intermediate"] as const;

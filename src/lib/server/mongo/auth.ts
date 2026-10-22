@@ -1,5 +1,5 @@
-import { getDb } from "@/lib/mongodb";
-import { getSessionUser, setSessionCookie, clearSessionCookie } from "../session";
+import { getDb } from "../../mongodb.ts";
+import { getSessionUser, setSessionCookie, clearSessionCookie } from "../session.ts";
 import bcrypt from "bcryptjs";
 
 /**

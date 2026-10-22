@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Match } from "@/lib/database.types";
+import { DEFAULT_MATCH_SETS, type Match } from "@/lib/database.types";
 import { useLiveMatch, useTick } from "@/lib/useLiveMatch";
 import { formatStartLine, formatTimer, matchElapsedSeconds } from "@/lib/format";
 import { MEDIA_PARTNER_LOGOS, SPONSOR_LOGOS } from "@/lib/config";
@@ -9,7 +9,7 @@ import { CountdownBadge } from "./CountdownBadge";
 import { MountainMark } from "./Logo";
 import { SponsorStrip } from "./SponsorStrip";
 
-function TeamRow({ name, sets, game, serving }: { name: string; sets: number[]; game: string; serving: boolean }) {
+function TeamRow({ name, sets, game, serving }: { name: string; sets?: number[] | null; game: string; serving: boolean }) {
   return (
     <div
       className="flex items-center gap-[18px] pl-[14px] -ml-[18px] border-l-4"
@@ -23,7 +23,7 @@ function TeamRow({ name, sets, game, serving }: { name: string; sets: number[]; 
         {name}
       </div>
       <div className="flex gap-2">
-        {[sets[0] ?? 0, sets[1] ?? 0].map((s, i) => (
+        {[(sets?.[0]) ?? DEFAULT_MATCH_SETS[0], (sets?.[1]) ?? DEFAULT_MATCH_SETS[1]].map((s, i) => (
           <div key={i} className="w-[46px] h-[46px] rounded-lg bg-snow/10 flex items-center justify-center font-display font-bold text-[24px] text-snow">
             {s}
           </div>

@@ -47,6 +47,7 @@ export default async function HomePage() {
           unoptimized
           sizes="100vw"
           className="object-cover"
+          style={{ objectPosition: "50% 22%" }}
         />
         <div
           className="absolute inset-0"
@@ -55,24 +56,24 @@ export default async function HomePage() {
               "linear-gradient(to top, rgba(23,21,31,0.94) 12%, rgba(23,21,31,0.4) 60%, rgba(23,21,31,0.15) 100%)",
           }}
         />
-        <div className="relative w-full max-w-[1440px] mx-auto">
+        <div className="relative w-full max-w-[1104px] mx-auto">
           <div className="max-w-[800px] flex flex-col gap-5">
             <div className="font-sans font-bold text-sm tracking-[0.12em] text-coral uppercase">
               Basecamp Padel · Komunitas
             </div>
-            <h1 className="font-display font-bold text-[44px] sm:text-[54px] md:text-[64px] leading-[1.05] text-snow m-0">
+            <h1 className="font-display font-bold text-[48px] sm:text-[56px] md:text-[64px] leading-[1.05] text-snow m-0">
               Start. Settle in.
               <br />
               Level up.
             </h1>
-            <p className="font-sans font-medium text-base md:text-lg text-snow/85 max-w-[520px] leading-[1.55] m-0">
+            <p className="font-sans font-medium text-[16px] md:text-[18px] text-snow/85 max-w-[520px] leading-[1.55] m-0">
               Komunitas mabar padel buat siapa aja — dari yang baru pegang raket sampai yang udah
               rutin naik level.
             </p>
-            <div className="flex gap-4 items-center flex-wrap pt-2">
+            <div className="flex gap-[14px] items-center flex-wrap pt-2">
               <Link
                 href="/jadwal"
-                className="no-underline bg-coral text-ink rounded-full px-7 py-4 font-sans font-bold text-[15px] transition-transform hover:scale-105 active:scale-95"
+                className="no-underline bg-coral text-ink rounded-full px-7 py-4 font-sans font-bold text-[15px] transition-transform hover:scale-105 active:scale-95 whitespace-nowrap text-center"
               >
                 Lihat Jadwal
               </Link>
@@ -80,7 +81,7 @@ export default async function HomePage() {
                 href={WHATSAPP_URL}
                 target="_blank"
                 rel="noopener"
-                className="no-underline text-snow font-sans font-bold text-[15px] py-4 px-2 underline underline-offset-4 hover:text-volt transition-colors"
+                className="no-underline text-snow font-sans font-bold text-[15px] py-4 px-2 underline underline-offset-4 hover:text-volt transition-colors whitespace-nowrap text-center"
               >
                 Gabung via WhatsApp
               </a>

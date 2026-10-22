@@ -1,4 +1,4 @@
-import { unstable_rethrow } from "next/navigation";
+import { unstable_rethrow } from "next/navigation.js";
 import type { createClient } from "@/lib/supabase/server";
 import type { ActionState } from "@/lib/actionState";
 

@@ -1,7 +1,8 @@
-import { cookies } from "next/headers";
+import { cookies } from "next/headers.js";
+import { SESSION_MAX_AGE } from "../accountRules.ts";
 
 const SESSION_COOKIE_NAME = "basecamp_session";
-const MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+const MAX_AGE = SESSION_MAX_AGE;
 
 export type SessionPayload = {
   id: string;
@@ -92,7 +93,12 @@ export async function setSessionCookie(user: {
   coach_id?: string | null;
   user_metadata?: Record<string, any>;
 }) {
-  const cookieStore = await cookies();
+  let cookieStore: any;
+  try {
+    cookieStore = await cookies();
+  } catch {
+    return null;
+  }
   const payload: SessionPayload = {
     id: user.id,
     email: user.email,
@@ -114,7 +120,12 @@ export async function setSessionCookie(user: {
 }
 
 export async function clearSessionCookie() {
-  const cookieStore = await cookies();
+  let cookieStore: any;
+  try {
+    cookieStore = await cookies();
+  } catch {
+    return null;
+  }
   cookieStore.set(SESSION_COOKIE_NAME, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -131,7 +142,12 @@ export async function getSessionUser(): Promise<{
   coach_id: string | null;
   user_metadata: Record<string, any>;
 } | null> {
-  const cookieStore = await cookies();
+  let cookieStore: any;
+  try {
+    cookieStore = await cookies();
+  } catch {
+    return null;
+  }
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
 

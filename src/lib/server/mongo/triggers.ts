@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { DEFAULT_MATCH_SETS } from "../../database.types.ts";
 
 /**
  * Maps player skill level to its official badge hex color.
@@ -52,6 +53,8 @@ export function applyCollectionDefaults(
       break;
     }
     case "matches": {
+      if (!Array.isArray(doc.team_a_sets)) doc.team_a_sets = [...DEFAULT_MATCH_SETS];
+      if (!Array.isArray(doc.team_b_sets)) doc.team_b_sets = [...DEFAULT_MATCH_SETS];
       if (doc.team_a_game === undefined) doc.team_a_game = "0";
       if (doc.team_b_game === undefined) doc.team_b_game = "0";
       if (doc.games_a === undefined) doc.games_a = 0;

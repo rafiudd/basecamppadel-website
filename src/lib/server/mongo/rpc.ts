@@ -1,16 +1,32 @@
 import crypto from "crypto";
 import type { Db } from "mongodb";
-import { getDb } from "@/lib/mongodb";
-import { getSessionUser, clearSessionCookie } from "../session";
+import { getDb } from "../../mongodb.ts";
+import { getSessionUser, clearSessionCookie } from "../session.ts";
 import {
   applyCollectionDefaults,
   levelColorFor,
   recomputePlayerStats,
-} from "./triggers";
-import { normalizeDoc } from "./utils";
+} from "./triggers.ts";
+import { normalizeDoc } from "./utils.ts";
+import { LEVEL_NAMES, type PlayerLevelName } from "../../coaching.ts";
+import {
+  normalizeWhatsapp,
+  normalizeInstagram,
+  PLAY_DURATIONS,
+  PLAY_DURATION_VALUES,
+  SELF_LEVELS,
+  type PlayDuration,
+  type SelfLevel,
+} from "../../accountRules.ts";
+import {
+  DOMINANT_HANDS,
+  COURT_POSITIONS,
+  type DominantHand,
+  type CourtPosition,
+} from "../../database.types.ts";
 
-async function getCallerAuth(db: Db) {
-  const user = await getSessionUser();
+async function getCallerAuth(db: Db, explicitUser?: any) {
+  const user = explicitUser || (await getSessionUser());
   if (!user) return { user: null, role: null, isAdmin: false, hasAdminAccess: false };
 
   const adminDoc = await db.collection("admin_users").findOne({
@@ -121,7 +137,8 @@ async function accountNewPlayer(
  */
 export async function executeMongoRpc(
   functionName: string,
-  args: Record<string, any> = {}
+  args: Record<string, any> = {},
+  explicitUser?: any
 ): Promise<{ data: any; error: any }> {
   try {
     const db = await getDb();
@@ -150,7 +167,7 @@ export async function executeMongoRpc(
         }
         const { p_player_id, p_level } = args;
         if (
-          !["Rookie", "Beginner", "Low Bronze", "Bronze", "Silver"].includes(p_level)
+          !LEVEL_NAMES.includes(p_level as PlayerLevelName)
         ) {
           return { data: null, error: { message: "Invalid player level" } };
         }
@@ -173,64 +190,79 @@ export async function executeMongoRpc(
       }
 
       case "account_save_profile": {
-        const { user } = await getCallerAuth(db);
+        const { user } = await getCallerAuth(db, explicitUser || args._callerUser);
         if (!user) {
           return { data: null, error: { message: "Not signed in" } };
         }
 
         const v_nick = String(args.p_nickname ?? "").trim();
+        const v_full_name = String(args.p_full_name ?? "").trim();
         const v_gender = String(args.p_gender ?? "").trim().toUpperCase();
-        const v_wa = String(args.p_whatsapp ?? "").replace(/\D/g, "");
+        const v_wa = normalizeWhatsapp(String(args.p_whatsapp ?? ""));
+
         const v_region = String(args.p_region ?? "").trim() || null;
-        const v_hand = String(args.p_dominant_hand ?? "").trim() || null;
-        const v_pos = String(args.p_position ?? "").trim() || null;
-        const v_ig =
-          String(args.p_instagram ?? "")
-            .trim()
-            .replace(/^@+/, "") || null;
-        const v_dur = String(args.p_play_duration ?? "").trim() || null;
-        const v_slevel = String(args.p_self_level ?? "").trim() || null;
+
+        // Hand normalization: accept "R", "L", "Kanan", "Kiri", or null
+        let v_hand: string | null = String(args.p_hand ?? args.p_dominant_hand ?? "").trim() || null;
+        if (v_hand === "Kanan") v_hand = "R";
+        else if (v_hand === "Kiri") v_hand = "L";
+
+        // Position normalization: accept "right", "left", "both", "Kanan (Drive)", "Kiri (Revés)", "Fleksibel", "Bebas", or null
+        let v_pos: string | null = String(args.p_position ?? "").trim() || null;
+        if (v_pos === "Kanan (Drive)" || v_pos === "Kanan") v_pos = "right";
+        else if (v_pos === "Kiri (Revés)" || v_pos === "Kiri") v_pos = "left";
+        else if (v_pos === "Fleksibel" || v_pos === "Bebas") v_pos = "both";
+
+        const raw_ig = String(args.p_instagram ?? "").trim();
+        const norm_ig = raw_ig ? normalizeInstagram(raw_ig) : "";
+        if (raw_ig && norm_ig === null) {
+          return { data: null, error: { message: "Username Instagram tidak valid" } };
+        }
+        const v_ig = norm_ig || null;
+
+        // Play duration normalization: accept PlayDuration value, label, or common colloquial inputs
+        let v_dur: string | null = String(args.p_play_duration ?? "").trim() || null;
+        if (v_dur) {
+          const match = PLAY_DURATIONS.find((d) => d.value === v_dur || d.label === v_dur);
+          if (match) {
+            v_dur = match.value;
+          } else if (v_dur === "< 3 bulan") v_dur = "lt3m";
+          else if (v_dur === "3-6 bulan") v_dur = "3to6m";
+          else if (v_dur === "6-12 bulan") v_dur = "6to12m";
+          else if (v_dur === "1-2 tahun") v_dur = "1to2y";
+          else if (v_dur === "> 2 tahun") v_dur = "gt2y";
+        }
+
+        // Self level normalization: accept "Pemula", "Beginner", "Intermediate"
+        let v_slevel: string | null = String(args.p_self_level ?? "").trim() || null;
+        if (v_slevel === "Baru pertama" || v_slevel === "Rookie") v_slevel = "Pemula";
+        else if (v_slevel === "Advanced") v_slevel = "Intermediate";
 
         if (!v_nick) {
-          return { data: null, error: { message: "Nama wajib diisi" } };
+          return { data: null, error: { message: "Nama panggilan wajib diisi" } };
+        }
+        if (v_nick.length > 40) {
+          return { data: null, error: { message: "Nama panggilan maksimal 40 karakter" } };
+        }
+        if (v_full_name.length > 80) {
+          return { data: null, error: { message: "Nama lengkap maksimal 80 karakter" } };
         }
         if (v_gender !== "M" && v_gender !== "F") {
-          return { data: null, error: { message: "Jenis kelamin wajib dipilih" } };
+          return { data: null, error: { message: "Pilih kategori dulu" } };
         }
-        if (!/^(0|62)\d{8,13}$/.test(v_wa)) {
+        if (!v_wa) {
           return { data: null, error: { message: "Nomor WhatsApp tidak valid" } };
         }
-        if (v_hand && !["Kanan", "Kiri", "Ambidextrous"].includes(v_hand)) {
+        if (v_hand && !DOMINANT_HANDS.includes(v_hand as DominantHand)) {
           return { data: null, error: { message: "Tangan dominan tidak valid" } };
         }
-        if (
-          v_pos &&
-          !["Kanan (Drive)", "Kiri (Revés)", "Fleksibel"].includes(v_pos)
-        ) {
+        if (v_pos && !COURT_POSITIONS.includes(v_pos as CourtPosition)) {
           return { data: null, error: { message: "Posisi bermain tidak valid" } };
         }
-        if (
-          v_dur &&
-          ![
-            "< 3 bulan",
-            "3-6 bulan",
-            "6-12 bulan",
-            "1-2 tahun",
-            "> 2 tahun",
-          ].includes(v_dur)
-        ) {
+        if (v_dur && !PLAY_DURATION_VALUES.includes(v_dur as PlayDuration)) {
           return { data: null, error: { message: "Lama bermain tidak valid" } };
         }
-        if (
-          v_slevel &&
-          ![
-            "Baru pertama",
-            "Rookie",
-            "Beginner",
-            "Intermediate",
-            "Advanced",
-          ].includes(v_slevel)
-        ) {
+        if (v_slevel && !SELF_LEVELS.includes(v_slevel as SelfLevel)) {
           return { data: null, error: { message: "Level pengalaman tidak valid" } };
         }
 
@@ -251,11 +283,42 @@ export async function executeMongoRpc(
           $or: [{ _id: user.id }, { user_id: user.id }],
         } as any);
         const v_linked = existingProfile?.player_id || null;
-        const v_photo = existingProfile?.photo_url || null;
 
-        const profileUpdate = {
+        const v_remove_photo = Boolean(args.p_remove_photo);
+        const v_photo_source = String(args.p_photo_source ?? "").trim();
+        const v_incoming_photo = args.p_photo_url ? String(args.p_photo_url).trim() : null;
+
+        let final_photo = existingProfile?.photo_url || null;
+        if (v_remove_photo) {
+          final_photo = null;
+        } else if (v_incoming_photo) {
+          final_photo = v_incoming_photo;
+        }
+
+        let final_photo_source = existingProfile?.photo_source || "";
+        if (v_remove_photo) {
+          final_photo_source = "none";
+        } else if (v_photo_source) {
+          final_photo_source = v_photo_source;
+        }
+
+        // Category locked check if player already has points
+        if (
+          v_linked &&
+          existingProfile?.gender &&
+          existingProfile.gender !== v_gender &&
+          (await accountPlayerLocked(db, v_linked, user.id))
+        ) {
+          return {
+            data: null,
+            error: { message: "Kategori cuma bisa diubah admin karena kamu sudah punya poin." },
+          };
+        }
+
+        const profileUpdate: Record<string, any> = {
           user_id: user.id,
           email: user.email,
+          full_name: v_full_name || existingProfile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || "",
           nickname: v_nick,
           gender: v_gender,
           whatsapp: v_wa,
@@ -265,6 +328,8 @@ export async function executeMongoRpc(
           instagram: v_ig,
           play_duration: v_dur,
           self_level: v_slevel,
+          photo_url: final_photo,
+          photo_source: final_photo_source,
           updated_at: new Date(),
         };
 
@@ -305,7 +370,7 @@ export async function executeMongoRpc(
                 gender: v_gender,
                 whatsapp: v_wa,
                 ...(v_region ? { region: v_region } : {}),
-                ...(v_photo ? { photo_url: v_photo } : {}),
+                ...(final_photo ? { photo_url: final_photo } : {}),
                 updated_at: new Date(),
               },
             }
@@ -327,7 +392,7 @@ export async function executeMongoRpc(
           }
           await accountLink(db, user.id, matchId, v_nick, v_gender, v_wa, {
             region: v_region,
-            photo_url: v_photo,
+            photo_url: final_photo,
           });
           return { data: "linked", error: null };
         }
@@ -356,7 +421,7 @@ export async function executeMongoRpc(
         // 3. Brand new player
         await accountNewPlayer(db, user.id, v_nick, v_gender, v_wa, {
           region: v_region,
-          photo_url: v_photo,
+          photo_url: final_photo,
         });
         return { data: "created", error: null };
       }

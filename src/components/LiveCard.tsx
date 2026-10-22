@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import type { Match, Serve } from "@/lib/database.types";
+import { DEFAULT_MATCH_SETS, type Match, type Serve } from "@/lib/database.types";
 import { usePolledLiveMatches } from "@/lib/useLiveMatch";
 import { formatClockTime } from "@/lib/format";
 import { YOUTUBE_URL } from "@/lib/config";
@@ -14,7 +14,7 @@ function Row({
   serving,
 }: {
   name: string;
-  sets: number[];
+  sets?: number[] | null;
   game: string | number;
   serving: boolean;
 }) {
@@ -35,7 +35,7 @@ function Row({
         {name}
       </div>
       <div className="flex gap-1.5">
-        {[sets[0] ?? 0, sets[1] ?? 0].map((s, i) => (
+        {[(sets?.[0]) ?? DEFAULT_MATCH_SETS[0], (sets?.[1]) ?? DEFAULT_MATCH_SETS[1]].map((s, i) => (
           <div
             key={i}
             className="w-8 h-8 rounded-md bg-snow/10 flex items-center justify-center font-display font-bold text-[15px] text-snow"
@@ -205,13 +205,13 @@ export function LiveCard({ initial }: { initial?: Match[] }) {
 
               <Row
                 name={match.team_a_name}
-                sets={match.team_a_sets}
+                sets={match.team_a_sets ?? DEFAULT_MATCH_SETS}
                 game={match.team_a_game}
                 serving={serve === "A"}
               />
               <Row
                 name={match.team_b_name}
-                sets={match.team_b_sets}
+                sets={match.team_b_sets ?? DEFAULT_MATCH_SETS}
                 game={match.team_b_game}
                 serving={serve === "B"}
               />

@@ -1,4 +1,5 @@
 import { getDb } from "../../mongodb.ts";
+import { DEFAULT_MATCH_SETS } from "../../database.types.ts";
 import crypto from "crypto";
 import { normalizeDoc, buildIdFilter } from "./utils.ts";
 import { populateRelations } from "./relations.ts";
@@ -341,7 +342,14 @@ export class MongoQueryBuilder<T = any, R = T[]> {
         }
 
         const rawDocs = await cursor.toArray();
-        let docs = rawDocs.map((d) => normalizeDoc(d));
+        let docs = rawDocs.map((d) => {
+          const doc = normalizeDoc(d);
+          if (this.collectionName === "matches" && doc) {
+            if (!Array.isArray(doc.team_a_sets)) doc.team_a_sets = [...DEFAULT_MATCH_SETS];
+            if (!Array.isArray(doc.team_b_sets)) doc.team_b_sets = [...DEFAULT_MATCH_SETS];
+          }
+          return doc;
+        });
 
         if (needsCustomNullSort && this.sortSpecs.length > 0) {
           docs = this.sortInMemory(docs);

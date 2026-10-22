@@ -28,8 +28,12 @@ export type Player = {
   created_at: string;
 };
 
-export type DominantHand = "R" | "L";
-export type CourtPosition = "right" | "left" | "both";
+export const DOMINANT_HANDS = ["R", "L"] as const;
+export type DominantHand = (typeof DOMINANT_HANDS)[number];
+export const COURT_POSITIONS = ["right", "left", "both"] as const;
+export type CourtPosition = (typeof COURT_POSITIONS)[number];
+
+export const DEFAULT_MATCH_SETS: [number, number] = [0, 0];
 
 /** A player account (Google login), see 0012_player_accounts.sql. */
 export type Profile = {

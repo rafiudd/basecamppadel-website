@@ -1,4 +1,4 @@
-import type { Database } from "@/lib/database.types";
+import type { Database } from "../../database.types";
 import { MongoQueryBuilder } from "./queryBuilder";
 import { executeMongoRpc } from "./rpc";
 import { createMongoAuthAdapter } from "./auth";

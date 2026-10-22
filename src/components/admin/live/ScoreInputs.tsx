@@ -18,11 +18,11 @@ export function SetStepper({ label, value, team, disabled, big, onStep }: { labe
 }
 
 /** Game count per set; "+" also resets the point score (0/15/30/40/AD) of both teams. */
-export function SetSteppers({ sets, team, disabled, big, onStep }: { sets: number[]; team: string; disabled: boolean; big?: boolean; onStep: (idx: 0 | 1, delta: number) => void }) {
+export function SetSteppers({ sets, team, disabled, big, onStep }: { sets?: number[] | null; team: string; disabled: boolean; big?: boolean; onStep: (idx: 0 | 1, delta: number) => void }) {
   return (
     <div className={`flex ${big ? "gap-3" : "gap-4"}`}>
       {([0, 1] as const).map((i) => (
-        <SetStepper key={i} label={`Set ${i + 1}`} value={sets[i] ?? 0} team={team} disabled={disabled} big={big} onStep={(d) => onStep(i, d)} />
+        <SetStepper key={i} label={`Set ${i + 1}`} value={sets?.[i] ?? 0} team={team} disabled={disabled} big={big} onStep={(d) => onStep(i, d)} />
       ))}
     </div>
   );
