@@ -36,6 +36,11 @@ const TrophyIcon = () => (
     <path d="M8 20h8l-1-3H9z" />
   </Icon>
 );
+const ShieldIcon = () => (
+  <Icon>
+    <path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6z" />
+  </Icon>
+);
 const UserIcon = () => (
   <Icon>
     <circle cx="12" cy="8" r="4" />
@@ -54,6 +59,7 @@ const AcademicCapIcon = () => (
 const LINKS = [
   { href: "/", label: "Home", icon: HomeIcon },
   { href: "/jadwal", label: "Jadwal", icon: CalendarIcon },
+  { href: "/liga", label: "Liga", icon: ShieldIcon },
   { href: "/kelas", label: "Kelas", icon: AcademicCapIcon },
   { href: "/leaderboard", label: "Leaderboard", icon: TrophyIcon },
   // signed out, /akun sends the visitor through /masuk first
@@ -83,10 +89,10 @@ export function BottomNav() {
             key={l.href}
             href={l.href}
             aria-current={on ? "page" : undefined}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 no-underline transition-colors active:scale-95 ${on ? "text-coral" : "text-snow/60"}`}
+            className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-2.5 px-1 no-underline transition-colors active:scale-95 ${on ? "text-coral" : "text-snow/60"}`}
           >
             <Ico />
-            <span className="text-2xs font-semibold">{l.label}</span>
+            <span className="w-full text-2xs font-semibold text-center truncate">{l.label}</span>
           </Link>
         );
       })}
