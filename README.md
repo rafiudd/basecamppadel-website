@@ -1,4 +1,4 @@
-# Basecamp Padel — Website + CMS
+# Basecamp Padel — Website + CMSas
 
 Next.js 16 (App Router) + Supabase. Public site, admin CMS, and OBS overlay untuk komunitas Basecamp Padel.
 
