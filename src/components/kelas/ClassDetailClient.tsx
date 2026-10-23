@@ -15,6 +15,18 @@ import { postClassComment } from "@/app/kelas/actions";
 import { useAccountChip } from "@/components/account/useAccountChip";
 import { Avatar } from "@/components/ui/Avatar";
 
+function getYouTubeId(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
+}
+
+function getYouTubeEmbedUrl(url: string | null | undefined): string | null {
+  const id = getYouTubeId(url);
+  return id ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1` : null;
+}
+
 export function ClassDetailClient({ classData }: { classData: any }) {
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>(
     classData.schedules[0]?.id || ""
@@ -141,7 +153,7 @@ export function ClassDetailClient({ classData }: { classData: any }) {
 
             <div className="flex items-center gap-4 text-xs md:text-sm text-snow/90 pt-1 flex-wrap">
               <span className="flex items-center gap-1 font-bold text-snow">
-                <span className="text-amber-400">★</span> {classData.averageRating}
+                <span className="text-amber-400">★</span> {classData.averageRating > 0 ? classData.averageRating : "–"}
                 <span className="font-normal text-snow/70">({classData.totalReviews} ulasan)</span>
               </span>
               <span>·</span>
@@ -182,21 +194,36 @@ export function ClassDetailClient({ classData }: { classData: any }) {
           {/* Media Player & Gallery Box */}
           <div className="w-full md:w-96 lg:w-[460px] flex-none flex flex-col gap-3">
             <div className="relative aspect-video rounded-2xl bg-[#0F0D17] overflow-hidden shadow-2xl flex items-center justify-center border border-white/10 group">
-              {activeMedia === "video" ? (
+              {activeMedia === "video" && classData.videoUrl ? (
                 isPlayingVideo ? (
                   <div className="w-full h-full flex items-center justify-center bg-black">
-                    <iframe
-                      className="w-full h-full"
-                      src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1"
-                      title="Video Preview"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
+                    {getYouTubeEmbedUrl(classData.videoUrl) ? (
+                      <iframe
+                        className="w-full h-full"
+                        src={getYouTubeEmbedUrl(classData.videoUrl)!}
+                        title="Video Preview"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video
+                        className="w-full h-full object-contain"
+                        src={classData.videoUrl}
+                        controls
+                        autoPlay
+                      />
+                    )}
                   </div>
                 ) : (
                   <div className="w-full h-full relative">
                     <img
-                      src={classData.coverImageUrl || galleryPhotos[0]}
+                      src={
+                        (getYouTubeId(classData.videoUrl)
+                          ? `https://img.youtube.com/vi/${getYouTubeId(classData.videoUrl)}/hqdefault.jpg`
+                          : null) ||
+                        classData.coverImageUrl ||
+                        galleryPhotos[0]
+                      }
                       alt={classData.title}
                       className="w-full h-full object-cover"
                     />
@@ -213,9 +240,6 @@ export function ClassDetailClient({ classData }: { classData: any }) {
                       </span>
                       <span className="absolute left-3 bottom-3 inline-flex items-center gap-1.5 bg-white/95 text-ink text-xs font-bold px-3 py-1 rounded-full shadow-sm">
                         Video preview kelas
-                      </span>
-                      <span className="absolute right-3 bottom-3 bg-ink/80 text-snow text-xs font-bold px-2 py-0.5 rounded">
-                        1:20
                       </span>
                     </button>
                   </div>
@@ -253,34 +277,42 @@ export function ClassDetailClient({ classData }: { classData: any }) {
             {/* Media Thumbnails Switcher */}
             <div className="grid grid-cols-4 gap-2">
               {/* Video Tab Thumbnail */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveMedia("video");
-                  setIsPlayingVideo(false);
-                }}
-                className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all cursor-pointer p-0 bg-ink ${
-                  activeMedia === "video"
-                    ? "border-volt ring-2 ring-volt/40 scale-[1.02] shadow-md"
-                    : "border-white/20 opacity-75 hover:opacity-100 hover:border-white/50"
-                }`}
-              >
-                <img
-                  src={classData.coverImageUrl || galleryPhotos[0]}
-                  alt="Video thumbnail"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-ink/50 flex items-center justify-center">
-                  <span className="w-7 h-7 rounded-full bg-coral flex items-center justify-center shadow">
-                    <svg className="w-3.5 h-3.5 text-ink ml-0.5" viewBox="0 0 24 24" fill="currentColor">
-                      <polygon points="7,4 20,12 7,20" />
-                    </svg>
+              {classData.videoUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveMedia("video");
+                    setIsPlayingVideo(false);
+                  }}
+                  className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all cursor-pointer p-0 bg-ink ${
+                    activeMedia === "video"
+                      ? "border-volt ring-2 ring-volt/40 scale-[1.02] shadow-md"
+                      : "border-white/20 opacity-75 hover:opacity-100 hover:border-white/50"
+                  }`}
+                >
+                  <img
+                    src={
+                      (getYouTubeId(classData.videoUrl)
+                        ? `https://img.youtube.com/vi/${getYouTubeId(classData.videoUrl)}/mqdefault.jpg`
+                        : null) ||
+                      classData.coverImageUrl ||
+                      galleryPhotos[0]
+                    }
+                    alt="Video thumbnail"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-ink/50 flex items-center justify-center">
+                    <span className="w-7 h-7 rounded-full bg-coral flex items-center justify-center shadow">
+                      <svg className="w-3.5 h-3.5 text-ink ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="7,4 20,12 7,20" />
+                      </svg>
+                    </span>
+                  </div>
+                  <span className="absolute bottom-1 left-1.5 right-1.5 text-[10px] font-bold text-snow truncate bg-black/60 px-1 rounded text-center">
+                    Video
                   </span>
-                </div>
-                <span className="absolute bottom-1 left-1.5 right-1.5 text-[10px] font-bold text-snow truncate bg-black/60 px-1 rounded text-center">
-                  Video
-                </span>
-              </button>
+                </button>
+              )}
 
               {/* Photo Thumbnails */}
               {galleryPhotos.map((url: string, idx: number) => {

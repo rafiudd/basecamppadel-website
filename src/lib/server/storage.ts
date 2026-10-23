@@ -9,7 +9,22 @@ import "server-only";
  * bucket: the worker URL, a custom domain, or the r2.dev URL).
  */
 
-const IMAGE_EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
+export const MEDIA_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+};
+
+const IMAGE_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
 
 function env(name: string): string {
   const v = process.env[name]?.trim();
@@ -23,21 +38,38 @@ const trimSlash = (s: string) => s.replace(/\/+$/, "");
 export const publicUrl = (key: string) => `${trimSlash(env("NEXT_PUBLIC_R2_PUBLIC_URL"))}/${key}`;
 
 /**
- * Stores an image under `<folder>/<random>.<ext>` and returns its public URL. Only jpg/png/webp/gif;
- * the extension comes from the content type, never from the uploaded file name.
+ * Stores media (image or video) via the Storage Worker and returns its public URL and key.
  */
-export async function uploadImage(folder: string, file: Blob, maxBytes: number): Promise<string> {
-  const ext = IMAGE_EXT[file.type];
-  if (!ext) throw new Error("File foto harus berupa gambar (JPG, PNG, WebP).");
-  if (file.size === 0 || file.size > maxBytes) throw new Error(`Foto maksimal ${Math.round(maxBytes / 1024 / 1024)} MB.`);
+export async function uploadMedia(
+  folder: string,
+  file: Blob,
+  maxBytes: number
+): Promise<{ url: string; key: string }> {
+  const ext = MEDIA_EXT[file.type.toLowerCase()];
+  if (!ext) throw new Error("Format file tidak didukung.");
+  if (file.size === 0 || file.size > maxBytes) {
+    throw new Error(`Ukuran file maksimal ${Math.round(maxBytes / 1024 / 1024)} MB.`);
+  }
+
   const key = `${folder.replace(/^\/+|\/+$/g, "")}/${crypto.randomUUID()}.${ext}`;
   const res = await fetch(`${trimSlash(env("STORAGE_WORKER_URL"))}/${key}`, {
     method: "PUT",
     body: await file.arrayBuffer(),
     headers: { authorization: `Bearer ${env("STORAGE_WORKER_SECRET")}`, "content-type": file.type },
   });
-  // the worker answers 201 {"key"}; anything else (an old/undeployed worker answers 200) is a failure
+
   const stored = res.status === 201 ? ((await res.json().catch(() => null)) as { key?: string } | null) : null;
-  if (stored?.key !== key) throw new Error(`Upload foto gagal (${res.status}).`);
-  return publicUrl(key);
+  if (stored?.key !== key) throw new Error(`Upload media gagal (${res.status}).`);
+  return { url: publicUrl(key), key };
+}
+
+/**
+ * Stores an image under `<folder>/<random>.<ext>` and returns its public URL. Only jpg/png/webp/gif;
+ * the extension comes from the content type, never from the uploaded file name.
+ */
+export async function uploadImage(folder: string, file: Blob, maxBytes: number): Promise<string> {
+  const ext = IMAGE_EXT[file.type.toLowerCase()];
+  if (!ext) throw new Error("File foto harus berupa gambar (JPG, PNG, WebP).");
+  const { url } = await uploadMedia(folder, file, maxBytes);
+  return url;
 }

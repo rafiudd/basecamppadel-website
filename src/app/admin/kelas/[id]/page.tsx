@@ -126,9 +126,16 @@ export default async function AdminClassDetailPage({
     published: c.published,
     coachName: Array.isArray(c.coaches) ? c.coaches[0]?.name : (c.coaches as any)?.name ?? null,
     defaultCoachId: c.default_coach_id,
-    totalParticipants: (participants?.length ?? 0) + 86,
-    averageRating: "4.8",
-    totalReviews: reviews?.length ?? 32,
+    totalParticipants: participants?.length ?? 0,
+    averageRating:
+      reviews && reviews.length > 0
+        ? (
+            Math.round(
+              (reviews.reduce((acc: number, r: any) => acc + (r.rating || 0), 0) / reviews.length) * 10
+            ) / 10
+          ).toFixed(1)
+        : "–",
+    totalReviews: reviews?.length ?? 0,
     schedules: mappedSchedules,
     comments: mappedComments,
     reviews: reviews ?? [],

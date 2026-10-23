@@ -14,8 +14,16 @@ interface Env {
   STORAGE_SECRET: string;
 }
 
-const MAX_BYTES = 10 * 1024 * 1024;
-const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MAX_BYTES = 100 * 1024 * 1024;
+const ALLOWED_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+]);
 const KEY = /^(players|avatars\/[0-9a-f-]{36}|classes\/(photos|videos))\/[0-9a-f-]{36}\.(jpe?g|png|webp|gif|mp4|webm|mov)$/;
 
 const json = (status: number, body: unknown) =>
@@ -54,12 +62,12 @@ export default {
     }
 
     const type = (request.headers.get("content-type") ?? "").split(";")[0].trim();
-    if (!IMAGE_TYPES.has(type)) return json(415, { error: "Only JPG, PNG, WebP or GIF" });
+    if (!ALLOWED_TYPES.has(type)) return json(415, { error: "Only JPG, PNG, WebP, GIF, MP4, WebM or MOV" });
     const size = Number(request.headers.get("content-length") ?? "0");
-    if (!size || size > MAX_BYTES) return json(413, { error: "Max 10 MB" });
+    if (!size || size > MAX_BYTES) return json(413, { error: "Max 100 MB" });
 
     const body = await request.arrayBuffer();
-    if (body.byteLength === 0 || body.byteLength > MAX_BYTES) return json(413, { error: "Max 10 MB" });
+    if (body.byteLength === 0 || body.byteLength > MAX_BYTES) return json(413, { error: "Max 100 MB" });
     await env.BUCKET.put(key, body, { httpMetadata: { contentType: type, cacheControl: "public, max-age=31536000, immutable" } });
     return json(201, { key });
   },

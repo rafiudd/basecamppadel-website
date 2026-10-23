@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { requireAdmin } from "@/lib/auth";
+import { uploadMedia } from "@/lib/server/storage";
 
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -18,25 +18,6 @@ const ALLOWED_VIDEO_TYPES: Record<string, string> = {
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15 MB
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100 MB
 
-function getR2Client() {
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-
-  if (!accountId || !accessKeyId || !secretAccessKey) {
-    throw new Error("Kredensial Cloudflare R2 belum dikonfigurasi di server.");
-  }
-
-  return new S3Client({
-    region: "auto",
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
-  });
-}
-
 export async function POST(req: NextRequest) {
   try {
     await requireAdmin();
@@ -53,12 +34,10 @@ export async function POST(req: NextRequest) {
     const isImage = mediaType === "image" || type.startsWith("image/");
     const isVideo = mediaType === "video" || type.startsWith("video/");
 
-    let ext = "";
     let folder = "";
 
     if (isImage) {
-      ext = ALLOWED_IMAGE_TYPES[type];
-      if (!ext) {
+      if (!ALLOWED_IMAGE_TYPES[type]) {
         return NextResponse.json(
           { error: "Format gambar tidak didukung. Gunakan JPG, PNG, WebP, atau GIF." },
           { status: 400 }
@@ -70,10 +49,9 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      folder = "photos";
+      folder = "classes/photos";
     } else if (isVideo) {
-      ext = ALLOWED_VIDEO_TYPES[type];
-      if (!ext) {
+      if (!ALLOWED_VIDEO_TYPES[type]) {
         return NextResponse.json(
           { error: "Format video tidak didukung. Gunakan MP4, WebM, atau MOV." },
           { status: 400 }
@@ -85,37 +63,21 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      folder = "videos";
+      folder = "classes/videos";
     } else {
       return NextResponse.json({ error: "Jenis file tidak valid." }, { status: 400 });
     }
 
-    const key = `classes/${folder}/${crypto.randomUUID()}.${ext}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    const s3 = getR2Client();
-    const bucket = process.env.R2_BUCKET || "basecamp-padel";
-
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: key,
-        Body: buffer,
-        ContentType: file.type,
-      })
+    // Upload via Cloudflare R2 Storage Worker
+    const { url, key } = await uploadMedia(
+      folder,
+      file,
+      isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES
     );
-
-    const publicBase = (
-      process.env.NEXT_PUBLIC_R2_PUBLIC_URL ||
-      process.env.STORAGE_WORKER_URL ||
-      ""
-    ).replace(/\/+$/, "");
-
-    const publicUrl = `${publicBase}/${key}`;
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
+      url,
       key,
       name: file.name,
       size: file.size,

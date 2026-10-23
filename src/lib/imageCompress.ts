@@ -12,6 +12,8 @@ export type CompressOptions = {
   quality?: number;
   /** Keep transparency (player cutouts): WebP, or PNG where the browser can't encode WebP. */
   keepAlpha?: boolean;
+  /** Output format preference (e.g. "webp"). Defaults to "auto". */
+  format?: "webp" | "jpeg" | "auto";
 };
 
 /** Largest original a player may pick; it's shrunk in the browser before upload. */
@@ -28,12 +30,11 @@ function hasAlpha(ctx: CanvasRenderingContext2D, w: number, h: number) {
 }
 
 /**
- * Resizes and re-encodes an image. Opaque results are JPEG; with `keepAlpha` and transparent pixels,
- * WebP (PNG when the browser can't encode WebP, e.g. older Safari). Returns the original file when
- * re-encoding wouldn't make it smaller.
+ * Resizes and re-encodes an image. Opaque results are JPEG or WebP (if requested);
+ * with `keepAlpha` and transparent pixels, WebP (PNG fallback).
  */
 export async function compressImage(file: File, opts: CompressOptions): Promise<File> {
-  const { maxSide, square = false, quality = 0.85, keepAlpha = false } = opts;
+  const { maxSide, square = false, quality = 0.85, keepAlpha = false, format = "auto" } = opts;
   const bitmap = await createImageBitmap(file);
   const side = Math.min(bitmap.width, bitmap.height);
   const [sx, sy, sw, sh] = square
@@ -51,7 +52,12 @@ export async function compressImage(file: File, opts: CompressOptions): Promise<
   bitmap.close();
 
   let blob: Blob | null;
-  if (keepAlpha && hasAlpha(ctx, w, h)) {
+  if (format === "webp") {
+    blob = await toBlob(canvas, "image/webp", quality);
+    if (!blob || blob.type !== "image/webp") {
+      blob = await toBlob(canvas, "image/jpeg", quality);
+    }
+  } else if (keepAlpha && hasAlpha(ctx, w, h)) {
     blob = await toBlob(canvas, "image/webp", quality);
     if (blob?.type !== "image/webp") blob = await toBlob(canvas, "image/png", 1);
   } else {
@@ -59,7 +65,7 @@ export async function compressImage(file: File, opts: CompressOptions): Promise<
   }
   if (!blob) throw new Error("Gambar tidak bisa diproses.");
   // already small enough and not cropped/resized: keep the original
-  if (!square && scale === 1 && blob.size >= file.size) return file;
+  if (format !== "webp" && !square && scale === 1 && blob.size >= file.size) return file;
 
   const ext = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
   return new File([blob], `${file.name.replace(/\.[^.]+$/, "") || "photo"}.${ext}`, { type: blob.type });

@@ -240,9 +240,9 @@ export async function getClassBySlug(slug: string): Promise<ClassDetailData | nu
   }
   const avgRating = reviews && reviews.length > 0
     ? Math.round((sumRating / reviews.length) * 10) / 10
-    : 4.8;
+    : 0;
 
-  const totalParticipants = 86; // seed baseline alumni + registered
+  const totalParticipants = participants?.length ?? 0;
 
   let sessionsParsed: Array<{ session: number; title: string; desc: string }> = [];
   try {

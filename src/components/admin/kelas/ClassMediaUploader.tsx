@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Image from "next/image";
 import { toast } from "@/components/ui/Toast";
+import { compressImage } from "@/lib/imageCompress";
 
 const PRESET_COURT_PHOTOS = [
   { name: "Coach Drill", url: "/images/classes/coach-drill.jpg" },
@@ -108,13 +109,26 @@ export function ClassMediaUploader({
           toast.error(`${file.name} bukan file gambar.`);
           continue;
         }
-        if (file.size > 15 * 1024 * 1024) {
+
+        // Auto convert & compress ke WebP (maks 1920px, quality 0.85)
+        let fileToUpload = file;
+        try {
+          fileToUpload = await compressImage(file, {
+            maxSide: 1920,
+            quality: 0.85,
+            format: "webp",
+          });
+        } catch (compErr) {
+          console.warn("Gagal konversi ke WebP, menggunakan file asli:", compErr);
+        }
+
+        if (fileToUpload.size > 15 * 1024 * 1024) {
           toast.error(`${file.name} melebihi batas 15 MB.`);
           continue;
         }
 
         const fd = new FormData();
-        fd.append("file", file);
+        fd.append("file", fileToUpload);
         fd.append("mediaType", "image");
 
         const res = await fetch("/api/admin/kelas/upload", {
