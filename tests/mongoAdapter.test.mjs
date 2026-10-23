@@ -32,6 +32,10 @@ test("applyCollectionDefaults: sets Postgres defaults on players, matches, event
   assert.equal(m.is_live, false);
   assert.equal(m.timer_running, false);
   assert.equal(m.is_wo, false);
+  assert.equal(m.team_a_games, 0);
+  assert.equal(m.team_b_games, 0);
+  assert.equal(m.is_bye, false);
+  assert.equal(m.status, "scheduled");
 });
 
 test("MongoQueryBuilder: chains update/delete with multiple eq, neq, is, in, not, match", () => {
@@ -161,4 +165,14 @@ test("applyCollectionDefaults: leagues and league_volumes get Postgres defaults"
   assert.equal(v.is_final, false);
   assert.equal(v.event_id, null);
   assert.equal(v.approx_date, "");
+test("applyCollectionDefaults: gen_participants start active and checked in (Postgres 0007 defaults)", () => {
+  const p = applyCollectionDefaults("gen_participants", { event_id: "G1", player_id: "P1", display_name: "Dimas" });
+  assert.equal(p.active, true);
+  assert.equal(p.checked_in, true);
+  assert.equal(p.total_points, 0);
+  assert.equal(p.sits_out_count, 0);
+
+  const sub = applyCollectionDefaults("gen_participants", { event_id: "G1", active: false, checked_in: false });
+  assert.equal(sub.active, false);
+  assert.equal(sub.checked_in, false);
 });

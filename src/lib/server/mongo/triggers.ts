@@ -65,6 +65,18 @@ export function applyCollectionDefaults(
       if (doc.timer_running === undefined) doc.timer_running = false;
       if (doc.timer_base_seconds === undefined) doc.timer_base_seconds = 0;
       if (doc.is_wo === undefined) doc.is_wo = false;
+      // remaining Postgres defaults (0001 + 0005): games are what the kompetisi and mabar score cards read
+      if (doc.team_a_games === undefined) doc.team_a_games = 0;
+      if (doc.team_b_games === undefined) doc.team_b_games = 0;
+      if (doc.is_bye === undefined) doc.is_bye = false;
+      if (doc.status === undefined) doc.status = "scheduled";
+      if (doc.serve === undefined) doc.serve = "A";
+      if (doc.session_label === undefined) doc.session_label = "";
+      if (doc.venue === undefined) doc.venue = "";
+      if (doc.team_a_name === undefined) doc.team_a_name = "Team A";
+      if (doc.team_b_name === undefined) doc.team_b_name = "Team B";
+      if (!Array.isArray(doc.team_a_player_ids)) doc.team_a_player_ids = [];
+      if (!Array.isArray(doc.team_b_player_ids)) doc.team_b_player_ids = [];
       break;
     }
     case "coaching_sessions": {
@@ -79,6 +91,15 @@ export function applyCollectionDefaults(
     }
     case "coaching_groups": {
       if (doc.court === undefined) doc.court = "";
+      break;
+    }
+    case "gen_participants": {
+      // 0003 + 0007: a substituted player is set inactive explicitly; everyone else starts active and checked in
+      if (doc.display_name === undefined) doc.display_name = "";
+      if (doc.total_points === undefined) doc.total_points = 0;
+      if (doc.sits_out_count === undefined) doc.sits_out_count = 0;
+      if (doc.checked_in === undefined) doc.checked_in = true;
+      if (doc.active === undefined) doc.active = true;
       break;
     }
     case "coaches": {

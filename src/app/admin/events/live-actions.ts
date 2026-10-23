@@ -34,15 +34,19 @@ async function assertTeamsFree(supabase: Supa, m: Match) {
   throw new Error(`${who} masih main di ${where} (${o.team_a_name} vs ${o.team_b_name}). Selesaikan match itu dulu.`);
 }
 
-/** ON AIR (overlays and the home Live card follow it), started if it wasn't; takes the court's previous match off air. */
-async function putOnAir(supabase: Supa, eventId: string, matchId: string) {
+/**
+ * ON AIR (overlays and the home Live card follow it), started if it wasn't; takes the court's previous match off air.
+ * `startTimer` also starts the match clock if it isn't running (a paused clock resumes from where it stopped).
+ */
+async function putOnAir(supabase: Supa, eventId: string, matchId: string, { startTimer = false } = {}) {
   const m = await loadMatch(supabase, matchId);
   if (m.status === "finished") throw new Error("Match sudah selesai.");
   if (m.status === "scheduled") await assertTeamsFree(supabase, m);
   let sameCourt = supabase.from("matches").update({ is_live: false }).eq("event_id", eventId).eq("is_live", true).neq("id", matchId);
   sameCourt = m.court_id ? sameCourt.eq("court_id", m.court_id) : sameCourt.is("court_id", null);
   await sameCourt;
-  const { error } = await supabase.from("matches").update({ is_live: true, status: "live" }).eq("id", matchId).neq("status", "finished");
+  const timer = startTimer && !m.timer_running ? { timer_running: true, timer_start: new Date().toISOString() } : {};
+  const { error } = await supabase.from("matches").update({ is_live: true, status: "live", ...timer }).eq("id", matchId).neq("status", "finished");
   if (error) throw new Error(error.message);
 }
 
@@ -73,12 +77,12 @@ export async function startMatch(_: ActionState, fd: FormData): Promise<ActionSt
   });
 }
 
-/** ON AIR switch of a running match (Match tab, mabar court cards). */
+/** ON AIR switch of a running match (Match tab, mabar court cards); switching it on also starts the timer. */
 export async function setOnAir(eventId: string, matchId: string, on: boolean): Promise<ActionState> {
   return guard(async () => {
     await requireAdmin();
     const supabase = await createClient();
-    if (on) await putOnAir(supabase, eventId, matchId);
+    if (on) await putOnAir(supabase, eventId, matchId, { startTimer: true });
     else {
       const { error } = await supabase.from("matches").update({ is_live: false }).eq("id", matchId).eq("event_id", eventId);
       if (error) throw new Error(error.message);
