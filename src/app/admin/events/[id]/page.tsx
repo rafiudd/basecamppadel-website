@@ -45,6 +45,7 @@ export default async function EventDetailPage({ params, searchParams }: { params
         venues={venues ?? []}
         courts={courts ?? []}
         back={data.league ? { href: `/admin/liga/${data.league.id}`, label: data.league.name } : undefined}
+        leagueId={data.league?.id ?? null}
       />
       {event.type === "mabar" ? (
         <MabarSection data={data} presetName={presetName} players={(players ?? []).map(({ id, name }) => ({ id, name }))} />

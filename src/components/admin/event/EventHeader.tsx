@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { BackLink } from "@/components/ui/PageHeader";
-import { EventTypeBadge } from "@/components/ui/Badge";
+import { EventTypeBadge, LeagueBadge } from "@/components/ui/Badge";
 import { EditIcon, LinkIcon, PlayIcon, ResetIcon } from "@/components/ui/icons";
 import { resetEvent } from "@/app/admin/events/actions";
 import type { CompEvent, Court, Venue } from "@/lib/database.types";
@@ -21,6 +21,7 @@ export function EventHeader({
   venues,
   courts,
   back = { href: "/admin/events", label: "Event" },
+  leagueId = null,
 }: {
   event: CompEvent;
   dateLine: string;
@@ -29,6 +30,8 @@ export function EventHeader({
   courts: Court[];
   /** Where "←" goes; a league volume's event goes back to its league. */
   back?: { href: string; label: string };
+  /** League this event is a volume of. */
+  leagueId?: string | null;
 }) {
   const [obsOpen, setObsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -40,6 +43,7 @@ export function EventHeader({
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="font-display font-bold text-page leading-heading m-0">{event.title}</h1>
             <EventTypeBadge type={event.type} />
+            {leagueId && <LeagueBadge leagueId={leagueId} />}
           </div>
           <div className="text-sm leading-normal text-snow/75">
             {dateLine}
