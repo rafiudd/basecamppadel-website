@@ -15,7 +15,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function EditLigaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const league = await loadLeagueById(supabase, id);
+  const [league, { data: presets }] = await Promise.all([
+    loadLeagueById(supabase, id),
+    supabase.from("point_presets").select("id, name").order("is_default", { ascending: false }).order("created_at"),
+  ]);
   if (!league) notFound();
 
   return (
@@ -26,7 +29,7 @@ export default async function EditLigaPage({ params }: { params: Promise<{ id: s
         description="Ubah informasi dasar liga dan status publikasi."
       />
 
-      <EditLigaForm league={league} />
+      <EditLigaForm league={league} presets={presets ?? []} />
     </div>
   );
 }

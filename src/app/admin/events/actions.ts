@@ -281,12 +281,13 @@ export async function deleteCompetition(_: ActionState, fd: FormData): Promise<A
     const matchIds = (ms ?? []).map((m) => m.id);
     // history rows would otherwise survive as orphans (match_id set null) and keep counting in W-L
     if (matchIds.length) await supabase.from("match_history").delete().in("match_id", matchIds);
-    const { data: ev } = await supabase.from("events").select("gen_event_id").eq("id", id).maybeSingle();
+    const { data: ev } = await supabase.from("events").select("gen_event_id, league_id").eq("id", id).maybeSingle();
     const { error } = await supabase.from("events").delete().eq("id", id);
     if (error) throw new Error(error.message);
     if (ev?.gen_event_id) await supabase.from("gen_events").delete().eq("id", ev.gen_event_id);
     revalidateEvent(id);
-    redirect("/admin/events");
+    // a league volume's event goes back to its league, where the emptied slot can be refilled
+    redirect(ev?.league_id ? `/admin/liga/${ev.league_id}` : "/admin/events");
   });
 }
 

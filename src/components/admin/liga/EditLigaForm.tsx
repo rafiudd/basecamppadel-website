@@ -6,7 +6,7 @@ import { ActionForm } from "@/components/admin/ActionForm";
 import { updateLeague, deleteLeague } from "@/app/admin/liga/actions";
 import type { LeagueWithVolumes } from "@/lib/leagues";
 
-export function EditLigaForm({ league }: { league: LeagueWithVolumes }) {
+export function EditLigaForm({ league, presets }: { league: LeagueWithVolumes; presets: { id: string; name: string }[] }) {
   const [volumeCount, setVolumeCount] = useState(league.total_volumes);
   // volumes that would be cut by the new count but already have an event: they must be deleted by hand first
   const blocked = league.volumes.filter((v) => v.volume_number > volumeCount && v.event_id);
@@ -78,6 +78,24 @@ export function EditLigaForm({ league }: { league: LeagueWithVolumes }) {
                 +
               </button>
             </div>
+          </div>
+
+          {/* Preset Selector */}
+          <div className="pt-3.5 border-t border-snow/8">
+            <label className="block">
+              <div className="text-2xs tracking-caps text-snow/65 uppercase mb-2 font-medium">Preset poin per volume</div>
+              <select name="point_preset_id" defaultValue={league.point_preset_id ?? ""} className="field min-h-11">
+                {!league.point_preset_id && <option value="">Default (25 / 20 / 15 / 5 / 1)</option>}
+                {presets.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <div className="text-xs text-snow/60 mt-1.5 leading-normal">
+                Mengganti preset langsung menghitung ulang klasemen liga dari semua volume. Poin di event tiap volume tidak berubah.
+              </div>
+            </label>
           </div>
 
           {blocked.length > 0 && (
