@@ -20,12 +20,15 @@ const setsKey = (side: Side) => (side === "A" ? "team_a_sets" : "team_b_sets");
 const gamesKey = (side: Side) => (side === "A" ? "team_a_games" : "team_b_games");
 
 /**
- * Score control of one competition match (Live page + Skor Cepat): optimistic writes straight to
- * `matches`, kept in sync with other operators via Realtime. Set scores also keep the game totals
- * current (bracket and klasemen show the live score), every score change can be undone, and ON AIR
- * goes through goLive (one ON AIR match per court).
+ * Score control of one competition match (Live page + Skor Cepat): writes straight to `matches`, kept in
+ * sync with other operators via Realtime. Set scores also keep the game totals current (bracket and
+ * klasemen show the live score), every score change can be undone, and ON AIR goes through goLive (one
+ * ON AIR match per court).
+ *
+ * Writes are optimistic by default. With `confirmFirst` (Skor Cepat) the screen only changes once the
+ * write succeeded: the tapped control shows `busy` and every other score control waits for it.
  */
-export function useMatchControl(initial: Match) {
+export function useMatchControl(initial: Match, { confirmFirst = false } = {}) {
   const router = useRouter();
   const remote = useLiveMatch(initial, initial.id);
   const [m, setLocal] = useState<Match>(initial);
@@ -34,6 +37,9 @@ export function useMatchControl(initial: Match) {
   const [history, setHistory] = useState<Snapshot[]>([]);
   const [pending, start] = useTransition();
   const supabase = useRef(createClient());
+  // which control is saving in confirmFirst mode; the ref blocks a second tap before the state re-renders
+  const [busy, setBusy] = useState<string | null>(null);
+  const busyRef = useRef(false);
 
   // Realtime → local (other operators / other tabs). "Adjust state during render" pattern.
   const [prevRemote, setPrevRemote] = useState(remote);
@@ -43,57 +49,93 @@ export function useMatchControl(initial: Match) {
   }
   useTick(m.timer_running);
 
-  /** Apply optimistically, then write to Supabase. */
+  /** Write to the DB; optimistic unless confirmFirst, where the patch is applied only after it saved. */
   const update = useCallback(
     async (patch: Partial<Match>) => {
-      setLocal((cur) => ({ ...cur, ...patch }));
+      if (!confirmFirst) setLocal((cur) => ({ ...cur, ...patch }));
       setSaving(true);
       setError(null);
       const { error } = await supabase.current.from("matches").update(patch).eq("id", m.id);
       if (error) {
         setError(error.message);
         toast.error(`Gagal menyimpan: ${error.message}`);
+      } else if (confirmFirst) {
+        setLocal((cur) => ({ ...cur, ...patch }));
       }
       setSaving(false);
       return !error;
     },
-    [m.id],
+    [m.id, confirmFirst],
   );
 
+  /** confirmFirst: runs one save at a time, marking `key` as the control that is saving. */
+  const guarded = async (key: string, run: () => Promise<unknown>) => {
+    if (!confirmFirst) return void run();
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(key);
+    try {
+      await run();
+    } finally {
+      busyRef.current = false;
+      setBusy(null);
+    }
+  };
+
   // ---- score (undoable)
-  const scored = (patch: Partial<Match>) => {
+  const scored = (patch: Partial<Match>, key: string) => {
     const { team_a_sets, team_b_sets, team_a_game, team_b_game, serve, team_a_games, team_b_games } = m;
     const snapshot = { team_a_sets, team_b_sets, team_a_game, team_b_game, serve, team_a_games, team_b_games };
+    const remember = () => setHistory((h) => [...h.slice(-(UNDO_STEPS - 1)), snapshot]);
     if (m.status !== "scheduled") {
-      setHistory((h) => [...h.slice(-(UNDO_STEPS - 1)), snapshot]);
-      update(patch);
+      if (!confirmFirst) {
+        remember();
+        update(patch);
+        return;
+      }
+      // only a saved change can be undone
+      guarded(key, async () => {
+        if (await update(patch)) remember();
+      });
       return;
     }
     // The first score of a match that wasn't started starts it (server checks no team plays twice).
     if (pending) return;
     const fd = new FormData();
     fd.set("match_id", m.id);
-    start(async () => {
-      if (!toast.result(await startMatch(null, fd), "Match dimulai")) return;
-      setHistory((h) => [...h.slice(-(UNDO_STEPS - 1)), snapshot]);
-      await update({ ...patch, status: "live" });
-      router.refresh();
-    });
+    start(() =>
+      guarded(key, async () => {
+        if (!toast.result(await startMatch(null, fd), "Match dimulai")) return;
+        if (!confirmFirst) remember();
+        if ((await update({ ...patch, status: "live" })) && confirmFirst) remember();
+        router.refresh();
+      }),
+    );
   };
   /** ± a game; a won game also sends both point scores back to 0. */
   const setSet = (side: Side, idx: 0 | 1, delta: number) => {
     const sets = [...(m[setsKey(side)] ?? [0, 0])];
     sets[idx] = Math.max(0, (sets[idx] ?? 0) + delta);
-    scored({ [setsKey(side)]: sets, [gamesKey(side)]: sum(sets), ...(delta > 0 ? { team_a_game: "0", team_b_game: "0" } : {}) });
+    scored(
+      { [setsKey(side)]: sets, [gamesKey(side)]: sum(sets), ...(delta > 0 ? { team_a_game: "0", team_b_game: "0" } : {}) },
+      `set:${side}:${idx}:${delta}`,
+    );
   };
-  const setGame = (side: Side, val: string) => scored(side === "A" ? { team_a_game: val } : { team_b_game: val });
-  const setServe = (side: Side) => scored({ serve: side });
-  const resetScore = () => scored({ team_a_sets: [0, 0], team_b_sets: [0, 0], team_a_game: "0", team_b_game: "0", team_a_games: 0, team_b_games: 0 });
+  const setGame = (side: Side, val: string) => scored(side === "A" ? { team_a_game: val } : { team_b_game: val }, `game:${side}:${val}`);
+  const setServe = (side: Side) => scored({ serve: side }, `serve:${side}`);
+  const resetScore = () =>
+    scored({ team_a_sets: [0, 0], team_b_sets: [0, 0], team_a_game: "0", team_b_game: "0", team_a_games: 0, team_b_games: 0 }, "reset");
   const undo = () => {
     const last = history.at(-1);
     if (!last) return;
-    setHistory((h) => h.slice(0, -1));
-    update(last);
+    if (!confirmFirst) {
+      setHistory((h) => h.slice(0, -1));
+      update(last);
+      return;
+    }
+    guarded("undo", async () => {
+      if (await update(last)) setHistory((h) => h.slice(0, -1));
+    });
   };
 
   // ---- timer
@@ -126,6 +168,8 @@ export function useMatchControl(initial: Match) {
     finished: m.status === "finished",
     saving,
     pending,
+    /** confirmFirst only: key of the control that is saving ("game:A:30", "set:B:0:1", "serve:A", "undo"), else null. */
+    busy,
     error,
     setSet,
     setGame,

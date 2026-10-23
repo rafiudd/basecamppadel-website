@@ -22,7 +22,19 @@ export function MabarDetail({ data }: { data: MabarData }) {
   const nameById = new Map(participants.map((p) => [p.id, p.display_name]));
   const pairName = (ids: string[]) => ids.map((id) => nameById.get(id) ?? "?").join(" & ");
   const round = rounds.find((r) => r.round_no === selected);
-  const roundMatches = round ? matches.filter((m) => m.round_id === round.id) : [];
+  // a round's courts are inserted together, so created_at doesn't keep them in order: sort by court name
+  // ("Court 1" left, "Court 2" right; numeric so Court 10 comes after Court 9), courtless last
+  const courtName = (id: string | null) => courts.find((c) => c.id === id)?.name ?? null;
+  const roundMatches = round
+    ? matches
+        .filter((m) => m.round_id === round.id)
+        .sort((x, y) => {
+          const a = courtName(x.court_id);
+          const b = courtName(y.court_id);
+          if (a === null || b === null) return a === b ? 0 : a === null ? 1 : -1;
+          return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+        })
+    : [];
   const playing = new Set(roundMatches.flatMap((m) => [...m.team_a_participant_ids, ...m.team_b_participant_ids]));
   const resting = round ? participants.filter((p) => p.active && p.checked_in && !playing.has(p.id)) : [];
 
