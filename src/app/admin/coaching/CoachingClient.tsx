@@ -510,11 +510,16 @@ export function CoachingClient({
                   setShowOverrideModal(true);
                 }
               }}
-              onClose={() => setShowAssessment(false)}
+              onClose={() => {
+                flushPendingAutoSave();
+                setShowAssessment(false);
+              }}
               onPrev={() => {
+                flushPendingAutoSave();
                 if (activePlayerIndex > 0) setSelectedPlayerId(filteredPlayers[activePlayerIndex - 1].player.id);
               }}
               onNext={() => {
+                flushPendingAutoSave();
                 if (activePlayerIndex < filteredPlayers.length - 1) setSelectedPlayerId(filteredPlayers[activePlayerIndex + 1].player.id);
               }}
             />
