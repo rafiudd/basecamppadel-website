@@ -15,11 +15,17 @@ export async function createCoachingSessionAction(data: {
   eventId?: string | null;
   defaultSkillIds: string[];
   groups: Array<{
+    id?: string;
+    tempId?: string;
     name: string;
     color: string;
     coachId?: string | null;
   }>;
   playerIds?: string[];
+  playerAssignments?: Array<{
+    playerId: string;
+    groupId?: string | null;
+  }>;
 }) {
   return guardResult(async () => {
     await requireAdmin();
@@ -43,8 +49,10 @@ export async function createCoachingSessionAction(data: {
     if (sErr || !session) throw new Error(sErr?.message || "Gagal membuat sesi");
 
     // 2. Create groups
+    const groupIdMap = new Map<string, string>();
     const createdGroupIds: string[] = [];
-    for (const grp of data.groups) {
+    for (let i = 0; i < data.groups.length; i++) {
+      const grp = data.groups[i];
       const { data: gData, error: gErr } = await supabase
         .from("coaching_groups")
         .insert({
@@ -57,50 +65,76 @@ export async function createCoachingSessionAction(data: {
         .single();
       if (gErr) throw new Error(gErr.message);
       createdGroupIds.push(gData.id);
+      if (grp.tempId) groupIdMap.set(grp.tempId, gData.id);
+      if (grp.id) groupIdMap.set(grp.id, gData.id);
+      groupIdMap.set(String(i), gData.id);
     }
 
     // 3. Add players
-    let playerIdsToAdd: string[] = data.playerIds || [];
-
-    // If created from event, automatically fetch participants
-    if (data.eventId) {
-      // Check gen_participants (mabar)
-      const { data: mabarParts } = await supabase
-        .from("gen_participants")
-        .select("player_id")
-        .eq("event_id", data.eventId);
-
-      if (mabarParts && mabarParts.length > 0) {
-        playerIdsToAdd = mabarParts
-          .map((p) => p.player_id)
-          .filter((id): id is string => Boolean(id));
-      } else {
-        // Check comp_team_players
-        const { data: compParts } = await supabase
-          .from("comp_team_players")
-          .select("player_id")
-          .eq("event_id", data.eventId);
-        if (compParts && compParts.length > 0) {
-          playerIdsToAdd = compParts
-            .map((p) => p.player_id)
-            .filter((id): id is string => Boolean(id));
-        }
-      }
-    }
-
-    // Distribute players across groups if groups exist
-    if (playerIdsToAdd.length > 0) {
+    if (data.playerAssignments && data.playerAssignments.length > 0) {
       const defaultGroupId = createdGroupIds[0] || null;
-      const sessionPlayerRows = playerIdsToAdd.map((pid, idx) => ({
-        session_id: session.id,
-        player_id: pid,
-        group_id: createdGroupIds.length > 0 ? createdGroupIds[idx % createdGroupIds.length] : defaultGroupId,
-      }));
+      const sessionPlayerRows = data.playerAssignments.map((pa, idx) => {
+        let assignedGroupId: string | null = null;
+        if (pa.groupId) {
+          assignedGroupId = groupIdMap.get(pa.groupId) || pa.groupId;
+        }
+        if (!assignedGroupId && createdGroupIds.length > 0) {
+          assignedGroupId = createdGroupIds[idx % createdGroupIds.length];
+        }
+        return {
+          session_id: session.id,
+          player_id: pa.playerId,
+          group_id: assignedGroupId || defaultGroupId,
+        };
+      });
 
       const { error: spErr } = await supabase
         .from("coaching_session_players")
         .upsert(sessionPlayerRows, { onConflict: "session_id, player_id" });
       if (spErr) throw new Error(spErr.message);
+    } else {
+      let playerIdsToAdd: string[] = data.playerIds || [];
+
+      // If created from event, automatically fetch participants
+      if (data.eventId) {
+        // Check gen_participants (mabar)
+        const { data: mabarParts } = await supabase
+          .from("gen_participants")
+          .select("player_id")
+          .eq("event_id", data.eventId);
+
+        if (mabarParts && mabarParts.length > 0) {
+          playerIdsToAdd = mabarParts
+            .map((p) => p.player_id)
+            .filter((id): id is string => Boolean(id));
+        } else {
+          // Check comp_team_players
+          const { data: compParts } = await supabase
+            .from("comp_team_players")
+            .select("player_id")
+            .eq("event_id", data.eventId);
+          if (compParts && compParts.length > 0) {
+            playerIdsToAdd = compParts
+              .map((p) => p.player_id)
+              .filter((id): id is string => Boolean(id));
+          }
+        }
+      }
+
+      // Distribute players across groups if groups exist
+      if (playerIdsToAdd.length > 0) {
+        const defaultGroupId = createdGroupIds[0] || null;
+        const sessionPlayerRows = playerIdsToAdd.map((pid, idx) => ({
+          session_id: session.id,
+          player_id: pid,
+          group_id: createdGroupIds.length > 0 ? createdGroupIds[idx % createdGroupIds.length] : defaultGroupId,
+        }));
+
+        const { error: spErr } = await supabase
+          .from("coaching_session_players")
+          .upsert(sessionPlayerRows, { onConflict: "session_id, player_id" });
+        if (spErr) throw new Error(spErr.message);
+      }
     }
 
     revalidatePath("/admin/coaching");

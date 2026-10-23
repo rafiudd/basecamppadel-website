@@ -322,11 +322,15 @@ export function SessionFormClient({
             eventId: selectedEventId || null,
             defaultSkillIds: selectedSkillIds,
             groups: groups.map((g) => ({
+              tempId: g.id || g.tempId,
               name: g.name.trim(),
               color: g.color,
               coachId: g.coachId || null,
             })),
-            playerIds: sessionPlayerIds,
+            playerAssignments: sessionPlayerIds.map((pid) => ({
+              playerId: pid,
+              groupId: playerGroupMap[pid] || null,
+            })),
           }));
           toast.success(`Sesi "${title.trim()}" berhasil dibuat`);
           router.push(`/admin/coaching?session=${res.sessionId}`);
