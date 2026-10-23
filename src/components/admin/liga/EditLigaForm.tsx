@@ -1,15 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { updateLeague, deleteLeague } from "@/app/admin/liga/actions";
 import type { LeagueWithVolumes } from "@/lib/leagues";
 
 export function EditLigaForm({ league }: { league: LeagueWithVolumes }) {
+  const [volumeCount, setVolumeCount] = useState(league.total_volumes);
+  // volumes that would be cut by the new count but already have an event: they must be deleted by hand first
+  const blocked = league.volumes.filter((v) => v.volume_number > volumeCount && v.event_id);
+
   return (
     <div className="flex flex-col gap-6">
       <ActionForm action={updateLeague} successText="Liga berhasil diperbarui" className="flex flex-col gap-5">
         <input type="hidden" name="league_id" value={league.id} />
+        <input type="hidden" name="total_volumes" value={volumeCount} />
 
         <section className="bg-ink-2 rounded-panel p-5 md:p-7 flex flex-col gap-4 border border-snow/5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -43,6 +49,60 @@ export function EditLigaForm({ league }: { league: LeagueWithVolumes }) {
             />
           </label>
 
+          {/* Volume Stepper */}
+          <div className="flex items-center justify-between gap-3 pt-3.5 border-t border-snow/8">
+            <div>
+              <div className="font-bold text-input text-snow">Jumlah volume</div>
+              <div className="text-caption text-snow/70 mt-0.5">Volume terakhir otomatis jadi Final.</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setVolumeCount((c) => Math.max(1, c - 1))}
+                aria-label="Kurangi volume"
+                disabled={volumeCount <= 1}
+                className="w-11 h-11 border-none rounded-lg bg-snow/12 text-snow text-xl font-bold flex items-center justify-center hover:bg-snow/20 disabled:opacity-40 transition-colors"
+              >
+                −
+              </button>
+              <span className="font-display font-bold text-title text-snow min-w-[32px] text-center">
+                {volumeCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => setVolumeCount((c) => Math.min(10, c + 1))}
+                aria-label="Tambah volume"
+                disabled={volumeCount >= 10}
+                className="w-11 h-11 border-none rounded-lg bg-snow/12 text-snow text-xl font-bold flex items-center justify-center hover:bg-snow/20 disabled:opacity-40 transition-colors"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {blocked.length > 0 && (
+            <div role="alert" className="rounded-xl bg-loss/12 border border-loss/25 px-4 py-3 text-sm flex flex-col gap-2">
+              <div className="font-semibold text-loss">
+                Tidak bisa dikurangi ke {volumeCount} volume.
+              </div>
+              <div className="text-snow/80 leading-normal">
+                Volume berikut sudah punya event. Hapus event-nya secara manual dulu, lalu kurangi volume.
+              </div>
+              <ul className="m-0 pl-0 list-none flex flex-col gap-1.5">
+                {blocked.map((v) => (
+                  <li key={v.id} className="flex items-center justify-between gap-3">
+                    <span className="text-snow min-w-0 truncate">
+                      <span className="font-semibold">Vol. {v.volume_number}</span> · {v.event?.title ?? "Event"}
+                    </span>
+                    <Link href={`/admin/events/${v.event_id}`} className="text-xs font-semibold text-snow/80 hover:text-volt whitespace-nowrap no-underline">
+                      Buka event →
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <label className="flex items-center gap-2.5 pt-2 cursor-pointer">
             <input
               type="checkbox"
@@ -58,7 +118,7 @@ export function EditLigaForm({ league }: { league: LeagueWithVolumes }) {
           <Link href={`/admin/liga/${league.id}`} className="btn min-h-11 inline-flex items-center no-underline">
             Batal
           </Link>
-          <button type="submit" className="btn btn-coral text-ink min-h-11 font-bold">
+          <button type="submit" disabled={blocked.length > 0} className="btn btn-coral text-ink min-h-11 font-bold disabled:opacity-40">
             Simpan Perubahan
           </button>
         </div>

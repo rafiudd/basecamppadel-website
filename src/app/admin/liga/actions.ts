@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import type { ActionState } from "@/lib/actionState";
-import { guard, int, str } from "@/lib/server/action";
+import { guard, int, str, type Supa } from "@/lib/server/action";
 import { presetPoints } from "@/lib/events";
 import { DEFAULT_LEAGUE_POINTS } from "@/lib/leagues";
 
@@ -95,6 +95,9 @@ export async function updateLeague(_: ActionState, fd: FormData): Promise<Action
     const organizer = str(fd, "organizer");
     const description = str(fd, "description");
     const published = fd.getAll("published").includes("on");
+    const totalVolumes = Math.min(10, Math.max(1, int(fd, "total_volumes", 1)));
+
+    await resizeVolumes(supabase, id, totalVolumes);
 
     const { error } = await supabase
       .from("leagues")
@@ -103,6 +106,7 @@ export async function updateLeague(_: ActionState, fd: FormData): Promise<Action
         organizer,
         description,
         published,
+        total_volumes: totalVolumes,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
@@ -113,6 +117,42 @@ export async function updateLeague(_: ActionState, fd: FormData): Promise<Action
     revalidatePath("/admin/liga");
     revalidatePath("/liga");
   });
+}
+
+/**
+ * Makes the league have exactly volumes 1..total: adds missing slots, removes empty ones above
+ * `total`, and moves the Final flag to the last volume. A volume that already has an event is never removed.
+ */
+async function resizeVolumes(supabase: Supa, leagueId: string, total: number) {
+  const { data: volumes, error } = await supabase
+    .from("league_volumes")
+    .select("id, volume_number, event_id")
+    .eq("league_id", leagueId);
+  if (error) throw new Error(error.message);
+
+  const extra = (volumes ?? []).filter((v) => v.volume_number > total);
+  const withEvent = extra.filter((v) => v.event_id).map((v) => v.volume_number);
+  if (withEvent.length) {
+    throw new Error(`Vol. ${withEvent.join(", ")} sudah punya event. Hapus event-nya secara manual dulu sebelum mengurangi volume.`);
+  }
+  if (extra.length) {
+    const { error: dErr } = await supabase.from("league_volumes").delete().in("id", extra.map((v) => v.id));
+    if (dErr) throw new Error(dErr.message);
+  }
+
+  // also refills gaps (e.g. a slot lost to the old cascade bug)
+  const have = new Set((volumes ?? []).map((v) => v.volume_number));
+  const missing = [];
+  for (let n = 1; n <= total; n++) {
+    if (!have.has(n)) missing.push({ league_id: leagueId, volume_number: n, is_final: false, approx_date: "" });
+  }
+  if (missing.length) {
+    const { error: iErr } = await supabase.from("league_volumes").insert(missing);
+    if (iErr) throw new Error(iErr.message);
+  }
+
+  await supabase.from("league_volumes").update({ is_final: false }).eq("league_id", leagueId).neq("volume_number", total);
+  await supabase.from("league_volumes").update({ is_final: true }).eq("league_id", leagueId).eq("volume_number", total);
 }
 
 export async function deleteLeague(_: ActionState, fd: FormData): Promise<ActionState> {
