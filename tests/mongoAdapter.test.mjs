@@ -165,6 +165,8 @@ test("applyCollectionDefaults: leagues and league_volumes get Postgres defaults"
   assert.equal(v.is_final, false);
   assert.equal(v.event_id, null);
   assert.equal(v.approx_date, "");
+});
+
 test("applyCollectionDefaults: gen_participants start active and checked in (Postgres 0007 defaults)", () => {
   const p = applyCollectionDefaults("gen_participants", { event_id: "G1", player_id: "P1", display_name: "Dimas" });
   assert.equal(p.active, true);
