@@ -61,9 +61,11 @@ export async function createCompetition(_: ActionState, fd: FormData): Promise<A
   return guard(async () => {
     await requireAdmin();
     const supabase = await createClient();
-    const eventId = str(fd, "event_type") === "mabar" ? await createMabar(supabase, fd) : await createKompetisi(supabase, fd);
-    revalidateEvent(eventId);
-    redirect(`/admin/events/${eventId}`);
+    const { id, volume } =
+      str(fd, "event_type") === "mabar" ? { id: await createMabar(supabase, fd), volume: null } : await createKompetisi(supabase, fd);
+    revalidateEvent(id);
+    // A league volume goes back to its league so the admin can carry on with the next volume.
+    redirect(volume ? `/admin/liga/${volume.league_id}?created=${volume.volume_number}` : `/admin/events/${id}`);
   });
 }
 
@@ -78,9 +80,7 @@ async function createKompetisi(supabase: Supa, fd: FormData) {
   if (filled.length > numTeams) throw new Error(`Jumlah tim (${filled.length}) melebihi format (${numTeams}).`);
 
   const details = readDetails(fd);
-  const leagueId = str(fd, "league_id") || null;
-  const leagueVolumeId = str(fd, "league_volume_id") || null;
-  const volumeNumber = int(fd, "volume_number", 0) || null;
+  const volume = await readLeagueVolume(supabase, fd);
 
   const { data: event, error } = await supabase
     .from("events")
@@ -93,20 +93,52 @@ async function createKompetisi(supabase: Supa, fd: FormData) {
       num_groups: numGroups,
       advance_per_group: advance,
       ko_start: plan.koStart ?? "final",
-      league_id: leagueId,
-      league_volume_id: leagueVolumeId,
-      volume_number: volumeNumber,
+      league_id: volume?.league_id ?? null,
+      league_volume_id: volume?.id ?? null,
+      volume_number: volume?.volume_number ?? null,
     })
     .select("id")
     .single();
   if (error) throw new Error(error.message);
 
-  if (leagueVolumeId) {
-    await supabase.from("league_volumes").update({ event_id: event.id }).eq("id", leagueVolumeId);
-  }
+  if (volume) await claimLeagueVolume(supabase, volume, event.id);
 
   await insertTeams(supabase, event.id, filled);
-  return event.id;
+  return { id: event.id as string, volume };
+}
+
+/** The league volume slot this event fills, read from the DB so the form can't point at another league's slot. */
+async function readLeagueVolume(supabase: Supa, fd: FormData) {
+  const volumeId = str(fd, "league_volume_id");
+  if (!volumeId) return null;
+  const { data: volume } = await supabase
+    .from("league_volumes")
+    .select("id, league_id, volume_number, event_id")
+    .eq("id", volumeId)
+    .maybeSingle();
+  if (!volume) throw new Error("Volume liga tidak ditemukan.");
+  const leagueId = str(fd, "league_id");
+  if (leagueId && volume.league_id !== leagueId) throw new Error("Volume ini bukan milik liga tersebut.");
+  if (volume.event_id) throw new Error(`Vol. ${volume.volume_number} sudah punya event.`);
+  return volume;
+}
+
+/** Links the event to its slot only if the slot is still empty; a double submit loses and its event is removed. */
+async function claimLeagueVolume(
+  supabase: Supa,
+  volume: { id: string; volume_number: number },
+  eventId: string,
+) {
+  const { error } = await supabase
+    .from("league_volumes")
+    .update({ event_id: eventId })
+    .eq("id", volume.id)
+    .is("event_id", null);
+  const { data: claimed } = await supabase.from("league_volumes").select("event_id").eq("id", volume.id).maybeSingle();
+  if (error || claimed?.event_id !== eventId) {
+    await supabase.from("events").delete().eq("id", eventId);
+    throw new Error(error?.message ?? `Vol. ${volume.volume_number} sudah punya event.`);
+  }
 }
 
 function readPairs(fd: FormData) {

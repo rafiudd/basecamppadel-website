@@ -70,7 +70,11 @@ export async function createLeague(_: ActionState, fd: FormData): Promise<Action
     }
 
     const { error: vErr } = await supabase.from("league_volumes").insert(volumeInserts);
-    if (vErr) throw new Error(vErr.message);
+    if (vErr) {
+      // No transactions here: drop the half-made league so a retry doesn't leave a volume-less duplicate.
+      await supabase.from("leagues").delete().eq("id", league.id);
+      throw new Error(vErr.message);
+    }
 
     revalidatePath("/admin/liga");
     revalidatePath("/liga");

@@ -1,5 +1,6 @@
 import type { Db } from "mongodb";
 import { DEFAULT_MATCH_SETS } from "../../database.types.ts";
+import { DEFAULT_LEAGUE_POINTS } from "../../leagueRules.ts";
 
 /**
  * Maps player skill level to its official badge hex color.
@@ -89,8 +90,17 @@ export function applyCollectionDefaults(
       break;
     }
     case "leagues": {
-      if (doc.status === undefined) doc.status = "active";
+      if (doc.organizer === undefined) doc.organizer = "";
       if (doc.description === undefined) doc.description = "";
+      if (doc.total_volumes === undefined) doc.total_volumes = 3;
+      if (doc.points === undefined) doc.points = { ...DEFAULT_LEAGUE_POINTS };
+      if (doc.published === undefined) doc.published = true;
+      break;
+    }
+    case "league_volumes": {
+      if (doc.is_final === undefined) doc.is_final = false;
+      if (doc.event_id === undefined) doc.event_id = null;
+      if (doc.approx_date === undefined) doc.approx_date = "";
       break;
     }
     case "classes": {
@@ -276,7 +286,9 @@ export async function handleCascadeDelete(
       }
 
       await db.collection("comp_groups").deleteMany({ event_id: { $in: ids } });
-      await db.collection("league_volumes").deleteMany({ event_id: { $in: ids } });
+      await db
+        .collection("league_volumes")
+        .updateMany({ event_id: { $in: ids } }, { $set: { event_id: null } });
 
       const awards = await db
         .collection("player_awards")
@@ -319,7 +331,22 @@ export async function handleCascadeDelete(
     }
 
     case "leagues": {
+      const volumes = await db
+        .collection("league_volumes")
+        .find({ league_id: { $in: ids } })
+        .toArray();
       await db.collection("league_volumes").deleteMany({ league_id: { $in: ids } });
+      await handleCascadeDelete(db, "league_volumes", volumes);
+      await db
+        .collection("events")
+        .updateMany({ league_id: { $in: ids } }, { $set: { league_id: null } });
+      break;
+    }
+
+    case "league_volumes": {
+      await db
+        .collection("events")
+        .updateMany({ league_volume_id: { $in: ids } }, { $set: { league_volume_id: null } });
       break;
     }
 

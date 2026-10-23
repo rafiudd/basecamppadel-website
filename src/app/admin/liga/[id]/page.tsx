@@ -11,13 +11,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: `Admin · ${league.name} — Basecamp Padel` };
 }
 
-export default async function AdminLigaDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminLigaDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ created?: string }>;
+}) {
   const { id } = await params;
+  const { created } = await searchParams;
   const supabase = await createClient();
   const league = await loadLeagueById(supabase, id);
   if (!league) notFound();
 
   const standings = await loadLeagueStandings(supabase, league);
 
-  return <AdminLigaDetailView league={league} standings={standings} />;
+  return <AdminLigaDetailView league={league} standings={standings} createdVolume={Number(created) || null} />;
 }

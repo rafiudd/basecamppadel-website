@@ -20,12 +20,15 @@ export function EventHeader({
   publicHref,
   venues,
   courts,
+  back = { href: "/admin/events", label: "Event" },
 }: {
   event: CompEvent;
   dateLine: string;
   publicHref: string | null;
   venues: Venue[];
   courts: Court[];
+  /** Where "←" goes; a league volume's event goes back to its league. */
+  back?: { href: string; label: string };
 }) {
   const [obsOpen, setObsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -33,7 +36,7 @@ export function EventHeader({
     <div className="relative">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-2 min-w-0">
-          <BackLink href="/admin/events" label="Event" />
+          <BackLink href={back.href} label={back.label} />
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="font-display font-bold text-page leading-heading m-0">{event.title}</h1>
             <EventTypeBadge type={event.type} />
