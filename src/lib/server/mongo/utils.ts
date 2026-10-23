@@ -24,3 +24,19 @@ export function buildIdFilter(val: any, fieldName = "id"): Record<string, any> {
   }
   return { $or: [{ _id: val }, { [fieldName]: val }] };
 }
+
+/**
+ * `comp_finish_event` takes `p_stages` as `[{ team_id, stage }]` (see database.types).
+ * Also accepts a `{ [teamId]: stage }` map so older callers keep working.
+ */
+export function stageEntries(pStages: unknown): [string, string][] {
+  if (Array.isArray(pStages)) {
+    return pStages
+      .filter((s) => s && s.team_id && s.stage)
+      .map((s) => [String(s.team_id), String(s.stage)]);
+  }
+  if (pStages && typeof pStages === "object") {
+    return Object.entries(pStages).map(([teamId, stage]) => [teamId, String(stage)]);
+  }
+  return [];
+}

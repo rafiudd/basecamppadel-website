@@ -1,4 +1,6 @@
+import Link from "next/link";
 import type { EventStatus, EventType } from "@/lib/database.types";
+import { ArrowUpRightIcon } from "./icons";
 
 const TONES = {
   coral: "bg-coral/18 text-coral-soft",
@@ -6,6 +8,7 @@ const TONES = {
   win: "bg-win/20 text-win-soft",
   muted: "bg-snow/10 text-snow/85",
   faint: "bg-snow/6 text-snow/65",
+  blue: "bg-blue-500/18 text-blue-300",
 } as const;
 
 export type BadgeTone = keyof typeof TONES;
@@ -26,6 +29,18 @@ export function StatusBadge({ status }: { status: EventStatus }) {
 
 export function EventTypeBadge({ type }: { type: EventType }) {
   return type === "mabar" ? <Badge tone="volt">Mabar</Badge> : <Badge tone="coral">Kompetisi</Badge>;
+}
+
+/** Marks an event that belongs to a league; links to that league's page. */
+export function LeagueBadge({ leagueId }: { leagueId: string }) {
+  return (
+    <Link href={`/admin/liga/${leagueId}`} title="Buka halaman liga" className="no-underline rounded-full hover:brightness-125 transition-[filter]">
+      <Badge tone="blue">
+        Liga
+        <ArrowUpRightIcon className="-mr-0.5" />
+      </Badge>
+    </Link>
+  );
 }
 
 export function ActiveBadge({ active }: { active: boolean }) {

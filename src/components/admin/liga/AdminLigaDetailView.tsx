@@ -2,15 +2,31 @@
 
 import Link from "next/link";
 import { TrophyIcon } from "@/components/ui/icons";
-import type { LeagueStandingRow, LeagueWithVolumes } from "@/lib/leagues";
+import type { LeagueStandingRow, LeagueWithVolumes, VolumeWithEvent } from "@/lib/leagues";
 import { formatDateShortIndo } from "@/lib/format";
 
 interface Props {
   league: LeagueWithVolumes;
   standings: LeagueStandingRow[];
+  /** Volume whose event was just made in the wizard (`?created=`), tagged "Baru". */
+  createdVolume?: number | null;
 }
 
-export function AdminLigaDetailView({ league, standings }: Props) {
+/** Event wizard pre-filled for this league volume. */
+function newEventHref(league: LeagueWithVolumes, vol: VolumeWithEvent) {
+  const params = new URLSearchParams({
+    league_id: league.id,
+    volume_id: vol.id,
+    volume_num: String(vol.volume_number),
+    title: `${league.name} Vol. ${vol.volume_number}`,
+    preset_id: league.point_preset_id ?? "",
+  });
+  return `/admin/events/new?${params}`;
+}
+
+export function AdminLigaDetailView({ league, standings, createdVolume }: Props) {
+  const created = createdVolume ? league.volumes.find((v) => v.volume_number === createdVolume && v.event_id) : undefined;
+
   return (
     <div className="flex flex-col gap-5">
       <Link href="/admin/liga" className="text-sm text-snow/70 no-underline hover:text-volt">
@@ -72,6 +88,11 @@ export function AdminLigaDetailView({ league, standings }: Props) {
                       Final
                     </span>
                   )}
+                  {vol.id === created?.id && (
+                    <span className="rounded-full px-2.5 py-0.5 text-xs font-bold bg-win/18 text-win-soft">
+                      Baru
+                    </span>
+                  )}
                 </div>
 
                 {/* Event info */}
@@ -128,7 +149,7 @@ export function AdminLigaDetailView({ league, standings }: Props) {
                     </Link>
                   ) : (
                     <Link
-                      href={`/admin/events/new?league_id=${league.id}&volume_id=${vol.id}&volume_num=${vol.volume_number}&title=${encodeURIComponent(`${league.name} Vol. ${vol.volume_number}`)}&preset_id=${league.point_preset_id ?? ""}`}
+                      href={newEventHref(league, vol)}
                       className="btn btn-volt text-indigo font-bold min-h-10 px-4 inline-flex items-center justify-center no-underline text-xs w-full md:w-auto"
                     >
                       + Buat event

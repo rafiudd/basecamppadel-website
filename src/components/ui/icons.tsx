@@ -50,6 +50,13 @@ export const CloseIcon = make(
   </>,
   { size: 18 },
 );
+export const ArrowUpRightIcon = make(
+  <>
+    <line x1="7" y1="17" x2="17" y2="7" />
+    <polyline points="8 7 17 7 17 16" />
+  </>,
+  { size: 12, strokeWidth: 2.4 },
+);
 export const CheckIcon = make(<polyline points="5 12 10 17 19 7" />, { size: 16 });
 export const PlusIcon = make(
   <>

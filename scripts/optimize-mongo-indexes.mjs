@@ -264,6 +264,14 @@ async function run() {
             unique: true,
           },
         },
+        {
+          key: { event_id: 1 },
+          options: {
+            name: "league_volumes_event_id_key",
+            unique: true,
+            partialFilterExpression: { event_id: { $type: "string" } },
+          },
+        },
       ],
     },
     {

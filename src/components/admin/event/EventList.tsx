@@ -1,11 +1,21 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/admin/ActionForm";
-import { EventTypeBadge, StatusBadge } from "@/components/ui/Badge";
+import { EventTypeBadge, LeagueBadge, StatusBadge } from "@/components/ui/Badge";
 import { TrashIcon } from "@/components/ui/icons";
 import { deleteCompetition } from "@/app/admin/events/actions";
 import type { EventStatus, EventType } from "@/lib/database.types";
 
-export type EventRow = { id: string; type: EventType; title: string; format: string; date: string; venue: string; status: EventStatus };
+export type EventRow = {
+  id: string;
+  type: EventType;
+  title: string;
+  format: string;
+  date: string;
+  venue: string;
+  status: EventStatus;
+  /** League this event is a volume of, if that league still exists. */
+  leagueId: string | null;
+};
 
 /** Events as a table (desktop) or cards (mobile). */
 export function EventList({ rows }: { rows: EventRow[] }) {
@@ -24,7 +34,12 @@ export function EventList({ rows }: { rows: EventRow[] }) {
           {rows.map((r) => (
             <tr key={r.id} className="border-t border-snow/10">
               <td className="py-2.5 pr-3 font-display font-bold whitespace-nowrap">{r.title}</td>
-              <td className="py-2.5 pr-3"><EventTypeBadge type={r.type} /></td>
+              <td className="py-2.5 pr-3">
+                <div className="flex gap-1.5">
+                  <EventTypeBadge type={r.type} />
+                  {r.leagueId && <LeagueBadge leagueId={r.leagueId} />}
+                </div>
+              </td>
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{r.format}</td>
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{r.date}</td>
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{r.venue}</td>
@@ -41,8 +56,9 @@ export function EventList({ rows }: { rows: EventRow[] }) {
             <div className="flex-1 min-w-0 flex flex-col gap-1">
               <div className="font-display font-bold text-base">{r.title}</div>
               <div className="text-caption leading-copy text-snow/70">
-                <div className="flex gap-1.5 mt-0.5 mb-1">
+                <div className="flex flex-wrap gap-1.5 mt-0.5 mb-1">
                   <EventTypeBadge type={r.type} />
+                  {r.leagueId && <LeagueBadge leagueId={r.leagueId} />}
                   <StatusBadge status={r.status} />
                 </div>
                 {r.format} · {r.date}

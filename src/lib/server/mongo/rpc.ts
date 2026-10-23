@@ -7,7 +7,7 @@ import {
   levelColorFor,
   recomputePlayerStats,
 } from "./triggers.ts";
-import { normalizeDoc } from "./utils.ts";
+import { normalizeDoc, stageEntries } from "./utils.ts";
 import { LEVEL_NAMES, type PlayerLevelName } from "../../coaching.ts";
 import {
   normalizeWhatsapp,
@@ -1090,52 +1090,53 @@ export async function executeMongoRpc(
           return { data: null, error: { message: "Event not found" } };
         }
 
+        if (ev.status === "finished") {
+          return { data: null, error: { message: "Event sudah diselesaikan" } };
+        }
+
         const eventId = String(ev.id || ev._id);
         const now = new Date();
         const affectedPlayerIds: string[] = [];
 
-        if (p_stages && typeof p_stages === "object") {
-          for (const [teamId, stage] of Object.entries(p_stages)) {
-            const stageStr = String(stage);
-            await db.collection("comp_teams").updateOne(
-              {
-                $and: [
-                  { $or: [{ _id: teamId }, { id: teamId }] },
-                  { event_id: eventId },
-                ],
-              } as any,
-              { $set: { final_stage: stageStr, updated_at: now } }
-            );
+        // Mirrors Postgres: every staged team gets an award row, even when its stage is worth 0 points.
+        for (const [teamId, stageStr] of stageEntries(p_stages)) {
+          await db.collection("comp_teams").updateOne(
+            {
+              $and: [
+                { $or: [{ _id: teamId }, { id: teamId }] },
+                { event_id: eventId },
+              ],
+            } as any,
+            { $set: { final_stage: stageStr, updated_at: now } }
+          );
 
-            const v_pts = Number(ev.points?.[stageStr] ?? 0);
-            if (v_pts > 0) {
-              const teamPlayers = await db
-                .collection("comp_team_players")
-                .find({ team_id: teamId })
-                .toArray();
-              for (const tp of teamPlayers) {
-                if (!tp.player_id) continue;
-                affectedPlayerIds.push(tp.player_id);
-                const existingAward = await db
-                  .collection("player_awards")
-                  .findOne({
-                    event_id: eventId,
-                    player_id: tp.player_id,
-                  } as any);
-                if (!existingAward) {
-                  const aid = crypto.randomUUID();
-                  await db.collection("player_awards").insertOne({
-                    _id: aid,
-                    id: aid,
-                    event_id: eventId,
-                    player_id: tp.player_id,
-                    stage: stageStr,
-                    points: v_pts,
-                    created_at: now,
-                    updated_at: now,
-                  } as any);
-                }
-              }
+          const v_pts = Number(ev.points?.[stageStr] ?? 0);
+          const teamPlayers = await db
+            .collection("comp_team_players")
+            .find({ team_id: teamId })
+            .toArray();
+          for (const tp of teamPlayers) {
+            if (!tp.player_id) continue;
+            affectedPlayerIds.push(tp.player_id);
+            const existingAward = await db
+              .collection("player_awards")
+              .findOne({
+                event_id: eventId,
+                player_id: tp.player_id,
+              } as any);
+            if (!existingAward) {
+              const aid = crypto.randomUUID();
+              await db.collection("player_awards").insertOne({
+                _id: aid,
+                id: aid,
+                event_id: eventId,
+                player_id: tp.player_id,
+                team_id: teamId,
+                stage: stageStr,
+                points: v_pts,
+                created_at: now,
+                updated_at: now,
+              } as any);
             }
           }
         }
