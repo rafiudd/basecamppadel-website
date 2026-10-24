@@ -798,52 +798,18 @@ export async function executeMongoRpc(
         }
 
         const p_match_id = args.p_match_id;
-        const p_games_a = Number(args.p_games_a ?? 0);
-        const p_games_b = Number(args.p_games_b ?? 0);
-        const p_wo = Boolean(args.p_wo);
-        const p_reason = args.p_reason || null;
+        // Postgres: p_wo text default null — "A"/"B" (which side won by walkover), or null.
+        const p_wo: "A" | "B" | null = args.p_wo === "A" || args.p_wo === "B" ? args.p_wo : null;
 
         const m = await db.collection("matches").findOne({
           $or: [{ _id: p_match_id }, { id: p_match_id }],
         } as any);
         if (!m) {
-          return { data: null, error: { message: "Match not found" } };
+          return { data: null, error: { message: "Match kompetisi tidak ditemukan" } };
         }
         if (!m.team_a_id || !m.team_b_id) {
-          return {
-            data: null,
-            error: { message: "Match teams are not finalized yet" },
-          };
+          return { data: null, error: { message: "Tim match ini belum lengkap" } };
         }
-        if (p_games_a < 0 || p_games_b < 0) {
-          return {
-            data: null,
-            error: { message: "Games cannot be negative" },
-          };
-        }
-        if (p_games_a === p_games_b) {
-          return {
-            data: null,
-            error: { message: "Tie is not allowed; a match must have a winner" },
-          };
-        }
-        if (
-          p_wo &&
-          !(
-            (p_games_a === 0 && p_games_b > 0) ||
-            (p_games_b === 0 && p_games_a > 0)
-          )
-        ) {
-          return {
-            data: null,
-            error: { message: "WO requires one side with 0 games" },
-          };
-        }
-
-        const v_winner_side = p_games_a > p_games_b ? "A" : "B";
-        const v_winner_id =
-          p_games_a > p_games_b ? m.team_a_id : m.team_b_id;
-        const v_old_winner = m.winner_team_id || null;
 
         const ev = await db.collection("events").findOne({
           $or: [{ _id: m.event_id }, { id: m.event_id }],
@@ -851,28 +817,41 @@ export async function executeMongoRpc(
         if (!ev) {
           return { data: null, error: { message: "Event not found" } };
         }
+        if (ev.status === "finished") {
+          return { data: null, error: { message: "Event sudah selesai, skor terkunci" } };
+        }
+
+        let p_games_a = Math.max(0, Number(args.p_games_a ?? 0));
+        let p_games_b = Math.max(0, Number(args.p_games_b ?? 0));
+        let v_winner_id: string;
+        if (p_wo === null) {
+          if (p_games_a === p_games_b) {
+            return { data: null, error: { message: "Skor seri tidak bisa diselesaikan" } };
+          }
+          v_winner_id = p_games_a > p_games_b ? m.team_a_id : m.team_b_id;
+        } else {
+          // A walkover's games are always logged as 0-0, matching Postgres.
+          v_winner_id = p_wo === "A" ? m.team_a_id : m.team_b_id;
+          p_games_a = 0;
+          p_games_b = 0;
+        }
+        const v_winner_side = v_winner_id === m.team_a_id ? "A" : "B";
+        const v_old_winner = m.winner_team_id || null;
 
         // Guard knockout advancement if winner changes
-        if (
-          m.next_match_id &&
-          v_old_winner &&
-          v_old_winner !== v_winner_id
-        ) {
+        if (m.next_match_id && v_old_winner && v_old_winner !== v_winner_id) {
           const nextMatch = await db.collection("matches").findOne({
             $or: [{ _id: m.next_match_id }, { id: m.next_match_id }],
           } as any);
           if (
             nextMatch &&
-            (nextMatch.winner_team_id ||
-              nextMatch.is_live ||
-              Number(nextMatch.games_a || 0) > 0 ||
-              Number(nextMatch.games_b || 0) > 0)
+            (nextMatch.status !== "scheduled" ||
+              Number(nextMatch.team_a_games || 0) + Number(nextMatch.team_b_games || 0) > 0)
           ) {
             return {
               data: null,
               error: {
-                message:
-                  "Cannot change winner: next round match already started or finished",
+                message: "Pemenang berubah, tapi match berikutnya sudah dimulai. Koreksi match berikutnya dulu.",
               },
             };
           }
@@ -883,34 +862,43 @@ export async function executeMongoRpc(
 
         // Audit log
         const logId = crypto.randomUUID();
+        // comp_score_log schema (Postgres 0005): id/event_id/match_id/user_id/action/before/after/created_at.
         await db.collection("comp_score_log").insertOne({
           _id: logId,
           id: logId,
+          event_id: String(ev.id || ev._id),
           match_id: matchId,
-          old_games_a: m.games_a ?? null,
-          old_games_b: m.games_b ?? null,
-          old_winner_team_id: v_old_winner,
-          new_games_a: p_games_a,
-          new_games_b: p_games_b,
-          new_winner_team_id: v_winner_id,
-          is_wo: p_wo,
-          reason: p_reason,
-          changed_by: user?.id || null,
-          changed_at: now,
+          user_id: user?.id || null,
+          action: m.status === "finished" ? "correct" : "finish",
+          before: {
+            games_a: m.team_a_games ?? 0,
+            games_b: m.team_b_games ?? 0,
+            winner_team_id: v_old_winner,
+            is_wo: m.is_wo ?? false,
+            status: m.status ?? null,
+          },
+          after: {
+            games_a: p_games_a,
+            games_b: p_games_b,
+            winner_team_id: v_winner_id,
+            is_wo: p_wo !== null,
+          },
+          created_at: now,
         } as any);
 
-        // Update match
+        // Update match — field names and `status` must match the matches schema (Postgres 0005).
         await db.collection("matches").updateOne(
           { _id: m._id },
           {
             $set: {
-              games_a: p_games_a,
-              games_b: p_games_b,
+              team_a_games: p_games_a,
+              team_b_games: p_games_b,
               team_a_game: String(p_games_a),
               team_b_game: String(p_games_b),
               winner: v_winner_side,
               winner_team_id: v_winner_id,
-              is_wo: p_wo,
+              is_wo: p_wo !== null,
+              status: "finished",
               is_live: false,
               timer_running: false,
               finished_at: now,
@@ -939,6 +927,9 @@ export async function executeMongoRpc(
             $or: [{ _id: v_winner_id }, { id: v_winner_id }],
           } as any);
           const winnerName = winnerTeam?.name || "TBD";
+          const winnerPlayerIds = (
+            await db.collection("comp_team_players").find({ team_id: v_winner_id }).sort({ slot: 1 }).toArray()
+          ).map((r) => r.player_id);
           if (m.next_match_slot === "A") {
             await db.collection("matches").updateOne(
               {
@@ -947,7 +938,8 @@ export async function executeMongoRpc(
               {
                 $set: {
                   team_a_id: v_winner_id,
-                  team_a: winnerName,
+                  team_a_name: winnerName,
+                  team_a_player_ids: winnerPlayerIds,
                   updated_at: now,
                 },
               }
@@ -960,7 +952,8 @@ export async function executeMongoRpc(
               {
                 $set: {
                   team_b_id: v_winner_id,
-                  team_b: winnerName,
+                  team_b_name: winnerName,
+                  team_b_player_ids: winnerPlayerIds,
                   updated_at: now,
                 },
               }
@@ -968,105 +961,39 @@ export async function executeMongoRpc(
           }
         }
 
-        // Rebuild match_history for all 4 players
-        const teamARows = await db
+        // Rebuild match_history for all 4 players — one row per player, matching the Postgres
+        // INSERT exactly: session_label/opponent_label/result/points_delta/stream_url only.
+        const teamPlayers = await db
           .collection("comp_team_players")
-          .find({ team_id: m.team_a_id })
-          .sort({ slot: 1 })
+          .find({ team_id: { $in: [m.team_a_id, m.team_b_id] } })
           .toArray();
-        const teamBRows = await db
-          .collection("comp_team_players")
-          .find({ team_id: m.team_b_id })
-          .sort({ slot: 1 })
-          .toArray();
-
-        const [v_pa1, v_pa2] = teamARows.map((r) => r.player_id);
-        const [v_pb1, v_pb2] = teamBRows.map((r) => r.player_id);
-        const playerIds = [v_pa1, v_pa2, v_pb1, v_pb2].filter(Boolean);
-
-        const playerDocs = await db
-          .collection("players")
-          .find({
-            $or: [{ _id: { $in: playerIds } }, { id: { $in: playerIds } }],
-          } as any)
-          .toArray();
-        const nameMap = new Map(
-          playerDocs.map((p) => [String(p.id || p._id), p.name])
-        );
-
-        const v_win_pts = Number(
-          ev.points?.match_win ?? ev.points?.win ?? 0
-        );
-        const v_loss_pts = Number(
-          ev.points?.match_loss ?? ev.points?.loss ?? 0
-        );
+        const playerIds = teamPlayers.map((r) => r.player_id).filter(Boolean);
 
         await db.collection("match_history").deleteMany({ match_id: matchId });
 
-        const today = now.toISOString().slice(0, 10);
-        const oppBLabel = [nameMap.get(v_pb1), nameMap.get(v_pb2)]
-          .filter(Boolean)
-          .join(" & ");
-        const oppALabel = [nameMap.get(v_pa1), nameMap.get(v_pa2)]
-          .filter(Boolean)
-          .join(" & ");
+        const STAGE_LABEL: Record<string, string> = { r16: "16 besar", qf: "8 besar", sf: "Semifinal" };
+        const label = `${ev.title} · ${
+          m.stage === "group" ? `Grup ${m.group_label ?? ""}` : STAGE_LABEL[m.stage] ?? "Final"
+        }`;
 
-        const newHistoryRows: any[] = [];
-        const addHist = (
-          pid: string | undefined,
-          partnerId: string | undefined,
-          opponents: string,
-          score: string,
-          won: boolean
-        ) => {
-          if (!pid) return;
-          const hid = crypto.randomUUID();
-          newHistoryRows.push({
-            _id: hid,
-            id: hid,
-            player_id: pid,
-            match_id: matchId,
-            event_id: String(ev.id || ev._id),
-            event_name: ev.name,
-            match_date: today,
-            partner: (partnerId && nameMap.get(partnerId)) || "—",
-            opponents: opponents || "—",
-            score,
-            result: won ? "W" : "L",
-            points_delta: won ? v_win_pts : v_loss_pts,
-            created_at: now,
-            updated_at: now,
+        const newHistoryRows: any[] = teamPlayers
+          .filter((tp) => tp.player_id)
+          .map((tp) => {
+            const hid = crypto.randomUUID();
+            const onTeamA = tp.team_id === m.team_a_id;
+            return {
+              _id: hid,
+              id: hid,
+              match_id: matchId,
+              player_id: tp.player_id,
+              session_label: label,
+              opponent_label: onTeamA ? m.team_b_name : m.team_a_name,
+              result: tp.team_id === v_winner_id ? "W" : "L",
+              points_delta: 0,
+              stream_url: m.stream_url ?? null,
+              created_at: now,
+            };
           });
-        };
-
-        addHist(
-          v_pa1,
-          v_pa2,
-          oppBLabel,
-          `${p_games_a} - ${p_games_b}`,
-          v_winner_side === "A"
-        );
-        addHist(
-          v_pa2,
-          v_pa1,
-          oppBLabel,
-          `${p_games_a} - ${p_games_b}`,
-          v_winner_side === "A"
-        );
-        addHist(
-          v_pb1,
-          v_pb2,
-          oppALabel,
-          `${p_games_b} - ${p_games_a}`,
-          v_winner_side === "B"
-        );
-        addHist(
-          v_pb2,
-          v_pb1,
-          oppALabel,
-          `${p_games_b} - ${p_games_a}`,
-          v_winner_side === "B"
-        );
 
         if (newHistoryRows.length > 0) {
           await db.collection("match_history").insertMany(newHistoryRows);
