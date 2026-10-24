@@ -41,29 +41,24 @@ export function InfoTab({ event }: { event: EventItem }) {
         </section>
 
         {/* Poin Leaderboard (Only for Kompetisi) */}
-        {event.type === "kompetisi" && (
+        {event.type === "kompetisi" && event.pointsRules && (
           <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2 text-ink shadow-xs">
             <h2 className="font-display font-bold text-[19px] m-0">Poin leaderboard</h2>
-            <div className="flex justify-between items-center py-2.5 border-t border-ink/7 text-[15px]">
-              <span className="text-ink/70">Juara</span>
-              <span className="font-bold">80 poin</span>
-            </div>
-            <div className="flex justify-between items-center py-2.5 border-t border-ink/7 text-[15px]">
-              <span className="text-ink/70">Runner-up</span>
-              <span className="font-bold">50 poin</span>
-            </div>
-            <div className="flex justify-between items-center py-2.5 border-t border-ink/7 text-[15px]">
-              <span className="text-ink/70">Semifinal</span>
-              <span className="font-bold">30 poin</span>
-            </div>
-            <div className="flex justify-between items-center py-2.5 border-t border-ink/7 text-[15px]">
-              <span className="text-ink/70">8 besar</span>
-              <span className="font-bold">15 poin</span>
-            </div>
-            <div className="flex justify-between items-center py-2.5 border-t border-ink/7 text-[15px]">
-              <span className="text-ink/70">Ikut fase grup</span>
-              <span className="font-bold">5 poin</span>
-            </div>
+            {[
+              { label: "Juara", value: event.pointsRules.champion },
+              { label: "Runner-up", value: event.pointsRules.runner_up },
+              { label: "Semifinal", value: event.pointsRules.sf },
+              { label: "8 besar", value: event.pointsRules.qf },
+              { label: "16 besar", value: event.pointsRules.r16 },
+              { label: "Ikut fase grup", value: event.pointsRules.group },
+            ]
+              .filter((row) => row.value)
+              .map((row) => (
+                <div key={row.label} className="flex justify-between items-center py-2.5 border-t border-ink/7 text-[15px]">
+                  <span className="text-ink/70">{row.label}</span>
+                  <span className="font-bold">{row.value} poin</span>
+                </div>
+              ))}
             <div className="text-[13px] text-ink/65 pt-1">
               Tiap pemain dapat poin tahap tertinggi yang dicapai.
             </div>

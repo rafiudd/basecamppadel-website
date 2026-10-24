@@ -57,6 +57,8 @@ export interface EventItem {
     streamUrl: string;
   };
   podium?: Array<{ rank: number; label: string; name: string; points?: number }>;
+  /** Kompetisi only: this event's own leaderboard point rules (the "Poin" tab / point preset). */
+  pointsRules?: EventPoints;
   registeredParticipants?: Array<{ id: string; name: string; level: string; avatar: string }>;
   registeredTeams?: Array<{ id: string; name: string; avatar: string }>;
   whatsapp_url?: string | null;
@@ -415,6 +417,7 @@ function mapCompetitionToEventItem(data: CompetitionData): EventItem {
     courtStreams: courtStreams.length > 0 ? courtStreams : undefined,
     liveScore,
     podium,
+    pointsRules: event.points,
     registeredTeams,
     whatsapp_url: event.whatsapp_url,
     league_id: data.league?.id ?? null,
