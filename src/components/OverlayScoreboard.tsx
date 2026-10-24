@@ -65,8 +65,9 @@ function LogoStep({ src, height, shape = "circle" }: { src: string; height: numb
  * before looping back to the event info. Each one getting the whole screen to itself (instead of
  * sharing a small card) is what lets it run this big.
  */
-function OffAirTicker({ match }: { match: Match | null }) {
+function OffAirTicker({ match, isEastLiga }: { match: Match | null; isEastLiga: boolean }) {
   const dateLine = match?.starts_at ? formatStartLine(match.starts_at, match.ends_at) : null;
+  const dateClass = isEastLiga ? "text-win" : "text-volt";
 
   const steps = useMemo((): TickerStep[] => {
     const list: TickerStep[] = [
@@ -82,7 +83,7 @@ function OffAirTicker({ match }: { match: Match | null }) {
               {dateLine && (
                 <>
                   <div className="w-1.5 h-1.5 rounded-full bg-snow/40" />
-                  <div className="font-sans font-semibold text-[22px] tracking-[0.04em] text-volt uppercase">{dateLine}</div>
+                  <div className={`font-sans font-semibold text-[22px] tracking-[0.04em] uppercase ${dateClass}`}>{dateLine}</div>
                 </>
               )}
             </div>
@@ -103,7 +104,7 @@ function OffAirTicker({ match }: { match: Match | null }) {
       });
     }
     return list;
-  }, [match, dateLine]);
+  }, [match, dateLine, dateClass]);
 
   const [index, setIndex] = useState(0);
   useEffect(() => setIndex(0), [steps.length]); // a match loading in/out shouldn't land on an out-of-range step
@@ -128,11 +129,11 @@ function OffAirTicker({ match }: { match: Match | null }) {
   );
 }
 
-function StartingSoonCard({ match }: { match: Match | null }) {
+function StartingSoonCard({ match, isEastLiga }: { match: Match | null; isEastLiga: boolean }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center">
       <div className="pt-12 flex flex-col items-center gap-4">
-        <CountdownBadge startsAt={match?.starts_at ?? null} />
+        <CountdownBadge startsAt={match?.starts_at ?? null} accent={isEastLiga ? "win" : "coral"} />
         <div className="flex items-center gap-3">
           <MountainMark size={32} />
           <div className="font-display font-bold text-[18px] tracking-[0.16em] text-snow">BASECAMP PADEL</div>
@@ -140,7 +141,7 @@ function StartingSoonCard({ match }: { match: Match | null }) {
       </div>
 
       <div className="flex-1 w-full px-20">
-        <OffAirTicker match={match} />
+        <OffAirTicker match={match} isEastLiga={isEastLiga} />
       </div>
     </div>
   );
@@ -178,7 +179,7 @@ export function OverlayScoreboard({
         style={{ background: showBackdrop ? "#17151F" : "transparent" }}
       >
         {showBackdrop && <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,#2a2460,#17151F)]" />}
-        <StartingSoonCard match={match} />
+        <StartingSoonCard match={match} isEastLiga={isEastLiga} />
       </div>
     );
   }
