@@ -311,7 +311,7 @@ export function MatchTab({
           if (!byGroup.has(g.group)) byGroup.set(g.group, []);
           byGroup.get(g.group)!.push(g);
         }
-        return [...byGroup.entries()].map(([groupLabel, rows]) => (
+        return [...byGroup.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([groupLabel, rows]) => (
           <section key={groupLabel} className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-xs">
             <div className="flex items-baseline justify-between gap-3">
               <h2 className="font-display font-bold text-[19px] m-0">Fase grup · {groupLabel}</h2>
