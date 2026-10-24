@@ -304,69 +304,79 @@ export function MatchTab({
         </section>
       )}
 
-      {/* Fase Grup matches */}
-      {matches?.groupMatches && matches.groupMatches.length > 0 && (
-        <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-xs">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-display font-bold text-[19px] m-0">Fase grup · Grup A</h2>
-            <span className="text-[13px] text-ink/60">+ 7 match di Grup B–D</span>
-          </div>
-
-          {matches.groupMatches.map((g, idx) => (
-            <div key={idx} className="flex items-center gap-4 py-3 border-t border-ink/7">
-              <div className="flex-none w-28 text-xs font-bold text-ink/60 leading-tight">
-                {g.group}<br />
-                <span className="font-normal">{g.court}</span>
-              </div>
-              <div className="flex-grow min-w-0 flex flex-col gap-0.5">
-                <div
-                  className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${
-                    g.team1.winner ? "bg-[#2f9e5c]/12" : ""
-                  }`}
-                >
-                  <span
-                    className={`text-sm truncate ${
-                      g.team1.winner ? "font-bold text-ink" : "font-semibold text-ink/50"
-                    }`}
-                  >
-                    {g.team1.name}
-                  </span>
-                  <span
-                    className={`font-display font-bold text-base ${
-                      g.team1.winner ? "text-[#23794A]" : "text-ink/50"
-                    }`}
-                  >
-                    {g.team1.score}
-                  </span>
-                </div>
-                <div
-                  className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${
-                    g.team2.winner ? "bg-[#2f9e5c]/12" : ""
-                  }`}
-                >
-                  <span
-                    className={`text-sm truncate ${
-                      g.team2.winner ? "font-bold text-ink" : "font-semibold text-ink/50"
-                    }`}
-                  >
-                    {g.team2.name}
-                  </span>
-                  <span
-                    className={`font-display font-bold text-base ${
-                      g.team2.winner ? "text-[#23794A]" : "text-ink/50"
-                    }`}
-                  >
-                    {g.team2.score}
-                  </span>
-                </div>
-              </div>
-              <div className="flex-none w-20 flex justify-end">
-                <span className="text-xs font-bold text-ink/55">Selesai</span>
-              </div>
+      {/* Fase Grup matches — one section per group, not one flat chronological list */}
+      {matches?.groupMatches && matches.groupMatches.length > 0 && (() => {
+        const byGroup = new Map<string, typeof matches.groupMatches>();
+        for (const g of matches.groupMatches) {
+          if (!byGroup.has(g.group)) byGroup.set(g.group, []);
+          byGroup.get(g.group)!.push(g);
+        }
+        return [...byGroup.entries()].map(([groupLabel, rows]) => (
+          <section key={groupLabel} className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-xs">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="font-display font-bold text-[19px] m-0">Fase grup · {groupLabel}</h2>
+              <span className="text-[13px] text-ink/60">
+                {rows.every((r) => r.status === "finished") ? "Selesai" : rows.some((r) => r.status === "live") ? "Berlangsung" : "Belum main"}
+              </span>
             </div>
-          ))}
-        </section>
-      )}
+
+            {rows.map((g, idx) => (
+              <div key={idx} className="flex items-center gap-4 py-3 border-t border-ink/7">
+                <div className="flex-none w-28 text-xs font-bold text-ink/60 leading-tight">
+                  <span className="font-normal">{g.court}</span>
+                </div>
+                <div className="flex-grow min-w-0 flex flex-col gap-0.5">
+                  <div
+                    className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${
+                      g.team1.winner ? "bg-[#2f9e5c]/12" : ""
+                    }`}
+                  >
+                    <span
+                      className={`text-sm truncate ${
+                        g.team1.winner ? "font-bold text-ink" : "font-semibold text-ink/50"
+                      }`}
+                    >
+                      {g.team1.name}
+                    </span>
+                    <span
+                      className={`font-display font-bold text-base ${
+                        g.team1.winner ? "text-[#23794A]" : "text-ink/50"
+                      }`}
+                    >
+                      {g.team1.score}
+                    </span>
+                  </div>
+                  <div
+                    className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${
+                      g.team2.winner ? "bg-[#2f9e5c]/12" : ""
+                    }`}
+                  >
+                    <span
+                      className={`text-sm truncate ${
+                        g.team2.winner ? "font-bold text-ink" : "font-semibold text-ink/50"
+                      }`}
+                    >
+                      {g.team2.name}
+                    </span>
+                    <span
+                      className={`font-display font-bold text-base ${
+                        g.team2.winner ? "text-[#23794A]" : "text-ink/50"
+                      }`}
+                    >
+                      {g.team2.score}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-none w-20 flex justify-end">
+                  <span className="text-xs font-bold text-ink/55">
+                    {g.status === "live" ? "Live" : g.status === "finished" ? "Selesai" : "Menunggu"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </section>
+        ));
+      })()}
     </div>
   );
 }
