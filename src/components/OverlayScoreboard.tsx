@@ -9,15 +9,15 @@ import { CountdownBadge } from "./CountdownBadge";
 import { MountainMark } from "./Logo";
 import { SponsorStrip } from "./SponsorStrip";
 
-function TeamRow({ name, sets, game, serving }: { name: string; sets?: number[] | null; game: string; serving: boolean }) {
+function TeamRow({ name, sets, game, serving, accent }: { name: string; sets?: number[] | null; game: string; serving: boolean; accent: string }) {
   return (
     <div
       className="flex items-center gap-[18px] pl-[14px] -ml-[18px] border-l-4"
-      style={{ borderColor: serving ? "#FFD43B" : "transparent" }}
+      style={{ borderColor: serving ? accent : "transparent" }}
     >
       <div
         className="w-[18px] h-[18px] rounded-full flex-none"
-        style={{ background: serving ? "#FFD43B" : "transparent", boxShadow: serving ? "0 0 0 4px rgba(255,212,59,0.25)" : "none" }}
+        style={{ background: serving ? accent : "transparent", boxShadow: serving ? `0 0 0 4px ${accent}40` : "none" }}
       />
       <div className="font-display font-bold text-[30px] uppercase text-snow flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis">
         {name}
@@ -31,7 +31,7 @@ function TeamRow({ name, sets, game, serving }: { name: string; sets?: number[] 
       </div>
       <div
         className="w-16 h-16 rounded-[10px] flex items-center justify-center font-display font-bold text-[32px]"
-        style={{ background: serving ? "#FFD43B" : "rgba(251,247,241,0.1)", color: serving ? "#1B1650" : "#FBF7F1" }}
+        style={{ background: serving ? accent : "rgba(251,247,241,0.1)", color: serving ? "#1B1650" : "#FBF7F1" }}
       >
         {game}
       </div>
@@ -163,6 +163,13 @@ export function OverlayScoreboard({
   const live = !!match?.is_live;
   useTick(!!match?.timer_running);
   const timer = match ? formatTimer(matchElapsedSeconds(match)) : "00:00";
+  // East Padel House is the League's own venue — give its broadcasts the League's green instead of
+  // the default Basecamp volt/coral, reusing the existing "win" green rather than a one-off hex.
+  const isEastLiga = match?.venue === "East Padel House";
+  const accent = isEastLiga ? "#2F9E5C" : "#FFD43B";
+  const accentClass = isEastLiga ? "text-win" : "text-volt";
+  const borderClass = isEastLiga ? "border-win" : "border-volt";
+  const labelClass = isEastLiga ? "text-win-soft" : "text-coral";
 
   if (!live) {
     return (
@@ -195,16 +202,22 @@ export function OverlayScoreboard({
 
       {/* match clock */}
       <div className="absolute top-10 right-10 flex items-center gap-3.5 bg-ink/55 px-6 py-3 rounded-full backdrop-blur-[6px]">
-        <span className="font-display font-bold text-[24px] text-volt tracking-[0.02em] tabular-nums">{timer}</span>
+        <span className={`font-display font-bold text-[24px] ${accentClass} tracking-[0.02em] tabular-nums`}>{timer}</span>
       </div>
 
-      {/* sponsor bar */}
+      {/* sponsor bar — East Padel House doesn't have a logo yet, so it gets a wordmark badge instead */}
       <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-ink/55 px-8 py-3 rounded-full backdrop-blur-[6px]">
-        <SponsorStrip height={68} shape="circle" />
+        {isEastLiga ? (
+          <span className="font-display font-bold text-[22px] tracking-[0.1em] text-win-soft uppercase whitespace-nowrap">
+            East Padel House
+          </span>
+        ) : (
+          <SponsorStrip height={68} shape="circle" />
+        )}
       </div>
 
       {/* lower third */}
-      <div className="absolute left-0 right-0 bottom-0 h-[190px] bg-indigo border-t-4 border-volt flex items-stretch">
+      <div className={`absolute left-0 right-0 bottom-0 h-[190px] bg-indigo border-t-4 ${borderClass} flex items-stretch`}>
         <div className="flex-none w-[260px] flex flex-col justify-center gap-3 px-8 border-r border-snow/15">
           <div className="flex items-center gap-4">
             <MountainMark size={40} />
@@ -219,12 +232,12 @@ export function OverlayScoreboard({
         </div>
 
         <div className="flex-1 flex flex-col justify-center gap-2.5 px-10 min-w-0">
-          <TeamRow name={match?.team_a_name ?? "Team A"} sets={match?.team_a_sets ?? [0, 0]} game={match?.team_a_game ?? "0"} serving={match?.serve === "A"} />
-          <TeamRow name={match?.team_b_name ?? "Team B"} sets={match?.team_b_sets ?? [0, 0]} game={match?.team_b_game ?? "0"} serving={match?.serve === "B"} />
+          <TeamRow name={match?.team_a_name ?? "Team A"} sets={match?.team_a_sets ?? [0, 0]} game={match?.team_a_game ?? "0"} serving={match?.serve === "A"} accent={accent} />
+          <TeamRow name={match?.team_b_name ?? "Team B"} sets={match?.team_b_sets ?? [0, 0]} game={match?.team_b_game ?? "0"} serving={match?.serve === "B"} accent={accent} />
         </div>
 
         <div className="flex-none w-[320px] border-l border-snow/15 px-8 flex flex-col justify-center gap-1.5">
-          <div className="font-sans font-bold text-[15px] tracking-[0.08em] text-coral uppercase">{match?.session_label ?? "—"}</div>
+          <div className={`font-sans font-bold text-[15px] tracking-[0.08em] ${labelClass} uppercase`}>{match?.session_label ?? "—"}</div>
           <div className="font-display font-bold text-[22px] text-snow">{match?.venue ?? ""}</div>
           <div className="font-sans font-semibold text-base text-snow/65">{match?.set_label ?? ""}</div>
         </div>
