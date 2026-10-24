@@ -2,15 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getSessionUser } from "@/lib/server/session";
 
+// Must match the real Match fields (src/lib/database.types.ts) — useMatchControl.ts sends
+// Partial<Match> patches straight through this whitelist, so a stale/wrong name here silently
+// drops that field instead of erroring.
 const ALLOWED_MATCH_FIELDS = new Set([
-  "team_a",
-  "team_b",
+  "team_a_sets",
+  "team_b_sets",
+  "team_a_games",
+  "team_b_games",
   "team_a_game",
   "team_b_game",
-  "games_a",
-  "games_b",
   "set_label",
   "serve",
+  "status",
   "is_live",
   "timer_start",
   "timer_base_seconds",
@@ -20,7 +24,6 @@ const ALLOWED_MATCH_FIELDS = new Set([
   "winner_team_id",
   "is_wo",
   "finished_at",
-  "scheduled_order",
 ]);
 
 export async function POST(req: NextRequest) {
