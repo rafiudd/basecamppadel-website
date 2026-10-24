@@ -192,6 +192,23 @@ export function assignSlots(items: { teams: string[]; after?: number[] }[], cour
   return res.map((r) => r ?? { slot, court: 0 });
 }
 
+/**
+ * Group-stage court assignment: each group plays its whole schedule on one fixed court (A -> court
+ * 1, B -> court 2, ...; groups wrap around if there are more groups than courts), instead of
+ * bouncing between whichever court is next free. Order within a group follows `fixtures`' own
+ * (round-interleaved) order; multiple groups sharing one court queue one after another.
+ */
+export function assignGroupSlots(fixtures: { group: string }[], groupLabels: string[], courtCount: number) {
+  const courts = Math.max(1, courtCount);
+  const courtOf = new Map(groupLabels.map((label, i) => [label, i % courts]));
+  const nextSlot = new Array(courts).fill(0);
+  return fixtures.map((f) => {
+    const court = courtOf.get(f.group) ?? 0;
+    const slot = nextSlot[court]++;
+    return { slot, court };
+  });
+}
+
 export type TimedMatch = { id: string; court_id: string | null; starts_at: string | null; teams: string[] };
 export type Conflict = { a: string; b: string; kind: "court" | "team" };
 

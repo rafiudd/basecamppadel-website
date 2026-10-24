@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import {
+  assignGroupSlots,
   assignSlots,
   buildFirstRound,
   computeFinalStages,
@@ -38,6 +39,17 @@ function scheduleRows<T extends { teams: string[]; after?: number[] }>(data: Com
   }));
 }
 
+/** Group-stage version of scheduleRows: each group stays on one fixed court (A, B, C, ... in order). */
+function scheduleGroupRows(data: CompetitionData, fixtures: { group: string }[], groupLabels: string[], fromMs: number) {
+  const courts = data.event.court_ids.length ? data.event.court_ids : [null];
+  const dur = data.event.match_minutes * 60_000;
+  return assignGroupSlots(fixtures, groupLabels, courts.length).map((s) => ({
+    court_id: courts[s.court] ?? null,
+    starts_at: new Date(fromMs + s.slot * dur).toISOString(),
+    ends_at: new Date(fromMs + (s.slot + 1) * dur).toISOString(),
+  }));
+}
+
 export async function generateGroupSchedule(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
     await requireAdmin();
@@ -56,7 +68,7 @@ export async function generateGroupSchedule(_: ActionState, fd: FormData): Promi
     if (Math.max(...sizes) - Math.min(...sizes) > 1) throw new Error("Selisih jumlah tim antar grup maksimal 1.");
 
     const fixtures = groupFixtures(labels.map((label) => ({ label, teamIds: teams.filter((t) => t.group_label === label).map((t) => t.id) })));
-    const slots = scheduleRows(data, fixtures.map((f) => ({ teams: [f.a, f.b] })), startIso(data));
+    const slots = scheduleGroupRows(data, fixtures, labels, startIso(data));
     const team = (tid: string) => teams.find((t) => t.id === tid)!;
     const rows = fixtures.map((f, i) => ({
       ...baseRow(data),
