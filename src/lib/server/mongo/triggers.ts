@@ -51,6 +51,9 @@ export function applyCollectionDefaults(
       if (doc.courts === undefined) doc.courts = 1;
       if (doc.bracket_stale === undefined) doc.bracket_stale = false;
       if (doc.format === undefined) doc.format = null;
+      // Postgres had `match_minutes int not null default 20`; the create wizard never submits this
+      // field (StepDetail has no input for it), so nothing in app code ever sets it either.
+      if (doc.match_minutes === undefined) doc.match_minutes = 20;
       break;
     }
     case "matches": {
