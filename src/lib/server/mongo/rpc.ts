@@ -921,8 +921,8 @@ export async function executeMongoRpc(
           }
         }
 
-        // Advance winner to next knockout match
-        if (m.next_match_id && m.next_match_slot) {
+        // Advance winner to next knockout match (the Match field is next_slot, not next_match_slot)
+        if (m.next_match_id && m.next_slot) {
           const winnerTeam = await db.collection("comp_teams").findOne({
             $or: [{ _id: v_winner_id }, { id: v_winner_id }],
           } as any);
@@ -930,7 +930,7 @@ export async function executeMongoRpc(
           const winnerPlayerIds = (
             await db.collection("comp_team_players").find({ team_id: v_winner_id }).sort({ slot: 1 }).toArray()
           ).map((r) => r.player_id);
-          if (m.next_match_slot === "A") {
+          if (m.next_slot === "A") {
             await db.collection("matches").updateOne(
               {
                 $or: [{ _id: m.next_match_id }, { id: m.next_match_id }],
@@ -944,7 +944,7 @@ export async function executeMongoRpc(
                 },
               }
             );
-          } else if (m.next_match_slot === "B") {
+          } else if (m.next_slot === "B") {
             await db.collection("matches").updateOne(
               {
                 $or: [{ _id: m.next_match_id }, { id: m.next_match_id }],
