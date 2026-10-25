@@ -304,17 +304,17 @@ export function MatchTab({
         </section>
       )}
 
-      {/* Fase Grup matches — one section per group, not one flat chronological list */}
+      {/* Fase Grup matches — one section per round, so matches running in parallel (one per group/court) are easy to scan together */}
       {matches?.groupMatches && matches.groupMatches.length > 0 && (() => {
-        const byGroup = new Map<string, typeof matches.groupMatches>();
+        const byRound = new Map<number, typeof matches.groupMatches>();
         for (const g of matches.groupMatches) {
-          if (!byGroup.has(g.group)) byGroup.set(g.group, []);
-          byGroup.get(g.group)!.push(g);
+          if (!byRound.has(g.round)) byRound.set(g.round, []);
+          byRound.get(g.round)!.push(g);
         }
-        return [...byGroup.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([groupLabel, rows]) => (
-          <section key={groupLabel} className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-xs">
+        return [...byRound.entries()].sort(([a], [b]) => a - b).map(([round, rows]) => (
+          <section key={round} className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-xs">
             <div className="flex items-baseline justify-between gap-3">
-              <h2 className="font-display font-bold text-[19px] m-0">Fase grup · {groupLabel}</h2>
+              <h2 className="font-display font-bold text-[19px] m-0">Fase grup · Ronde {round}</h2>
               <span className="text-[13px] text-ink/60">
                 {rows.every((r) => r.status === "finished") ? "Selesai" : rows.some((r) => r.status === "live") ? "Berlangsung" : "Belum main"}
               </span>
@@ -323,6 +323,7 @@ export function MatchTab({
             {rows.map((g, idx) => (
               <div key={idx} className="flex items-center gap-4 py-3 border-t border-ink/7">
                 <div className="flex-none w-28 text-xs font-bold text-ink/60 leading-tight">
+                  {g.group}<br />
                   <span className="font-normal">{g.court}</span>
                 </div>
                 <div className="flex-grow min-w-0 flex flex-col gap-0.5">

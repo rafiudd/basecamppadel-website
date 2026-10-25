@@ -33,13 +33,17 @@ export function LigaCard({ league }: Props) {
 
   const primaryActionUrl = liveVol?.event?.slug
     ? `/jadwal/${liveVol.event.slug}`
-    : openVol?.event?.whatsapp_url || WHATSAPP_URL;
+    : openVol
+    ? openVol.event?.whatsapp_url || WHATSAPP_URL
+    : `/liga/${league.slug}`;
 
   const primaryActionLabel = liveVol
     ? `Lihat Vol. ${liveVol.volume_number} Live`
     : openVol
     ? `Daftar Vol. ${openVol.volume_number}`
     : "Lihat Liga";
+
+  const showSecondaryAction = primaryActionUrl !== `/liga/${league.slug}`;
 
   return (
     <article className="bg-white border border-ink/8 rounded-2xl overflow-hidden flex flex-col md:flex-row min-h-[340px] shadow-xs hover:shadow-md transition-shadow">
@@ -121,12 +125,14 @@ export function LigaCard({ league }: Props) {
             </a>
           )}
 
-          <Link
-            href={`/liga/${league.slug}`}
-            className="border-1.5 border-ink/25 hover:border-ink text-ink font-bold text-sm px-6 py-2.5 rounded-full no-underline text-center transition-colors"
-          >
-            Lihat liga →
-          </Link>
+          {showSecondaryAction && (
+            <Link
+              href={`/liga/${league.slug}`}
+              className="border-1.5 border-ink/25 hover:border-ink text-ink font-bold text-sm px-6 py-2.5 rounded-full no-underline text-center transition-colors"
+            >
+              Lihat liga →
+            </Link>
+          )}
         </div>
       </div>
     </article>

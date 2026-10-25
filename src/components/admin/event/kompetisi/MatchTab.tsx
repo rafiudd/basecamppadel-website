@@ -20,14 +20,21 @@ type Mode = "grp" | "ko";
 export function MatchTab({ data, scoreLog }: { data: CompetitionData; scoreLog: CompScoreLog[] }) {
   const { event, matches, groups, ko } = data;
   const [mode, setMode] = useState<Mode>(groups.some((g) => !g.complete) || !ko.length ? "grp" : "ko");
-  const [group, setGroup] = useState(groups.find((g) => !g.complete)?.label ?? groups[0]?.label ?? "");
+  const groupMatches = matches.filter((m) => m.stage === "group");
+  const rounds = [...new Set(groupMatches.map((m) => m.round_no ?? 0))].sort((a, b) => a - b);
+  const [roundStr, setRoundStr] = useState(
+    String(rounds.find((r) => groupMatches.some((m) => m.round_no === r && m.status !== "finished")) ?? rounds[0] ?? 0),
+  );
+  const roundNo = Number(roundStr);
   const [stage, setStage] = useState<KoStage | "">(ko.find((r) => r.matches.some((m) => m.status !== "finished"))?.stage ?? ko[0]?.stage ?? "");
   const [editing, setEditing] = useState<Match | null>(null);
 
-  const section = mode === "grp" ? groups.find((g) => g.label === group) : null;
-  const round = mode === "ko" ? ko.find((r) => r.stage === stage) : null;
-  const list = section ? section.matches : (round?.matches.filter((m) => !m.is_bye) ?? []);
-  const title = section ? `Grup ${section.label}` : round ? STAGE_LABEL[round.stage] : "";
+  const koRound = mode === "ko" ? ko.find((r) => r.stage === stage) : null;
+  const list =
+    mode === "grp"
+      ? groupMatches.filter((m) => (m.round_no ?? 0) === roundNo).sort((a, b) => (a.group_label ?? "").localeCompare(b.group_label ?? ""))
+      : (koRound?.matches.filter((m) => !m.is_bye) ?? []);
+  const title = mode === "grp" ? `Ronde ${roundNo}` : koRound ? STAGE_LABEL[koRound.stage] : "";
 
   return (
     <div className="flex flex-col gap-4">
@@ -42,7 +49,11 @@ export function MatchTab({ data, scoreLog }: { data: CompetitionData; scoreLog: 
         ]}
       />
       {mode === "grp" ? (
-        <ChipTabs value={group} onChange={setGroup} options={groups.map((g) => ({ value: g.label, label: `Grup ${g.label}`, count: g.matches.length }))} />
+        <ChipTabs<string>
+          value={roundStr}
+          onChange={setRoundStr}
+          options={rounds.map((r) => ({ value: String(r), label: `Ronde ${r}`, count: groupMatches.filter((m) => (m.round_no ?? 0) === r).length }))}
+        />
       ) : (
         <ChipTabs<KoStage | "">
           value={stage}
@@ -57,8 +68,8 @@ export function MatchTab({ data, scoreLog }: { data: CompetitionData; scoreLog: 
             <div className="font-display font-bold text-title-sm">{title}</div>
             <div className="text-caption text-snow/70">{sectionSummary(list)}</div>
           </div>
-          {list.map((m, i) => (
-            <MatchRow key={m.id} m={m} label={m.stage === "group" ? `Match ${i + 1}` : koShort(m)} data={data} onEditScore={() => setEditing(m)} />
+          {list.map((m) => (
+            <MatchRow key={m.id} m={m} label={m.stage === "group" ? `Grup ${m.group_label ?? ""}` : koShort(m)} data={data} onEditScore={() => setEditing(m)} />
           ))}
         </div>
       ) : (

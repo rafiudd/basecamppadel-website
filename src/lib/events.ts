@@ -78,6 +78,7 @@ export interface KnockoutMatch {
 
 export interface GroupMatch {
   group: string;
+  round: number;
   court: string;
   status: "live" | "next" | "waiting" | "finished";
   team1: { name: string; score: string; winner?: boolean };
@@ -586,6 +587,7 @@ function mapCompetitionToMatchesData(data: CompetitionData): EventMatchesData {
       const loc = [cName !== "—" ? cName : null, timeStr].filter(Boolean).join(" · ") || "Court";
       return {
         group: `Grup ${m.group_label || ""}`,
+        round: m.round_no ?? 0,
         court: loc,
         status: m.is_live ? "live" : m.status === "finished" ? "finished" : "waiting",
         team1: {
