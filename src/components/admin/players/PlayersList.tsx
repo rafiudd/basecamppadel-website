@@ -9,10 +9,13 @@ import { inputClass } from "@/components/ui/Field";
 import { deletePlayer } from "@/app/admin/actions";
 import { InlineDelete } from "@/components/admin/InlineDelete";
 import { PlayerProfileModal } from "@/components/admin/players/PlayerProfileModal";
+import { Pagination } from "@/components/ui/Pagination";
 import { LEVELS } from "@/lib/config";
 import type { Player } from "@/lib/database.types";
 
 type Sort = "poin" | "nama" | "wl" | "match" | "coaching";
+
+const PAGE_SIZE = 25;
 
 function Actions({ p }: { p: Player }) {
   return (
@@ -28,6 +31,7 @@ export function PlayersList({ players, coachingCounts }: { players: Player[]; co
   const [sort, setSort] = useState<Sort>("poin");
   const [gender, setGender] = useState<"" | "M" | "F">("");
   const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+  const [page, setPage] = useState(1);
 
   const matchCount = (p: Player) => p.wins + p.losses;
   const coachingCount = (p: Player) => coachingCounts[p.id] ?? 0;
@@ -55,19 +59,24 @@ export function PlayersList({ players, coachingCounts }: { players: Player[]; co
     { id: "F" as const, label: "Women", n: base.filter((p) => p.gender === "F").length },
   ];
 
+  const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const clampedPage = Math.min(page, totalPages);
+  const pageStart = (clampedPage - 1) * PAGE_SIZE;
+  const paged = shown.slice(pageStart, pageStart + PAGE_SIZE);
+
   return (
     <>
       <div className="flex flex-col gap-2.5">
         <div className="flex gap-2 flex-wrap">
           <div className="relative w-full md:w-auto md:flex-1 md:min-w-55">
             <SearchIcon className="absolute left-3 top-3 text-snow/65" />
-            <input aria-label="Cari pemain" placeholder="Cari nama atau region" value={q} onChange={(e) => setQ(e.target.value)} className={`${inputClass} pl-10`} />
+            <input aria-label="Cari pemain" placeholder="Cari nama atau region" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} className={`${inputClass} pl-10`} />
           </div>
-          <select aria-label="Level" value={level} onChange={(e) => setLevel(e.target.value)} className={`${inputClass} flex-1 basis-0 min-w-0 md:flex-none md:w-50`}>
+          <select aria-label="Level" value={level} onChange={(e) => { setLevel(e.target.value); setPage(1); }} className={`${inputClass} flex-1 basis-0 min-w-0 md:flex-none md:w-50`}>
             <option value="">Semua level</option>
             {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
-          <select aria-label="Urutkan" value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={`${inputClass} flex-1 basis-0 min-w-0 md:flex-none md:w-45`}>
+          <select aria-label="Urutkan" value={sort} onChange={(e) => { setSort(e.target.value as Sort); setPage(1); }} className={`${inputClass} flex-1 basis-0 min-w-0 md:flex-none md:w-45`}>
             <option value="poin">Urutkan: Poin</option>
             <option value="nama">Urutkan: Nama</option>
             <option value="wl">Urutkan: W-L</option>
@@ -81,7 +90,7 @@ export function PlayersList({ players, coachingCounts }: { players: Player[]; co
               key={c.label}
               type="button"
               aria-pressed={gender === c.id}
-              onClick={() => setGender(c.id)}
+              onClick={() => { setGender(c.id); setPage(1); }}
               className={`border-none rounded-full min-h-10 px-3.5 py-2 text-sm font-semibold whitespace-nowrap ${gender === c.id ? "bg-indigo text-snow" : "bg-ink-3 text-snow/80"}`}
             >
               {c.label} {c.n}
@@ -105,7 +114,7 @@ export function PlayersList({ players, coachingCounts }: { players: Player[]; co
           </tr>
         </thead>
         <tbody>
-          {shown.map((p) => (
+          {paged.map((p) => (
             <tr key={p.id} className={`border-t border-snow/10 ${p.active ? "" : "opacity-50"}`}>
               <td className="py-2 pr-3"><Avatar name={p.name} photoUrl={p.photo_url} size={36} /></td>
               <td className="py-2.5 pr-3 font-display font-bold whitespace-nowrap">
@@ -130,7 +139,7 @@ export function PlayersList({ players, coachingCounts }: { players: Player[]; co
       </table>
 
       <div className="md:hidden flex flex-col gap-2">
-        {shown.map((p) => (
+        {paged.map((p) => (
           <div key={p.id} className={`bg-ink-3 rounded-card py-3 pl-3.5 pr-2 flex items-center gap-3 ${p.active ? "" : "opacity-50"}`}>
             <Avatar name={p.name} photoUrl={p.photo_url} size={36} />
             <button type="button" onClick={() => setProfilePlayer(p)} className="flex-1 min-w-0 border-0 bg-transparent cursor-pointer text-left p-0">
@@ -145,6 +154,8 @@ export function PlayersList({ players, coachingCounts }: { players: Player[]; co
       </div>
 
       {shown.length === 0 && <p className="text-sm text-snow/50 m-0">{players.length ? "Tidak ada pemain yang cocok." : "Belum ada pemain."}</p>}
+
+      <Pagination page={clampedPage} totalPages={totalPages} onChange={setPage} />
 
       {profilePlayer && <PlayerProfileModal player={profilePlayer} onClose={() => setProfilePlayer(null)} />}
     </>

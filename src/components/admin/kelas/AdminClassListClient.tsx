@@ -4,6 +4,9 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { formatRupiah, PIN_COLORS } from "@/lib/kelasRules";
 import { Badge } from "@/components/ui/Badge";
+import { Pagination } from "@/components/ui/Pagination";
+
+const PAGE_SIZE = 20;
 
 interface ClassRow {
   id: string;
@@ -44,6 +47,7 @@ export function AdminClassListClient({
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState("all");
   const [sort, setSort] = useState("near");
+  const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => {
     return initialClasses.filter((c) => {
@@ -56,6 +60,10 @@ export function AdminClassListClient({
       return true;
     });
   }, [initialClasses, q, category, status]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const clampedPage = Math.min(page, totalPages);
+  const paged = filtered.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-5">
@@ -129,7 +137,7 @@ export function AdminClassListClient({
               type="search"
               placeholder="Cari kelas"
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) => { setQ(e.target.value); setPage(1); }}
               className="bg-snow/10 border-0 rounded-lg px-3 py-2.5 pl-9 text-sm text-snow w-full outline-none focus:ring-1 focus:ring-volt"
             />
           </div>
@@ -138,7 +146,7 @@ export function AdminClassListClient({
         <div>
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={(e) => { setCategory(e.target.value); setPage(1); }}
             className="bg-snow/10 border-0 rounded-lg px-3 py-2.5 text-sm text-snow w-full outline-none cursor-pointer"
           >
             <option value="all" className="bg-[#17151F]">Semua kategori</option>
@@ -153,7 +161,7 @@ export function AdminClassListClient({
         <div>
           <select
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) => { setStatus(e.target.value); setPage(1); }}
             className="bg-snow/10 border-0 rounded-lg px-3 py-2.5 text-sm text-snow w-full outline-none cursor-pointer"
           >
             <option value="all" className="bg-[#17151F]">Semua status</option>
@@ -191,7 +199,7 @@ export function AdminClassListClient({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((c) => (
+            {paged.map((c) => (
               <tr key={c.id} className="border-b border-snow/10 hover:bg-snow/[0.02]">
                 <td className="py-3.5 pr-3 align-middle">
                   <div className="font-display font-bold text-snow">{c.title}</div>
@@ -256,7 +264,7 @@ export function AdminClassListClient({
 
       {/* Mobile Card View */}
       <div className="md:hidden flex flex-col gap-2.5">
-        {filtered.map((c) => (
+        {paged.map((c) => (
           <div key={c.id} className="bg-[#1F1C2B] rounded-2xl p-4 flex flex-col gap-2.5">
             <div className="flex justify-between items-start gap-2">
               <div>
@@ -313,8 +321,10 @@ export function AdminClassListClient({
       </div>
 
       <div className="flex justify-between items-center text-xs text-snow/60 pt-2">
-        <span>Menampilkan {filtered.length} dari {initialClasses.length} kelas</span>
+        <span>Menampilkan {paged.length} dari {filtered.length} kelas</span>
       </div>
+
+      <Pagination page={clampedPage} totalPages={totalPages} onChange={setPage} />
     </div>
   );
 }
