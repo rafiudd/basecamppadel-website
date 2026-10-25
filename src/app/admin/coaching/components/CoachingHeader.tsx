@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "nextjs-toploader/app";
 import type { CoachingSessionSummary, SessionFullData } from "@/lib/coaching-db";
 import { SESSION_TABS, TAB_STATUS, type SessionTab } from "@/lib/coaching";
 import { useTopLoaderWhile } from "@/components/TopLoader";
 import { toast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { setCoachingSessionStatusAction } from "../session-actions";
+import { SessionPickerModal } from "./SessionPickerModal";
+import { formatDateShortIndo } from "@/lib/format";
 import {
   PlusIcon,
   EditIcon,
@@ -17,6 +18,7 @@ import {
   ChartIcon,
   UploadIcon,
   ImageIcon,
+  ChevronDownIcon,
 } from "@/components/ui/icons";
 
 export function CoachingHeader({
@@ -46,9 +48,10 @@ export function CoachingHeader({
   onExportXlsx: () => void;
   onPublishAll: () => void;
 }) {
-  const router = useRouter();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showSessionPicker, setShowSessionPicker] = useState(false);
   const activeSession = sessionData?.session;
+  const activeSessionSummary = sessions.find((s) => s.id === activeSessionId);
   // Only coaches actually assigned to a group in this session — not every coach in the system.
   const sessionCoaches = useMemo(
     () => sessions.find((s) => s.id === activeSessionId)?.coaches ?? [],
@@ -271,25 +274,25 @@ export function CoachingHeader({
 
       {/* Desktop Filter Bar (>= lg) */}
       <div className="hidden lg:flex bg-[#221F30] rounded-2xl p-[18px_20px] items-end gap-4 border border-[#FBF7F1]/5">
-        {/* Sesi coaching selector */}
-        <label className="block flex-2 min-w-64">
+        {/* Sesi coaching selector — a searchable table in a modal, not a <select> that gets
+            unusable once there are a lot of sessions */}
+        <div className="block flex-2 min-w-64">
           <span className="text-[12px] tracking-[0.08em] text-[#FBF7F1]/70 uppercase mb-2 block font-medium">
             Sesi coaching
           </span>
-          <select
-            value={activeSessionId}
-            onChange={(e) => {
-              router.push(`/admin/coaching?when=${sessionTab}&session=${e.target.value}`);
-            }}
-            className="bg-[#FBF7F1]/10 border-0 rounded-lg px-3 py-2.5 min-h-11 font-sans text-[15px] text-[#FBF7F1] w-full box-border appearance-auto focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
+          <button
+            type="button"
+            onClick={() => setShowSessionPicker(true)}
+            className="bg-[#FBF7F1]/10 border-0 rounded-lg px-3 py-2.5 min-h-11 font-sans text-[15px] text-[#FBF7F1] w-full box-border flex items-center justify-between gap-2 text-left cursor-pointer hover:bg-[#FBF7F1]/15 transition-colors focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
           >
-            {sessions.map((s) => (
-              <option key={s.id} value={s.id} className="bg-[#17151F] text-[#FBF7F1]">
-                {s.title} · {s.session_date} {s.venue_name ? `· ${s.venue_name}` : ""}
-              </option>
-            ))}
-          </select>
-        </label>
+            <span className="truncate">
+              {activeSessionSummary
+                ? `${activeSessionSummary.title} · ${formatDateShortIndo(activeSessionSummary.session_date)}${activeSessionSummary.venue_name ? ` · ${activeSessionSummary.venue_name}` : ""}`
+                : "Pilih sesi"}
+            </span>
+            <ChevronDownIcon className="flex-none text-[#FBF7F1]/60" />
+          </button>
+        </div>
 
         {/* Status of the session on screen: move it to another tab in one click */}
         {activeSession && (
@@ -358,19 +361,18 @@ export function CoachingHeader({
           <span className="text-[11px] tracking-[0.08em] text-[#FBF7F1]/60 uppercase mb-1.5 block font-semibold">
             Sesi coaching
           </span>
-          <select
-            value={activeSessionId}
-            onChange={(e) => {
-              router.push(`/admin/coaching?when=${sessionTab}&session=${e.target.value}`);
-            }}
-            className="bg-[#FBF7F1]/10 border-0 rounded-lg px-2.5 py-2 font-sans text-xs sm:text-sm text-[#FBF7F1] w-full box-border appearance-auto focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
+          <button
+            type="button"
+            onClick={() => setShowSessionPicker(true)}
+            className="bg-[#FBF7F1]/10 border-0 rounded-lg px-2.5 py-2 font-sans text-xs sm:text-sm text-[#FBF7F1] w-full box-border flex items-center justify-between gap-2 text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
           >
-            {sessions.map((s) => (
-              <option key={s.id} value={s.id} className="bg-[#17151F] text-[#FBF7F1]">
-                {s.title} · {s.session_date} {s.venue_name ? `· ${s.venue_name}` : ""}
-              </option>
-            ))}
-          </select>
+            <span className="truncate">
+              {activeSessionSummary
+                ? `${activeSessionSummary.title} · ${formatDateShortIndo(activeSessionSummary.session_date)}`
+                : "Pilih sesi"}
+            </span>
+            <ChevronDownIcon className="flex-none text-[#FBF7F1]/60" />
+          </button>
         </div>
 
         {activeSession && (
@@ -430,6 +432,15 @@ export function CoachingHeader({
           </div>
         </div>
       </div>
+
+      {showSessionPicker && (
+        <SessionPickerModal
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          sessionTab={sessionTab}
+          onClose={() => setShowSessionPicker(false)}
+        />
+      )}
     </>
   );
 }
