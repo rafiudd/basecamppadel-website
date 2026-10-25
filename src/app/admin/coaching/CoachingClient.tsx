@@ -29,6 +29,7 @@ import { CreateSessionModal } from "./components/CreateSessionModal";
 import { OverrideLevelModal } from "./components/OverrideLevelModal";
 import { ImportRekapModal } from "./components/ImportRekapModal";
 import { CoachingHeader } from "./components/CoachingHeader";
+import { SessionListTable } from "./components/SessionListTable";
 import { PlayerListTable } from "./components/PlayerListTable";
 import { AssessmentEditor } from "./components/AssessmentEditor";
 import { toast } from "@/components/ui/Toast";
@@ -525,10 +526,12 @@ export function CoachingClient({
             />
           )}
         </>
-      ) : (
+      ) : sessions.length === 0 ? (
         <p className="m-0 bg-[#221F30] rounded-2xl p-6 text-sm text-[#FBF7F1]/70 border border-[#FBF7F1]/5">
           {EMPTY_TAB_TEXT[sessionTab]}
         </p>
+      ) : (
+        <SessionListTable sessions={sessions} sessionTab={sessionTab} />
       )}
 
       {showMasterTeknik && (

@@ -26,7 +26,9 @@ export default async function CoachingAdminPage({
   const split = splitSessionsByStatus(await getCoachingSessions());
   const tab = pickSessionTab(split, when, paramSessionId);
   const sessions = split[tab];
-  const activeSessionId = (paramSessionId && sessions.some((s) => s.id === paramSessionId) ? paramSessionId : sessions[0]?.id) || "";
+  // No `?session=` means "show the session list", not "open the first one" — the list is the
+  // page's default view now, not an auto-picked workspace.
+  const activeSessionId = paramSessionId && sessions.some((s) => s.id === paramSessionId) ? paramSessionId : "";
 
   // Fetch session full data, all master skills, coaches, players, venues, events
   const [sessionData, allSkills, allCoaches, { data: allPlayers }, { data: venues }, { data: events }] =
