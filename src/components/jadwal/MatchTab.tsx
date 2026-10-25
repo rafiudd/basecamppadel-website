@@ -4,6 +4,7 @@ import { useState } from "react";
 import { YOUTUBE_URL } from "@/lib/config";
 import type { EventItem, EventMatchesData } from "@/lib/events";
 import { UnitScheduleModal } from "@/components/jadwal/UnitScheduleModal";
+import { TeamScheduleModal } from "@/components/jadwal/TeamScheduleModal";
 
 export function MatchTab({
   event,
@@ -15,6 +16,7 @@ export function MatchTab({
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [filterKey, setFilterKey] = useState("");
   const openUnit = openKey ? matches?.unitSchedules?.[openKey] : null;
+  const openTeam = openKey ? matches?.teamSchedules?.[openKey] : null;
   const hasMatches =
     (matches?.rounds && matches.rounds.length > 0) ||
     (matches?.knockout && matches.knockout.length > 0) ||
@@ -160,83 +162,11 @@ export function MatchTab({
             </span>
           </div>
 
-          {matches.knockout.map((m, idx) => (
-            <div key={idx} className="flex items-center gap-4 py-3 border-t border-ink/7">
-              <div className="flex-none w-28 text-xs font-bold text-ink/60 leading-tight">
-                {m.round}<br />
-                <span className="font-normal">{m.court}</span>
-              </div>
-              <div className="flex-grow min-w-0 flex flex-col gap-0.5">
-                <div
-                  className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${
-                    m.team1.winner ? "bg-[#2f9e5c]/12" : ""
-                  }`}
-                >
-                  <span
-                    className={`text-sm truncate ${
-                      m.team1.winner
-                        ? "font-bold text-ink"
-                        : m.team2.winner
-                        ? "font-semibold text-ink/50"
-                        : "font-semibold text-ink"
-                    }`}
-                  >
-                    {m.team1.name}
-                  </span>
-                  <span
-                    className={`font-display font-bold text-base ${
-                      m.team1.winner ? "text-[#23794A]" : "text-ink"
-                    }`}
-                  >
-                    {m.team1.score}
-                  </span>
-                </div>
-                <div
-                  className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${
-                    m.team2.winner ? "bg-[#2f9e5c]/12" : ""
-                  }`}
-                >
-                  <span
-                    className={`text-sm truncate ${
-                      m.team2.winner
-                        ? "font-bold text-ink"
-                        : m.team1.winner
-                        ? "font-semibold text-ink/50"
-                        : "font-semibold text-ink"
-                    }`}
-                  >
-                    {m.team2.name}
-                  </span>
-                  <span
-                    className={`font-display font-bold text-base ${
-                      m.team2.winner ? "text-[#23794A]" : "text-ink"
-                    }`}
-                  >
-                    {m.team2.score}
-                  </span>
-                </div>
-              </div>
-              <div className="flex-none w-28 flex justify-end">
-                {m.status === "live" ? (
-                  <a
-                    href={m.streamUrl || YOUTUBE_URL}
-                    target="_blank"
-                    rel="noopener"
-                    className="no-underline inline-flex items-center gap-1.5 rounded-full py-1.5 px-3 text-xs font-bold bg-coral text-ink whitespace-nowrap transition-transform hover:scale-105 active:scale-95"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-ink" />
-                    LIVE · Tonton
-                  </a>
-                ) : m.status === "next" ? (
-                  <span className="text-xs font-bold text-ink/65">Berikutnya</span>
-                ) : m.status === "waiting" ? (
-                  <span className="text-xs font-bold text-ink/50">Menunggu</span>
-                ) : (
-                  <span className="text-xs font-bold text-ink/55">Selesai</span>
-                )}
-              </div>
-            </div>
-          ))}
+          <div className={`grid gap-2.5 ${matches.knockout.length > 1 ? "sm:grid-cols-2" : ""}`}>
+            {matches.knockout.map((m, idx) => (
+              <MatchCard key={idx} title={m.round} subtitle={m.court} status={m.status} streamUrl={m.streamUrl} team1={m.team1} team2={m.team2} onTeamClick={setOpenKey} />
+            ))}
+          </div>
         </section>
       )}
 
@@ -248,59 +178,11 @@ export function MatchTab({
             <span className="text-[13px] text-ink/60">Selesai</span>
           </div>
 
-          {matches.quarterfinals.map((q, idx) => (
-            <div key={idx} className="flex items-center gap-4 py-3 border-t border-ink/7">
-              <div className="flex-none w-28 text-xs font-bold text-ink/60 leading-tight">
-                {q.round}<br />
-                <span className="font-normal">{q.court}</span>
-              </div>
-              <div className="flex-grow min-w-0 flex flex-col gap-0.5">
-                <div
-                  className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${
-                    q.team1.winner ? "bg-[#2f9e5c]/12" : ""
-                  }`}
-                >
-                  <span
-                    className={`text-sm truncate ${
-                      q.team1.winner ? "font-bold text-ink" : "font-semibold text-ink/50"
-                    }`}
-                  >
-                    {q.team1.name}
-                  </span>
-                  <span
-                    className={`font-display font-bold text-base ${
-                      q.team1.winner ? "text-[#23794A]" : "text-ink/50"
-                    }`}
-                  >
-                    {q.team1.score}
-                  </span>
-                </div>
-                <div
-                  className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${
-                    q.team2.winner ? "bg-[#2f9e5c]/12" : ""
-                  }`}
-                >
-                  <span
-                    className={`text-sm truncate ${
-                      q.team2.winner ? "font-bold text-ink" : "font-semibold text-ink/50"
-                    }`}
-                  >
-                    {q.team2.name}
-                  </span>
-                  <span
-                    className={`font-display font-bold text-base ${
-                      q.team2.winner ? "text-[#23794A]" : "text-ink/50"
-                    }`}
-                  >
-                    {q.team2.score}
-                  </span>
-                </div>
-              </div>
-              <div className="flex-none w-20 flex justify-end">
-                <span className="text-xs font-bold text-ink/55">Selesai</span>
-              </div>
-            </div>
-          ))}
+          <div className={`grid gap-2.5 ${matches.quarterfinals.length > 1 ? "sm:grid-cols-2" : ""}`}>
+            {matches.quarterfinals.map((q, idx) => (
+              <MatchCard key={idx} title={q.round} subtitle={q.court} status={q.status} streamUrl={q.streamUrl} team1={q.team1} team2={q.team2} onTeamClick={setOpenKey} />
+            ))}
+          </div>
         </section>
       )}
 
@@ -320,64 +202,99 @@ export function MatchTab({
               </span>
             </div>
 
-            {rows.map((g, idx) => (
-              <div key={idx} className="flex items-center gap-4 py-3 border-t border-ink/7">
-                <div className="flex-none w-28 text-xs font-bold text-ink/60 leading-tight">
-                  {g.group}<br />
-                  <span className="font-normal">{g.court}</span>
-                </div>
-                <div className="flex-grow min-w-0 flex flex-col gap-0.5">
-                  <div
-                    className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${
-                      g.team1.winner ? "bg-[#2f9e5c]/12" : ""
-                    }`}
-                  >
-                    <span
-                      className={`text-sm truncate ${
-                        g.team1.winner ? "font-bold text-ink" : "font-semibold text-ink/50"
-                      }`}
-                    >
-                      {g.team1.name}
-                    </span>
-                    <span
-                      className={`font-display font-bold text-base ${
-                        g.team1.winner ? "text-[#23794A]" : "text-ink/50"
-                      }`}
-                    >
-                      {g.team1.score}
-                    </span>
-                  </div>
-                  <div
-                    className={`flex items-center justify-between gap-2.5 min-h-[30px] px-2 rounded-md ${
-                      g.team2.winner ? "bg-[#2f9e5c]/12" : ""
-                    }`}
-                  >
-                    <span
-                      className={`text-sm truncate ${
-                        g.team2.winner ? "font-bold text-ink" : "font-semibold text-ink/50"
-                      }`}
-                    >
-                      {g.team2.name}
-                    </span>
-                    <span
-                      className={`font-display font-bold text-base ${
-                        g.team2.winner ? "text-[#23794A]" : "text-ink/50"
-                      }`}
-                    >
-                      {g.team2.score}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex-none w-20 flex justify-end">
-                  <span className="text-xs font-bold text-ink/55">
-                    {g.status === "live" ? "Live" : g.status === "finished" ? "Selesai" : "Menunggu"}
-                  </span>
-                </div>
-              </div>
-            ))}
+            <div className={`grid gap-2.5 ${rows.length > 1 ? "sm:grid-cols-2" : ""}`}>
+              {rows.map((g, idx) => (
+                <MatchCard key={idx} title={g.group} subtitle={g.court} status={g.status} team1={g.team1} team2={g.team2} onTeamClick={setOpenKey} />
+              ))}
+            </div>
           </section>
         ));
       })()}
+      {openTeam && <TeamScheduleModal name={openTeam.name} rows={openTeam.rows} onClose={() => setOpenKey(null)} />}
     </div>
   );
+}
+
+/** One match, styled the same as an Americano round card: bordered tile, label header, winner row highlighted green. */
+function MatchCard({
+  title,
+  subtitle,
+  status,
+  streamUrl,
+  team1,
+  team2,
+  onTeamClick,
+}: {
+  title: string;
+  subtitle?: string;
+  status: "live" | "next" | "waiting" | "finished";
+  streamUrl?: string;
+  team1: { id?: string; name: string; score: string; winner?: boolean };
+  team2: { id?: string; name: string; score: string; winner?: boolean };
+  onTeamClick?: (id: string) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-ink/8 p-2.5 flex flex-col gap-1">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[10px] font-bold text-ink/35 uppercase tracking-wide truncate">{title}</div>
+          {subtitle && <div className="text-[10px] font-normal text-ink/35 truncate">{subtitle}</div>}
+        </div>
+        <StatusBadge status={status} streamUrl={streamUrl} />
+      </div>
+      <TeamRow id={team1.id} name={team1.name} score={team1.score} winner={team1.winner} loserDim={!!team2.winner} onClick={onTeamClick} />
+      <TeamRow id={team2.id} name={team2.name} score={team2.score} winner={team2.winner} loserDim={!!team1.winner} onClick={onTeamClick} />
+    </div>
+  );
+}
+
+function TeamRow({
+  id,
+  name,
+  score,
+  winner,
+  loserDim,
+  onClick,
+}: {
+  id?: string;
+  name: string;
+  score: string;
+  winner?: boolean;
+  loserDim?: boolean;
+  onClick?: (id: string) => void;
+}) {
+  const nameClass = `text-sm truncate ${winner ? "font-bold text-ink" : loserDim ? "font-semibold text-ink/50" : "font-semibold text-ink"}`;
+  return (
+    <div className={`flex items-center justify-between gap-2.5 min-h-[28px] px-1.5 rounded-md ${winner ? "bg-[#2f9e5c]/12" : ""}`}>
+      {id && onClick ? (
+        <button type="button" onClick={() => onClick(id)} className={`${nameClass} text-left hover:underline underline-offset-2`}>
+          {name}
+        </button>
+      ) : (
+        <span className={nameClass}>{name}</span>
+      )}
+      <span className={`font-display font-bold text-base ${winner ? "text-[#23794A]" : loserDim ? "text-ink/50" : "text-ink"}`}>
+        {score || "—"}
+      </span>
+    </div>
+  );
+}
+
+function StatusBadge({ status, streamUrl }: { status: "live" | "next" | "waiting" | "finished"; streamUrl?: string }) {
+  if (status === "live") {
+    return (
+      <a
+        href={streamUrl || YOUTUBE_URL}
+        target="_blank"
+        rel="noopener"
+        className="flex-none no-underline inline-flex items-center gap-1 rounded-full py-1 px-2 text-[10px] font-bold bg-coral text-ink whitespace-nowrap transition-transform hover:scale-105 active:scale-95"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-ink" />
+        LIVE
+      </a>
+    );
+  }
+  const label = status === "next" ? "Berikutnya" : status === "waiting" ? "Menunggu" : "Selesai";
+  const tone = status === "next" ? "text-ink/65" : status === "waiting" ? "text-ink/50" : "text-ink/55";
+  return <span className={`flex-none text-[10px] font-bold ${tone} whitespace-nowrap`}>{label}</span>;
 }

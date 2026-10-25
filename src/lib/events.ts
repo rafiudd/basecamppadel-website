@@ -71,8 +71,8 @@ export interface KnockoutMatch {
   round: string;
   court: string;
   status: "live" | "next" | "waiting" | "finished";
-  team1: { name: string; score: string; winner?: boolean };
-  team2: { name: string; score: string; winner?: boolean };
+  team1: { id?: string; name: string; score: string; winner?: boolean };
+  team2: { id?: string; name: string; score: string; winner?: boolean };
   streamUrl?: string;
 }
 
@@ -81,8 +81,17 @@ export interface GroupMatch {
   round: number;
   court: string;
   status: "live" | "next" | "waiting" | "finished";
-  team1: { name: string; score: string; winner?: boolean };
-  team2: { name: string; score: string; winner?: boolean };
+  team1: { id?: string; name: string; score: string; winner?: boolean };
+  team2: { id?: string; name: string; score: string; winner?: boolean };
+}
+
+/** One match in a kompetisi team's own history — "lihat jadwal" popup, same idea as a mabar pair's UnitMatchRow. */
+export interface TeamMatchRow {
+  label: string;
+  opponent: string;
+  mine: number | null;
+  theirs: number | null;
+  result: "W" | "L" | null;
 }
 
 export interface GroupRow {
@@ -119,6 +128,8 @@ export interface EventMatchesData {
   roundsTotal?: number;
   /** Mabar only: every pair/player's full match history, keyed the same as `GroupRow.key` — for a "lihat jadwal lawan" popup. */
   unitSchedules?: Record<string, { name: string; rows: UnitMatchRow[] }>;
+  /** Kompetisi only: every team's full match history (group + knockout), keyed by team id — same "lihat jadwal" popup idea as unitSchedules. */
+  teamSchedules?: Record<string, { name: string; rows: TeamMatchRow[] }>;
 }
 
 /** Get client suitable for current runtime. */
@@ -579,29 +590,71 @@ function mapCompetitionToMatchesData(data: CompetitionData): EventMatchesData {
     })),
   }));
 
-  const groupMatches: GroupMatch[] = matches
-    .filter((m) => m.stage === "group")
+  // Display "round" = this match's position in its own group's court queue (1st match on that
+  // court, 2nd, ...), NOT `round_no` (the round-robin pairing round). With 4 teams per group a
+  // round-robin round already has 2 simultaneous pairs, which bundled 2 matches per group into
+  // one "Ronde" section — only the court queue position is actually simultaneous across groups,
+  // since every group's court advances one match at a time on the same shared time grid.
+  const groupStageMatches = matches.filter((m) => m.stage === "group");
+  const slotByMatchId = new Map<string, number>();
+  const byGroupLabel = new Map<string, typeof groupStageMatches>();
+  for (const m of groupStageMatches) {
+    const key = m.group_label ?? "";
+    if (!byGroupLabel.has(key)) byGroupLabel.set(key, []);
+    byGroupLabel.get(key)!.push(m);
+  }
+  for (const list of byGroupLabel.values()) {
+    list.sort((a, b) => (a.starts_at ?? "").localeCompare(b.starts_at ?? ""));
+    list.forEach((m, i) => slotByMatchId.set(m.id, i + 1));
+  }
+
+  const groupMatches: GroupMatch[] = groupStageMatches
     .map((m) => {
       const cName = courtNameOf(courts, m.court_id);
       const timeStr = m.starts_at ? isoToWibTime(m.starts_at) : "";
       const loc = [cName !== "—" ? cName : null, timeStr].filter(Boolean).join(" · ") || "Court";
       return {
         group: `Grup ${m.group_label || ""}`,
-        round: m.round_no ?? 0,
+        round: slotByMatchId.get(m.id) ?? m.round_no ?? 0,
         court: loc,
         status: m.is_live ? "live" : m.status === "finished" ? "finished" : "waiting",
         team1: {
+          id: m.team_a_id ?? undefined,
           name: teamNameOf(teams, m.team_a_id),
           score: m.status === "finished" || m.is_live ? String(m.team_a_games) : "",
           winner: m.status === "finished" && m.winner_team_id === m.team_a_id,
         },
         team2: {
+          id: m.team_b_id ?? undefined,
           name: teamNameOf(teams, m.team_b_id),
           score: m.status === "finished" || m.is_live ? String(m.team_b_games) : "",
           winner: m.status === "finished" && m.winner_team_id === m.team_b_id,
         },
       };
     });
+
+  // Every team's own match history (group + knockout), for the "lihat jadwal" popup — same idea
+  // as a mabar pair's unitSchedules, but keyed by comp_teams id and labeled by stage.
+  const teamSchedules: Record<string, { name: string; rows: TeamMatchRow[] }> = {};
+  const historyMatches = matches
+    .filter((m) => m.stage && m.team_a_id && m.team_b_id && !m.is_bye)
+    .sort((a, b) => (a.starts_at ?? "").localeCompare(b.starts_at ?? ""));
+  for (const m of historyMatches) {
+    const label = m.stage === "group" ? `Grup ${m.group_label ?? ""}` : STAGE_LABEL[m.stage as KoStage] ?? "Final";
+    const scored = m.status === "finished";
+    const addRow = (teamId: string, oppId: string, mine: number, theirs: number) => {
+      if (!teamSchedules[teamId]) teamSchedules[teamId] = { name: teamNameOf(teams, teamId), rows: [] };
+      teamSchedules[teamId].rows.push({
+        label,
+        opponent: teamNameOf(teams, oppId),
+        mine: scored ? mine : null,
+        theirs: scored ? theirs : null,
+        result: scored ? (mine > theirs ? "W" : "L") : null,
+      });
+    };
+    addRow(m.team_a_id!, m.team_b_id!, m.team_a_games, m.team_b_games);
+    addRow(m.team_b_id!, m.team_a_id!, m.team_b_games, m.team_a_games);
+  }
 
   const koAll = matches.filter((m) => m.stage && m.stage !== "group");
   const qfMatches = koAll
@@ -641,6 +694,7 @@ function mapCompetitionToMatchesData(data: CompetitionData): EventMatchesData {
     quarterfinals: qfMatches.length > 0 ? qfMatches : undefined,
     knockout: otherKoMatches.length > 0 ? otherKoMatches : qfMatches.length > 0 ? [] : undefined,
     liveMatch,
+    teamSchedules: Object.keys(teamSchedules).length > 0 ? teamSchedules : undefined,
   };
 }
 
@@ -653,11 +707,13 @@ function formatKnockoutMatch(m: Match, teams: { id: string; name: string }[], co
     court: loc,
     status: m.is_live ? "live" : m.status === "finished" ? "finished" : "waiting",
     team1: {
+      id: m.team_a_id ?? undefined,
       name: teamNameOf(teams, m.team_a_id),
       score: m.status === "finished" || m.is_live ? String(m.team_a_games) : "",
       winner: m.status === "finished" && m.winner_team_id === m.team_a_id,
     },
     team2: {
+      id: m.team_b_id ?? undefined,
       name: teamNameOf(teams, m.team_b_id),
       score: m.status === "finished" || m.is_live ? String(m.team_b_games) : "",
       winner: m.status === "finished" && m.winner_team_id === m.team_b_id,

@@ -21,9 +21,26 @@ export function MatchTab({ data, scoreLog }: { data: CompetitionData; scoreLog: 
   const { event, matches, groups, ko } = data;
   const [mode, setMode] = useState<Mode>(groups.some((g) => !g.complete) || !ko.length ? "grp" : "ko");
   const groupMatches = matches.filter((m) => m.stage === "group");
-  const rounds = [...new Set(groupMatches.map((m) => m.round_no ?? 0))].sort((a, b) => a - b);
+  // Round tab = this match's position in its own group's court queue (1st match on that court,
+  // 2nd, ...), not `round_no` (the round-robin pairing round). With 4 teams per group a
+  // round-robin round already has 2 simultaneous pairs, which bundled 2 matches per group into
+  // one tab — only the court queue position is actually simultaneous across groups, since every
+  // group's court advances one match at a time on the same shared time grid.
+  const slotByMatchId = new Map<string, number>();
+  const byGroupLabel = new Map<string, typeof groupMatches>();
+  for (const m of groupMatches) {
+    const key = m.group_label ?? "";
+    if (!byGroupLabel.has(key)) byGroupLabel.set(key, []);
+    byGroupLabel.get(key)!.push(m);
+  }
+  for (const list of byGroupLabel.values()) {
+    list.sort((a, b) => (a.starts_at ?? "").localeCompare(b.starts_at ?? ""));
+    list.forEach((m, i) => slotByMatchId.set(m.id, i + 1));
+  }
+  const slotOf = (m: Match) => slotByMatchId.get(m.id) ?? m.round_no ?? 0;
+  const rounds = [...new Set(groupMatches.map(slotOf))].sort((a, b) => a - b);
   const [roundStr, setRoundStr] = useState(
-    String(rounds.find((r) => groupMatches.some((m) => m.round_no === r && m.status !== "finished")) ?? rounds[0] ?? 0),
+    String(rounds.find((r) => groupMatches.some((m) => slotOf(m) === r && m.status !== "finished")) ?? rounds[0] ?? 0),
   );
   const roundNo = Number(roundStr);
   const [stage, setStage] = useState<KoStage | "">(ko.find((r) => r.matches.some((m) => m.status !== "finished"))?.stage ?? ko[0]?.stage ?? "");
@@ -32,7 +49,7 @@ export function MatchTab({ data, scoreLog }: { data: CompetitionData; scoreLog: 
   const koRound = mode === "ko" ? ko.find((r) => r.stage === stage) : null;
   const list =
     mode === "grp"
-      ? groupMatches.filter((m) => (m.round_no ?? 0) === roundNo).sort((a, b) => (a.group_label ?? "").localeCompare(b.group_label ?? ""))
+      ? groupMatches.filter((m) => slotOf(m) === roundNo).sort((a, b) => (a.group_label ?? "").localeCompare(b.group_label ?? ""))
       : (koRound?.matches.filter((m) => !m.is_bye) ?? []);
   const title = mode === "grp" ? `Ronde ${roundNo}` : koRound ? STAGE_LABEL[koRound.stage] : "";
 
@@ -52,7 +69,7 @@ export function MatchTab({ data, scoreLog }: { data: CompetitionData; scoreLog: 
         <ChipTabs<string>
           value={roundStr}
           onChange={setRoundStr}
-          options={rounds.map((r) => ({ value: String(r), label: `Ronde ${r}`, count: groupMatches.filter((m) => (m.round_no ?? 0) === r).length }))}
+          options={rounds.map((r) => ({ value: String(r), label: `Ronde ${r}`, count: groupMatches.filter((m) => slotOf(m) === r).length }))}
         />
       ) : (
         <ChipTabs<KoStage | "">
