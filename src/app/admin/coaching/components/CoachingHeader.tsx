@@ -6,7 +6,6 @@ import { SESSION_TABS, type SessionTab } from "@/lib/coaching";
 import { formatDateShortIndo } from "@/lib/format";
 import {
   PlusIcon,
-  EditIcon,
   ListIcon,
   ChartIcon,
   UploadIcon,
@@ -66,23 +65,12 @@ export function CoachingHeader({
             </span>
           </div>
 
-          {/* Every action tidied into one small row instead of a big top header */}
+          {/* Just import / export / poster / kirim semua — everything else lives on the list view or the session edit page */}
           <div className="flex items-center gap-1.5 flex-wrap flex-none">
             {isAdmin && (
-              <>
-                <Link href="/admin/coaching/skills" title="Master Teknik" aria-label="Master Teknik" className={iconBtn}>
-                  <ListIcon size={16} />
-                </Link>
-                <Link href="/admin/coaching/sessions/new" title="Tambah Sesi Baru" aria-label="Tambah Sesi Baru" className={iconBtn}>
-                  <PlusIcon size={16} strokeWidth={2.4} />
-                </Link>
-                <Link href={`/admin/coaching/sessions/${session.id}`} title="Edit Sesi Ini" aria-label="Edit Sesi Ini" className={iconBtn}>
-                  <EditIcon size={16} />
-                </Link>
-                <button type="button" onClick={onOpenImportRekap} title="Import Excel" aria-label="Import Excel" className={iconBtn}>
-                  <UploadIcon size={16} />
-                </button>
-              </>
+              <button type="button" onClick={onOpenImportRekap} title="Import Excel" aria-label="Import Excel" className={iconBtn}>
+                <UploadIcon size={16} />
+              </button>
             )}
             <a href={`/admin/coaching/sessions/${session.id}/poster`} title="Buat poster" aria-label="Buat poster" className={iconBtn}>
               <ImageIcon size={16} />
