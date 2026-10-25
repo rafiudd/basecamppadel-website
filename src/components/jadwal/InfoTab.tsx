@@ -221,7 +221,18 @@ export function InfoTab({ event }: { event: EventItem }) {
                 <span className="flex flex-col min-w-0">
                   <span className="text-xs text-snow/70">{p.label}</span>
                   <span className="font-display font-bold text-base text-snow truncate">
-                    {p.name}
+                    {p.players && p.players.length > 0 ? (
+                      p.players.map((pl, i) => (
+                        <span key={pl.id}>
+                          {i > 0 && " / "}
+                          <Link href={`/leaderboard/${pl.id}`} className="text-snow no-underline hover:text-volt hover:underline underline-offset-2">
+                            {pl.name}
+                          </Link>
+                        </span>
+                      ))
+                    ) : (
+                      p.name
+                    )}
                   </span>
                 </span>
               </div>

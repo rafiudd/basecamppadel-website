@@ -56,7 +56,7 @@ export interface EventItem {
     team2: { name: string; sets: number[]; game: number };
     streamUrl: string;
   };
-  podium?: Array<{ rank: number; label: string; name: string; points?: number }>;
+  podium?: Array<{ rank: number; label: string; name: string; points?: number; players?: Array<{ id: string; name: string }> }>;
   /** Kompetisi only: this event's own leaderboard point rules (the "Poin" tab / point preset). */
   pointsRules?: EventPoints;
   registeredParticipants?: Array<{ id: string; name: string; level: string; avatar: string }>;
@@ -367,9 +367,9 @@ function mapCompetitionToEventItem(data: CompetitionData): EventItem {
     const sfTeams = teams.filter((t) => t.final_stage === "sf");
     if (champ || runner) {
       podium = [
-        champ ? { rank: 1, label: "Juara", name: champ.name, points: event.points?.champion } : null,
-        runner ? { rank: 2, label: "Runner-up", name: runner.name, points: event.points?.runner_up } : null,
-        ...sfTeams.map((t) => ({ rank: 3, label: "Semifinal", name: t.name, points: event.points?.sf })),
+        champ ? { rank: 1, label: "Juara", name: champ.name, points: event.points?.champion, players: champ.players } : null,
+        runner ? { rank: 2, label: "Runner-up", name: runner.name, points: event.points?.runner_up, players: runner.players } : null,
+        ...sfTeams.map((t) => ({ rank: 3, label: "Semifinal", name: t.name, points: event.points?.sf, players: t.players })),
       ].filter(Boolean) as EventItem["podium"];
     } else {
       // Find final match
@@ -378,8 +378,8 @@ function mapCompetitionToEventItem(data: CompetitionData): EventItem {
         const champId = finalMatch.winner_team_id;
         const runnerId = champId === finalMatch.team_a_id ? finalMatch.team_b_id : finalMatch.team_a_id;
         podium = [
-          { rank: 1, label: "Juara", name: teamNameOf(teams, champId), points: event.points?.champion },
-          { rank: 2, label: "Runner-up", name: teamNameOf(teams, runnerId), points: event.points?.runner_up },
+          { rank: 1, label: "Juara", name: teamNameOf(teams, champId), points: event.points?.champion, players: teams.find((t) => t.id === champId)?.players },
+          { rank: 2, label: "Runner-up", name: teamNameOf(teams, runnerId), points: event.points?.runner_up, players: teams.find((t) => t.id === runnerId)?.players },
         ];
       }
     }
@@ -587,6 +587,7 @@ function mapCompetitionToMatchesData(data: CompetitionData): EventMatchesData {
       wl: `${s.wins}–${s.losses}`,
       diff: s.diff > 0 ? `+${s.diff}` : s.diff < 0 ? `−${Math.abs(s.diff)}` : "0",
       qualified: s.rank <= event.advance_per_group ? `Lolos · ${g.label}${s.rank}` : undefined,
+      key: s.teamId,
     })),
   }));
 
