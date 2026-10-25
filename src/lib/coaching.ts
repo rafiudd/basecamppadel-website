@@ -225,6 +225,14 @@ export type SessionStatus = "draft" | "active" | "finished";
 /** coaching_sessions.status behind each tab. */
 export const TAB_STATUS: Record<SessionTab, SessionStatus> = { draft: "draft", berjalan: "active", selesai: "finished" };
 
+/** Session status, derived from assessment progress instead of a manual switch: nobody rated yet
+ *  is still draft, at least one player rated moves it to active, everybody submitted finishes it. */
+export function deriveSessionStatus(totalPlayers: number, ratedPlayers: number, submittedPlayers: number): SessionStatus {
+  if (totalPlayers > 0 && submittedPlayers >= totalPlayers) return "finished";
+  if (ratedPlayers > 0) return "active";
+  return "draft";
+}
+
 /** The tab a session with this status sits in. */
 export function statusTab(status: SessionStatus): SessionTab {
   return SESSION_TABS.find((t) => TAB_STATUS[t] === status) ?? "draft";

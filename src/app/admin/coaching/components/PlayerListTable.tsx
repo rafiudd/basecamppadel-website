@@ -28,8 +28,11 @@ export function PlayerListTable({
   selesaiCount,
   searchQuery,
   statusFilter,
+  coaches,
+  selectedCoachFilter,
   onSearchChange,
   onStatusFilterChange,
+  onCoachFilterChange,
   onSelectPlayer,
 }: {
   filteredPlayers: SessionPlayerItem[];
@@ -37,8 +40,11 @@ export function PlayerListTable({
   selesaiCount: number;
   searchQuery: string;
   statusFilter: "belum" | "selesai";
+  coaches: Array<{ id: string; name: string }>;
+  selectedCoachFilter: string;
   onSearchChange: (q: string) => void;
   onStatusFilterChange: (s: "belum" | "selesai") => void;
+  onCoachFilterChange: (coachId: string) => void;
   onSelectPlayer: (index: number) => void;
 }) {
   return (
@@ -54,26 +60,41 @@ export function PlayerListTable({
             className="bg-[#FBF7F1]/10 border-0 rounded-lg px-3 py-2.5 min-h-11 font-sans text-[15px] text-[#FBF7F1] w-full box-border focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
           />
         </label>
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={() => onStatusFilterChange("belum")}
-            className={`flex-1 sm:flex-none border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center transition-all cursor-pointer ${
-              statusFilter === "belum" ? "bg-[#FFD43B] text-[#17151F]" : "bg-[#FBF7F1]/10 text-[#FBF7F1]/80 hover:text-[#FBF7F1]"
-            }`}
+        {coaches.length > 0 && (
+          <select
+            aria-label="Filter coach"
+            value={selectedCoachFilter}
+            onChange={(e) => onCoachFilterChange(e.target.value)}
+            className="bg-[#FBF7F1]/10 border-0 rounded-lg px-3 py-2.5 min-h-11 font-sans text-sm text-[#FBF7F1] sm:w-44 box-border focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
           >
-            Belum dinilai {belumCount}
-          </button>
-          <button
-            type="button"
-            onClick={() => onStatusFilterChange("selesai")}
-            className={`flex-1 sm:flex-none border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center transition-all cursor-pointer ${
-              statusFilter === "selesai" ? "bg-[#FFD43B] text-[#17151F]" : "bg-[#FBF7F1]/10 text-[#FBF7F1]/80 hover:text-[#FBF7F1]"
-            }`}
-          >
-            Selesai dinilai {selesaiCount}
-          </button>
-        </div>
+            <option value="all" className="bg-[#17151F]">Semua coach</option>
+            {coaches.map((c) => (
+              <option key={c.id} value={c.id} className="bg-[#17151F]">{c.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {/* 2. Tab "Belum dinilai" / "Selesai dinilai" */}
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          onClick={() => onStatusFilterChange("belum")}
+          className={`flex-1 border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center transition-all cursor-pointer ${
+            statusFilter === "belum" ? "bg-[#FFD43B] text-[#17151F]" : "bg-[#FBF7F1]/10 text-[#FBF7F1]/80 hover:text-[#FBF7F1]"
+          }`}
+        >
+          Belum dinilai {belumCount}
+        </button>
+        <button
+          type="button"
+          onClick={() => onStatusFilterChange("selesai")}
+          className={`flex-1 border-0 rounded-lg min-h-11 px-4 font-sans font-bold text-sm whitespace-nowrap inline-flex items-center justify-center transition-all cursor-pointer ${
+            statusFilter === "selesai" ? "bg-[#FFD43B] text-[#17151F]" : "bg-[#FBF7F1]/10 text-[#FBF7F1]/80 hover:text-[#FBF7F1]"
+          }`}
+        >
+          Selesai dinilai {selesaiCount}
+        </button>
       </div>
 
       {filteredPlayers.length === 0 ? (

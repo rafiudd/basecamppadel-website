@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { guardResult } from "@/lib/server/action";
 import { requireAdminOrCoach, requireAdmin } from "@/lib/auth";
 import { computePlayerLevel, LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
+import { syncSessionStatus } from "@/lib/coaching-db";
 
 /**
  * Sets a player's level through coaching_apply_level (0020): players is admin-write only under RLS,
@@ -71,6 +72,7 @@ export async function saveAssessmentDraftAction(data: {
       .upsert(payload, { onConflict: "session_id, player_id" });
 
     if (error) throw new Error(error.message);
+    await syncSessionStatus(supabase, data.sessionId);
 
     // Note: Do not revalidatePath here so auto-save is a fast, quiet background write
     // that doesn't trigger Next.js page re-renders or router reload while typing.
@@ -136,6 +138,7 @@ export async function submitAssessmentAction(data: {
 
     // Update player level unless explicitly overridden
     if (!player?.level_overridden) await applyPlayerLevel(supabase, data.playerId, levelRes.level);
+    await syncSessionStatus(supabase, data.sessionId);
 
     revalidatePath("/admin/coaching");
     revalidatePath("/leaderboard");
@@ -192,6 +195,8 @@ export async function publishAllSessionDraftsAction(sessionId: string) {
 
       if (!player?.level_overridden) await applyPlayerLevel(supabase, draft.player_id, levelRes.level);
     }
+
+    await syncSessionStatus(supabase, sessionId);
 
     revalidatePath("/admin/coaching");
     revalidatePath("/leaderboard");
@@ -325,6 +330,8 @@ export async function importRekapDraftsAction(params: {
       );
       if (e6) throw new Error(e6.message);
     }
+
+    await syncSessionStatus(supabase, sessionId);
 
     revalidatePath("/admin/coaching");
     return { count: items.length };

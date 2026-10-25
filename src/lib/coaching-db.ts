@@ -7,7 +7,7 @@ import type {
   CoachingSkill,
   Player,
 } from "@/lib/database.types";
-import { computePlayerLevel, computeScoreDelta, type PlayerLevelName } from "./coaching";
+import { computePlayerLevel, computeScoreDelta, deriveSessionStatus, type PlayerLevelName } from "./coaching";
 
 export interface CoachingSessionSummary extends CoachingSession {
   totalPlayers: number;
@@ -148,6 +148,33 @@ export async function getCoachingSessions(options?: {
   }
 
   return results;
+}
+
+/**
+ * Recomputes a session's status from its current assessment progress and writes it if it changed
+ * — called after every draft save / submit / bulk publish so Draft → Berjalan → Selesai happens on
+ * its own instead of through the old manual status switch.
+ */
+export async function syncSessionStatus(supabase: Awaited<ReturnType<typeof createClient>>, sessionId: string): Promise<void> {
+  const { data: sessionPlayers } = await supabase
+    .from("coaching_session_players")
+    .select("player_id")
+    .eq("session_id", sessionId);
+  const totalPlayers = sessionPlayers?.length ?? 0;
+
+  const { data: assessments } = await supabase
+    .from("coaching_assessments")
+    .select("status")
+    .eq("session_id", sessionId);
+  const ratedPlayers = (assessments ?? []).filter((a) => a.status === "draft" || a.status === "submitted").length;
+  const submittedPlayers = (assessments ?? []).filter((a) => a.status === "submitted").length;
+
+  const nextStatus = deriveSessionStatus(totalPlayers, ratedPlayers, submittedPlayers);
+
+  const { data: current } = await supabase.from("coaching_sessions").select("status").eq("id", sessionId).single();
+  if (current && current.status !== nextStatus) {
+    await supabase.from("coaching_sessions").update({ status: nextStatus }).eq("id", sessionId);
+  }
 }
 
 // ------------------------------------------------------------- Session Full Details

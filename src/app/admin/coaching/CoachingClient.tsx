@@ -63,6 +63,11 @@ export function CoachingClient({
   const [selectedCoachFilter, setSelectedCoachFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"belum" | "selesai">("belum");
+  // Only coaches actually assigned to a group in this session — not every coach in the system.
+  const sessionCoaches = useMemo(
+    () => sessions.find((s) => s.id === activeSessionId)?.coaches ?? [],
+    [sessions, activeSessionId],
+  );
 
   // The coach dropdown's options are scoped to the active session — reset a stale selection
   // (a coach from the previous session) back to "all" when the session changes, without an
@@ -430,15 +435,11 @@ export function CoachingClient({
   return (
     <div className="flex flex-col gap-5 text-[#FBF7F1]">
       <CoachingHeader
-        sessions={sessions}
         sessionTab={sessionTab}
         sessionCounts={sessionCounts}
         sessionData={sessionData}
-        activeSessionId={activeSessionId}
-        selectedCoachFilter={selectedCoachFilter}
         isAdmin={isAdmin}
         isPublishingAll={isPublishingAll}
-        onCoachFilterChange={setSelectedCoachFilter}
         onOpenImportRekap={() => setShowImportRekap(true)}
         onExportXlsx={handleExportXlsx}
         onPublishAll={handlePublishAll}
@@ -452,6 +453,9 @@ export function CoachingClient({
             selesaiCount={selesaiCount}
             searchQuery={searchQuery}
             statusFilter={statusFilter}
+            coaches={sessionCoaches}
+            selectedCoachFilter={selectedCoachFilter}
+            onCoachFilterChange={setSelectedCoachFilter}
             onSearchChange={setSearchQuery}
             onStatusFilterChange={setStatusFilter}
             onSelectPlayer={(index) => {

@@ -150,7 +150,7 @@ export async function executeMongoRpc(
           return { data: null, error: { message: "Not authorized" } };
         }
         const { p_session_id, p_status } = args;
-        if (!["draft", "active", "completed"].includes(p_status)) {
+        if (!["draft", "active", "finished"].includes(p_status)) {
           return { data: null, error: { message: "Invalid session status" } };
         }
         await db.collection("coaching_sessions").updateOne(
