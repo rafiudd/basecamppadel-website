@@ -6,6 +6,8 @@ import { guardResult } from "@/lib/server/action";
 import { requireAdminOrCoach, requireAdmin } from "@/lib/auth";
 import { computePlayerLevel, LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
 import { syncSessionStatus } from "@/lib/coaching-db";
+import { sendKirimdevWhatsAppMessage, checkKirimdevStatus } from "@/lib/server/kirimdev";
+import { sendBrevoEmail, generateCoachingReportEmailHtml, checkBrevoStatus } from "@/lib/server/brevo";
 
 /**
  * Sets a player's level through coaching_apply_level (0020): players is admin-write only under RLS,
@@ -367,3 +369,111 @@ export async function updatePlayerContactAction(data: {
     return { success: true };
   });
 }
+
+export async function sendCoachingReportWhatsAppAction(data: {
+  playerId: string;
+  whatsapp: string;
+  message: string;
+  sessionId?: string;
+}) {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    const supabase = await createClient();
+
+    let cleanWhatsapp: string | null = null;
+    if (data.whatsapp?.trim()) {
+      cleanWhatsapp = data.whatsapp.replace(/[^0-9]/g, "");
+      if (cleanWhatsapp.startsWith("0")) {
+        cleanWhatsapp = "62" + cleanWhatsapp.slice(1);
+      }
+      try {
+        await supabase
+          .from("players")
+          .update({ whatsapp: cleanWhatsapp })
+          .eq("id", data.playerId);
+      } catch {
+        // non-blocking
+      }
+    }
+
+    const result = await sendKirimdevWhatsAppMessage({
+      to: cleanWhatsapp || data.whatsapp,
+      message: data.message,
+      previewUrl: true,
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || "Gagal mengirim pesan melalui provider WhatsApp Kirimdev.");
+    }
+
+    if (data.sessionId) {
+      revalidatePath("/admin/coaching");
+    }
+
+    return {
+      success: true,
+      messageId: result.messageId,
+    };
+  });
+}
+
+export async function getKirimdevConfigStatusAction() {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    return await checkKirimdevStatus();
+  });
+}
+
+export async function sendCoachingReportEmailAction(data: {
+  playerId: string;
+  email: string;
+  playerName?: string;
+  sessionTitle?: string;
+  evaluation?: string;
+  nextPractice?: string;
+  message?: string;
+  sessionId?: string;
+}) {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+
+    const subject = `Catatan Coaching & Rapor — Basecamp Padel${data.sessionTitle ? ` (${data.sessionTitle})` : ""}`;
+    const htmlContent = generateCoachingReportEmailHtml({
+      playerName: data.playerName,
+      sessionTitle: data.sessionTitle,
+      evaluation: data.evaluation,
+      nextPractice: data.nextPractice,
+    });
+
+    const result = await sendBrevoEmail({
+      to: {
+        email: data.email,
+        name: data.playerName,
+      },
+      subject,
+      htmlContent,
+      textContent: data.message,
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || "Gagal mengirim email via Brevo.");
+    }
+
+    if (data.sessionId) {
+      revalidatePath("/admin/coaching");
+    }
+
+    return {
+      success: true,
+      messageId: result.messageId,
+    };
+  });
+}
+
+export async function getBrevoConfigStatusAction() {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    return await checkBrevoStatus();
+  });
+}
+

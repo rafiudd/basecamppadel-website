@@ -636,6 +636,7 @@ export function CoachingClient({
           onClose={() => setNotificationTarget(null)}
           player={notificationTarget.player}
           initialEmail={notificationTarget.email}
+          sessionId={activeSessionId}
           sessionTitle={notificationTarget.sessionTitle}
           evaluation={notificationTarget.evaluation}
           nextPractice={notificationTarget.nextPractice}
