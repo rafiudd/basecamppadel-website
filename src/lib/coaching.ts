@@ -248,13 +248,15 @@ export function splitSessionsByStatus<T extends { status: string }>(sessions: T[
 }
 
 /**
- * Which tab to open: the one asked for, else the one holding the asked session, else the first
- * non-empty of Berjalan, Draft, Selesai (Berjalan when all are empty).
+ * Which tab to open: the one holding the open session (its status may have just auto-changed —
+ * see deriveSessionStatus — so a stale `?when=` from before that move must not strand the view on
+ * an empty tab), else the one asked for, else the first non-empty of Berjalan, Draft, Selesai
+ * (Berjalan when all are empty).
  */
 export function pickSessionTab(split: Record<SessionTab, { id: string }[]>, asked?: string, sessionId?: string): SessionTab {
-  const asTab = SESSION_TABS.find((t) => t === asked);
-  if (asTab) return asTab;
   const holding = sessionId && SESSION_TABS.find((t) => split[t].some((s) => s.id === sessionId));
   if (holding) return holding;
+  const asTab = SESSION_TABS.find((t) => t === asked);
+  if (asTab) return asTab;
   return (["berjalan", "draft", "selesai"] as const).find((t) => split[t].length) ?? "berjalan";
 }

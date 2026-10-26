@@ -145,10 +145,22 @@ test("Sesi: satu tab per status (Draft / Berjalan / Selesai), urutan input tetap
   assert.equal(pickSessionTab(split), "berjalan");
   assert.equal(pickSessionTab(split, undefined, "a"), "draft");
   assert.equal(pickSessionTab(split, undefined, "z"), "selesai");
-  assert.equal(pickSessionTab(split, "selesai", "c"), "selesai");
+  // "c" actually lives in berjalan (its status may have just auto-changed — see deriveSessionStatus) —
+  // follow it there instead of stranding the view on the stale "selesai" tab asked for.
+  assert.equal(pickSessionTab(split, "selesai", "c"), "berjalan");
   assert.equal(pickSessionTab(split, "bogus"), "berjalan");
   assert.equal(pickSessionTab({ draft: [s("a", "draft")], berjalan: [], selesai: [s("b", "finished")] }), "draft");
   assert.equal(pickSessionTab({ draft: [], berjalan: [], selesai: [] }), "berjalan");
+});
+
+test("deriveSessionStatus: draft -> active -> finished mengikuti progres penilaian", async () => {
+  const { deriveSessionStatus } = await import("../src/lib/coaching.ts");
+  assert.equal(deriveSessionStatus(0, 0, 0), "draft");
+  assert.equal(deriveSessionStatus(20, 0, 0), "draft");
+  assert.equal(deriveSessionStatus(20, 1, 0), "active");
+  assert.equal(deriveSessionStatus(20, 20, 17), "active"); // semua dinilai tapi belum semua submitted
+  assert.equal(deriveSessionStatus(20, 20, 20), "finished");
+  assert.equal(deriveSessionStatus(0, 0, 0), "draft"); // 0/0 tidak dianggap "selesai"
 });
 
 test("Status sesi: TAB_STATUS dan statusTab saling balik (redirect setelah pindah status)", async () => {
