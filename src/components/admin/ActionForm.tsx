@@ -20,6 +20,7 @@ export function ActionForm({
   confirmLabel,
   danger,
   successText,
+  onSuccess,
 }: {
   action: (state: ActionState, fd: FormData) => Promise<ActionState>;
   children: React.ReactNode;
@@ -28,8 +29,14 @@ export function ActionForm({
   confirmLabel?: string;
   danger?: boolean;
   successText?: string | false;
+  onSuccess?: () => void;
 }) {
   const success = successText ?? (danger ? "Berhasil dihapus" : "Berhasil disimpan");
+  const onSuccessRef = useRef(onSuccess);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
   const [, formAction, pending] = useActionState(async (state: ActionState, fd: FormData): Promise<ActionState> => {
     let res: ActionState;
     try {
@@ -37,12 +44,17 @@ export function ActionForm({
     } catch (e) {
       if (isRedirect(e)) {
         if (success) toast.success(success);
+        onSuccessRef.current?.();
         throw e;
       }
       res = { error: UNEXPECTED_ERROR };
     }
-    if (res?.error) toast.error(res.error);
-    else if (success) toast.success(success);
+    if (res?.error) {
+      toast.error(res.error);
+    } else {
+      if (success) toast.success(success);
+      onSuccessRef.current?.();
+    }
     return res;
   }, null);
   const formRef = useRef<HTMLFormElement>(null);

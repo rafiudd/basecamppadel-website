@@ -168,3 +168,36 @@ test("Status sesi: TAB_STATUS dan statusTab saling balik (redirect setelah pinda
   assert.deepEqual(SESSION_TABS.map((t) => TAB_STATUS[t]), ["draft", "active", "finished"]);
   for (const t of SESSION_TABS) assert.equal(statusTab(TAB_STATUS[t]), t);
 });
+
+test("notifikasi rapor: template pesan, wa url, dan mailto url", async () => {
+  const {
+    normalizeWhatsAppNumber,
+    generateCoachingReportNotificationMessage,
+    generateCoachingWhatsAppUrl,
+    generateCoachingMailtoUrl,
+  } = await import("../src/lib/coachingRules.ts");
+
+  assert.equal(normalizeWhatsAppNumber("0812-3456-7890"), "6281234567890");
+  assert.equal(normalizeWhatsAppNumber("+62 812 999"), "62812999");
+  assert.equal(normalizeWhatsAppNumber("628111"), "628111");
+
+  const msg = generateCoachingReportNotificationMessage({
+    evaluation: "Forehand stabil, power konsisten.",
+    nextPractice: "Latih defend dekat kaca belakang.",
+  });
+
+  assert.ok(msg.includes("Halo! Catatan latihan dari coach sudah keluar nih 🎾"));
+  assert.ok(msg.includes("*Evaluasi:*\nForehand stabil, power konsisten."));
+  assert.ok(msg.includes("*Latihan berikutnya:*\nLatih defend dekat kaca belakang."));
+  assert.ok(msg.includes("https://www.basecamppadel.id/akun?tab=notes"));
+  assert.ok(msg.includes("Sampai ketemu di lapangan!"));
+
+  const waUrl = generateCoachingWhatsAppUrl("08123456789", msg);
+  assert.ok(waUrl.startsWith("https://wa.me/628123456789?text="));
+  assert.ok(waUrl.includes(encodeURIComponent("Halo! Catatan latihan dari coach")));
+
+  const mailtoUrl = generateCoachingMailtoUrl("pemain@example.com", msg);
+  assert.ok(mailtoUrl.startsWith("mailto:pemain@example.com?subject="));
+  assert.ok(mailtoUrl.includes(encodeURIComponent("Catatan Coaching & Rapor — Basecamp Padel")));
+  assert.ok(mailtoUrl.includes(encodeURIComponent(msg)));
+});

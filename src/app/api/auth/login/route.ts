@@ -29,9 +29,9 @@ export async function POST(req: NextRequest) {
       $or: [{ user_id: userId }, { _id: userId }],
     } as any);
 
-    if (!adminRow || (adminRow.role !== "admin" && adminRow.role !== "coach")) {
+    if (!adminRow || (adminRow.role !== "admin" && adminRow.role !== "coach" && adminRow.role !== "scorekeeper")) {
       return NextResponse.json(
-        { error: "Akun Anda tidak memiliki hak akses admin atau coach." },
+        { error: "Akun Anda tidak memiliki hak akses admin, coach, atau score keeper." },
         { status: 403 }
       );
     }

@@ -34,6 +34,7 @@ export function PlayerListTable({
   onStatusFilterChange,
   onCoachFilterChange,
   onSelectPlayer,
+  onOpenNotificationModal,
 }: {
   filteredPlayers: SessionPlayerItem[];
   belumCount: number;
@@ -46,6 +47,7 @@ export function PlayerListTable({
   onStatusFilterChange: (s: "belum" | "selesai") => void;
   onCoachFilterChange: (coachId: string) => void;
   onSelectPlayer: (index: number) => void;
+  onOpenNotificationModal?: (playerItem: SessionPlayerItem) => void;
 }) {
   return (
     <div className="bg-[#1F1C2B] rounded-2xl p-3.5 flex flex-col gap-3 border border-[#FBF7F1]/5">
@@ -141,7 +143,28 @@ export function PlayerListTable({
                     <td className="py-2.5 pr-3">
                       <StatusBadge status={pItem.status} />
                     </td>
-                    <td className="py-2.5 pr-1 text-[#FBF7F1]/40 text-right">→</td>
+                    <td className="py-2.5 pr-2 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {pItem.status === "submitted" && onOpenNotificationModal && (
+                          <button
+                            type="button"
+                            title="Kirim Notifikasi Rapor"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenNotificationModal(pItem);
+                            }}
+                            className="px-2 py-1 rounded-md bg-[#2F9E5C]/15 hover:bg-[#2F9E5C]/25 text-[#6FD39A] text-xs font-semibold inline-flex items-center gap-1 border border-[#2F9E5C]/25 cursor-pointer transition-colors"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                              <path d="m22 2-7 20-4-9-9-4Z" />
+                              <path d="M22 2 11 13" />
+                            </svg>
+                            <span>Notif</span>
+                          </button>
+                        )}
+                        <span className="text-[#FBF7F1]/40 ml-1">→</span>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -154,9 +177,8 @@ export function PlayerListTable({
               const pLevel = pItem.computedLevel.level;
               const pColor = LEVEL_DEFINITIONS[pLevel]?.color || "#FFD43B";
               return (
-                <button
+                <div
                   key={pItem.player.id}
-                  type="button"
                   onClick={() => onSelectPlayer(idx)}
                   className="w-full text-left flex items-center gap-3 p-3 rounded-xl bg-[#17151F]/40 border border-[#FBF7F1]/5 hover:border-[#FBF7F1]/15 transition-all cursor-pointer"
                 >
@@ -172,8 +194,26 @@ export function PlayerListTable({
                       {pLevel} · {pItem.group?.name || "Grup 1"}
                     </span>
                   </div>
-                  <StatusBadge status={pItem.status} />
-                </button>
+                  <div className="flex items-center gap-1.5 flex-none">
+                    <StatusBadge status={pItem.status} />
+                    {pItem.status === "submitted" && onOpenNotificationModal && (
+                      <button
+                        type="button"
+                        title="Kirim Notifikasi Rapor"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenNotificationModal(pItem);
+                        }}
+                        className="p-1.5 rounded-lg bg-[#2F9E5C]/15 hover:bg-[#2F9E5C]/25 text-[#6FD39A] border border-[#2F9E5C]/25 cursor-pointer"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                          <path d="m22 2-7 20-4-9-9-4Z" />
+                          <path d="M22 2 11 13" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>

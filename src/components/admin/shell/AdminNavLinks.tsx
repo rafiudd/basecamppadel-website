@@ -5,11 +5,23 @@ import { usePathname } from "next/navigation";
 import { ADMIN_NAV, isActive } from "./nav";
 
 /** Desktop header menu. */
-export function AdminNavLinks({ isCoachOnly }: { isCoachOnly?: boolean }) {
+export function AdminNavLinks({
+  isCoachOnly,
+  isScoreKeeperOnly,
+  isAdmin,
+}: {
+  isCoachOnly?: boolean;
+  isScoreKeeperOnly?: boolean;
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
   const navItems = isCoachOnly
     ? ADMIN_NAV.filter((l) => l.href.startsWith("/admin/coaching") || l.href.startsWith("/admin/kelas"))
-    : ADMIN_NAV;
+    : isScoreKeeperOnly
+    ? ADMIN_NAV.filter((l) => l.href.startsWith("/admin/live"))
+    : isAdmin
+    ? ADMIN_NAV
+    : ADMIN_NAV.filter((l) => !l.adminOnly);
 
 
   return (

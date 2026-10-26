@@ -41,6 +41,7 @@ export function AssessmentEditor({
   onSaveDraft,
   onSubmitAndNext,
   onOpenOverrideModal,
+  onOpenNotificationModal,
   onClose,
   onPrev,
   onNext,
@@ -75,6 +76,7 @@ export function AssessmentEditor({
   onSaveDraft: () => void;
   onSubmitAndNext: () => void;
   onOpenOverrideModal: () => void;
+  onOpenNotificationModal?: () => void;
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -217,6 +219,20 @@ export function AssessmentEditor({
                 className="text-xs bg-[#FBF7F1]/10 hover:bg-[#FBF7F1]/15 text-[#FBF7F1]/90 px-3 py-1.5 rounded-lg border border-[#FBF7F1]/10 font-medium cursor-pointer whitespace-nowrap"
               >
                 Ubah Level
+              </button>
+            )}
+            {/* Kirim Notifikasi (WA & Email) */}
+            {currentPlayerItem.status === "submitted" && onOpenNotificationModal && (
+              <button
+                type="button"
+                onClick={onOpenNotificationModal}
+                className="text-xs bg-[#2F9E5C]/15 hover:bg-[#2F9E5C]/25 text-[#6FD39A] px-3 py-1.5 rounded-lg border border-[#2F9E5C]/30 font-bold cursor-pointer whitespace-nowrap inline-flex items-center gap-1.5 transition-colors"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m22 2-7 20-4-9-9-4Z" />
+                  <path d="M22 2 11 13" />
+                </svg>
+                Kirim Notifikasi
               </button>
             )}
             {/* D.6: the printable rapor in a new tab ("Save as PDF"); only once the assessment is submitted */}

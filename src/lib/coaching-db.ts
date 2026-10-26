@@ -33,6 +33,7 @@ export interface SessionPlayerItem {
     overrideReason?: string;
     cappedByMabar: boolean;
   };
+  email?: string | null;
 }
 
 export interface SessionFullData {
@@ -272,11 +273,22 @@ export async function getSessionFullData(
   const coachMap = new Map((coaches || []).map((c) => [c.id, c]));
   const assessmentMap = new Map((assessments || []).map((a) => [a.player_id, a]));
 
+  // Profiles to get email and connected contact data
+  const { data: profiles } = playerIds.length > 0
+    ? await supabase.from("profiles").select("player_id, email, whatsapp").in("player_id", playerIds)
+    : { data: [] };
+  const profileMap = new Map((profiles || []).map((prof) => [prof.player_id, prof]));
+
   const playerItems: SessionPlayerItem[] = [];
 
   for (const sp of sessionPlayers || []) {
-    const p = (sp.players as unknown as Player | null) || (sp.player_id ? playerMap.get(sp.player_id) : null);
-    if (!p) continue;
+    const rawPlayer = (sp.players as unknown as Player | null) || (sp.player_id ? playerMap.get(sp.player_id) : null);
+    if (!rawPlayer) continue;
+
+    const prof = profileMap.get(rawPlayer.id);
+    const email = prof?.email || null;
+    const whatsapp = rawPlayer.whatsapp || prof?.whatsapp || null;
+    const p = { ...rawPlayer, whatsapp };
 
     const grp = sp.group_id ? groupMap.get(sp.group_id) || null : null;
     const coach = grp?.coach_id ? coachMap.get(grp.coach_id) || null : null;
@@ -309,6 +321,7 @@ export async function getSessionFullData(
       status,
       previousScores: prevScores,
       computedLevel: levelCalc,
+      email,
     });
   }
 

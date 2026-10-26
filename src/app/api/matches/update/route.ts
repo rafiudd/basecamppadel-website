@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       $or: [{ _id: user.id }, { user_id: user.id }],
     } as any);
 
-    if (adminRow?.role !== "admin") {
+    if (adminRow?.role !== "admin" && adminRow?.role !== "scorekeeper") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

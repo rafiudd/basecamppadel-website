@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { CloseIcon } from "@/components/ui/icons";
 
 /** Centered dialog on a dimmed backdrop; clicking the backdrop or × closes it. */
@@ -14,6 +15,12 @@ export function Modal({
   width?: number;
   children: React.ReactNode;
 }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-50 bg-ink/70 flex items-center justify-center p-4" onClick={onClose}>
       <div

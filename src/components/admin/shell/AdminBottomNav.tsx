@@ -7,11 +7,21 @@ import { ADMIN_NAV, isActive } from "./nav";
 const MOBILE_NAV = [...ADMIN_NAV].sort((a, b) => a.mobileOrder - b.mobileOrder);
 
 /** Phone tab bar, fixed to the bottom (hidden from md up, where the header menu shows). */
-export function AdminBottomNav({ isCoachOnly }: { isCoachOnly?: boolean }) {
+export function AdminBottomNav({
+  isCoachOnly,
+  isScoreKeeperOnly,
+  isAdmin,
+}: {
+  isCoachOnly?: boolean;
+  isScoreKeeperOnly?: boolean;
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
   const navItems = isCoachOnly
-    ? MOBILE_NAV.filter((l) => l.href.startsWith("/admin/coaching"))
-    : MOBILE_NAV;
+    ? MOBILE_NAV.filter((l) => l.href.startsWith("/admin/coaching") || l.href.startsWith("/admin/kelas"))
+    : isScoreKeeperOnly
+    ? MOBILE_NAV.filter((l) => l.href.startsWith("/admin/live"))
+    : MOBILE_NAV.filter((l) => !l.adminOnly);
 
   return (
     <nav
