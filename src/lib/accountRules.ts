@@ -105,5 +105,11 @@ export function profilePhoto(p: { photo_url: string | null; photo_source?: Photo
  * coaching area), else the player profile.
  */
 export function accountHome(role: string | null | undefined): string {
-  return role === "admin" ? "/admin/events" : role === "coach" ? "/admin/coaching" : "/akun";
+  return role === "admin"
+    ? "/admin/events"
+    : role === "coach"
+    ? "/admin/coaching"
+    : role === "scorekeeper"
+    ? "/admin/live"
+    : "/akun";
 }

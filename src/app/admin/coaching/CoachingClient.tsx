@@ -28,6 +28,7 @@ import { MasterTeknikModal } from "./components/MasterTeknikModal";
 import { CreateSessionModal } from "./components/CreateSessionModal";
 import { OverrideLevelModal } from "./components/OverrideLevelModal";
 import { ImportRekapModal } from "./components/ImportRekapModal";
+import { SendNotificationModal } from "./components/SendNotificationModal";
 import { CoachingHeader } from "./components/CoachingHeader";
 import { SessionListTable } from "./components/SessionListTable";
 import { PlayerListTable } from "./components/PlayerListTable";
@@ -89,6 +90,14 @@ export function CoachingClient({
   const [showImportRekap, setShowImportRekap] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overridePlayerTarget, setOverridePlayerTarget] = useState<Player | null>(null);
+  const [notificationTarget, setNotificationTarget] = useState<{
+    player: Player;
+    email?: string | null;
+    sessionTitle?: string;
+    evaluation?: string;
+    nextPractice?: string;
+    nextPlayerId?: string | null;
+  } | null>(null);
 
   // Form State for current assessment editor
   const [scores, setScores] = useState<Record<string, number>>({});
@@ -325,11 +334,16 @@ export function CoachingClient({
         setSaveStatus("Terkirim");
         toast.success(`Penilaian ${currentPlayerItem.player.name} berhasil disimpan & dikirim`);
 
-        if (nextPlayerId) {
-          setSelectedPlayerId(nextPlayerId);
-        } else {
-          setShowAssessment(false);
-        }
+        // Automatically trigger notification modal
+        setNotificationTarget({
+          player: currentPlayerItem.player,
+          email: currentPlayerItem.email || null,
+          sessionTitle: sessionData.session.title,
+          evaluation,
+          nextPractice,
+          nextPlayerId,
+        });
+
         router.refresh();
       } catch (err: any) {
         setSaveStatus("Gagal mengirim");
@@ -462,6 +476,16 @@ export function CoachingClient({
               setSelectedPlayerId(filteredPlayers[index].player.id);
               setShowAssessment(true);
             }}
+            onOpenNotificationModal={(pItem) => {
+              setNotificationTarget({
+                player: pItem.player,
+                email: pItem.email || null,
+                sessionTitle: sessionData?.session.title,
+                evaluation: pItem.assessment?.evaluation || "",
+                nextPractice: pItem.assessment?.next_practice || "",
+                nextPlayerId: null,
+              });
+            }}
           />
 
           {showAssessment && currentPlayerItem && (
@@ -513,6 +537,22 @@ export function CoachingClient({
                 if (currentPlayerItem) {
                   setOverridePlayerTarget(currentPlayerItem.player);
                   setShowOverrideModal(true);
+                }
+              }}
+              onOpenNotificationModal={() => {
+                if (currentPlayerItem) {
+                  const nextPlayerId =
+                    activePlayerIndex < filteredPlayers.length - 1
+                      ? filteredPlayers[activePlayerIndex + 1].player.id
+                      : null;
+                  setNotificationTarget({
+                    player: currentPlayerItem.player,
+                    email: currentPlayerItem.email || null,
+                    sessionTitle: sessionData?.session.title,
+                    evaluation,
+                    nextPractice,
+                    nextPlayerId,
+                  });
                 }
               }}
               onClose={() => {
@@ -587,6 +627,27 @@ export function CoachingClient({
           onSuccess={() => {
             router.refresh();
           }}
+        />
+      )}
+
+      {notificationTarget && (
+        <SendNotificationModal
+          isOpen={Boolean(notificationTarget)}
+          onClose={() => setNotificationTarget(null)}
+          player={notificationTarget.player}
+          initialEmail={notificationTarget.email}
+          sessionTitle={notificationTarget.sessionTitle}
+          evaluation={notificationTarget.evaluation}
+          nextPractice={notificationTarget.nextPractice}
+          hasNext={Boolean(notificationTarget.nextPlayerId)}
+          onNextPlayer={
+            notificationTarget.nextPlayerId
+              ? () => {
+                  setSelectedPlayerId(notificationTarget.nextPlayerId!);
+                  setNotificationTarget(null);
+                }
+              : null
+          }
         />
       )}
     </div>

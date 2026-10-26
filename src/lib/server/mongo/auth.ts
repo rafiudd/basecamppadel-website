@@ -39,8 +39,8 @@ export function createMongoAuthAdapter() {
         $or: [{ user_id: userId }, { _id: userId }],
       } as any);
 
-      if (!adminRow || (adminRow.role !== "admin" && adminRow.role !== "coach")) {
-        return { data: { user: null }, error: { message: "Akun Anda tidak memiliki hak akses admin atau coach." } };
+      if (!adminRow || (adminRow.role !== "admin" && adminRow.role !== "coach" && adminRow.role !== "scorekeeper")) {
+        return { data: { user: null }, error: { message: "Akun Anda tidak memiliki hak akses admin, coach, atau score keeper." } };
       }
 
       await setSessionCookie({

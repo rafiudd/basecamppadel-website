@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PlayerForm } from "@/components/admin/players/PlayerForm";
 import { PlayersList } from "@/components/admin/players/PlayersList";
 import { PendingClaims, type PendingClaim } from "@/components/admin/players/PendingClaims";
+import { PlayerLoginManagement } from "@/components/admin/players/PlayerLoginManagement";
 
 export default async function PlayersAdmin({ searchParams }: { searchParams: Promise<{ edit?: string; new?: string }> }) {
   const { edit, new: isNew } = await searchParams;
@@ -43,7 +44,16 @@ export default async function PlayersAdmin({ searchParams }: { searchParams: Pro
 
       {!showForm && <PendingClaims claims={claims} />}
       {showForm ? (
-        <PlayerForm key={editing?.id ?? "new"} player={editing} accountEmail={linkedEmail} />
+        <div className="flex flex-col gap-6">
+          <PlayerForm key={editing?.id ?? "new"} player={editing} accountEmail={linkedEmail} />
+          {editing && (
+            <PlayerLoginManagement
+              playerId={editing.id}
+              playerName={editing.name}
+              accountEmail={linkedEmail}
+            />
+          )}
+        </div>
       ) : (
         <PlayersList players={players ?? []} coachingCounts={coachingCounts} />
       )}

@@ -32,12 +32,12 @@ async function getCallerAuth(db: Db, explicitUser?: any) {
   const adminDoc = await db.collection("admin_users").findOne({
     $or: [{ _id: user.id }, { user_id: user.id }],
   } as any);
-  const role = (adminDoc?.role as "admin" | "coach" | undefined) || null;
+  const role = (adminDoc?.role as "admin" | "coach" | "scorekeeper" | undefined) || null;
   return {
     user,
     role,
     isAdmin: role === "admin",
-    hasAdminAccess: role === "admin" || role === "coach",
+    hasAdminAccess: role === "admin" || role === "coach" || role === "scorekeeper",
   };
 }
 

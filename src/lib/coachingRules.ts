@@ -453,3 +453,51 @@ export function eventHistory(
 export function matchHistory(entries: EventEntry[]): (EventMatch & { label: string })[] {
   return entries.flatMap((e) => e.matches.map((m) => ({ ...m, label: [e.title, m.section].filter(Boolean).join(" · ") })));
 }
+
+// ---------------------------------------------------------------- notifikasi rapor
+export function normalizeWhatsAppNumber(phone: string): string {
+  let clean = phone.replace(/[^0-9]/g, "");
+  if (clean.startsWith("0")) {
+    clean = "62" + clean.slice(1);
+  }
+  return clean;
+}
+
+export function generateCoachingReportNotificationMessage({
+  evaluation,
+  nextPractice,
+}: {
+  evaluation?: string | null;
+  nextPractice?: string | null;
+}): string {
+  const parts: string[] = ["Halo! Catatan latihan dari coach sudah keluar nih 🎾\n"];
+
+  const cleanEval = (evaluation || "").trim();
+  if (cleanEval) {
+    parts.push(`*Evaluasi:*\n${cleanEval}\n`);
+  }
+
+  const cleanPractice = (nextPractice || "").trim();
+  if (cleanPractice) {
+    parts.push(`*Latihan berikutnya:*\n${cleanPractice}\n`);
+  }
+
+  parts.push(
+    "Untuk detail rapor lengkap dan perkembangan skill kamu, silakan cek di:\nhttps://www.basecamppadel.id/akun?tab=notes\n\nSampai ketemu di lapangan!"
+  );
+
+  return parts.join("\n").trim();
+}
+
+export function generateCoachingWhatsAppUrl(phone: string, message: string): string {
+  const clean = normalizeWhatsAppNumber(phone);
+  const encoded = encodeURIComponent(message);
+  return clean ? `https://wa.me/${clean}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+}
+
+export function generateCoachingMailtoUrl(email: string, message: string): string {
+  const cleanEmail = email.trim();
+  const subject = encodeURIComponent("Catatan Coaching & Rapor — Basecamp Padel");
+  const body = encodeURIComponent(message);
+  return cleanEmail ? `mailto:${cleanEmail}?subject=${subject}&body=${body}` : `mailto:?subject=${subject}&body=${body}`;
+}

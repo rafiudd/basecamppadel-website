@@ -337,3 +337,33 @@ export async function importRekapDraftsAction(params: {
     return { count: items.length };
   });
 }
+
+export async function updatePlayerContactAction(data: {
+  playerId: string;
+  whatsapp?: string | null;
+}) {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    const supabase = await createClient();
+
+    let cleanWhatsapp: string | null = null;
+    if (data.whatsapp) {
+      cleanWhatsapp = data.whatsapp.replace(/[^0-9]/g, "");
+      if (cleanWhatsapp.startsWith("0")) {
+        cleanWhatsapp = "62" + cleanWhatsapp.slice(1);
+      }
+    }
+
+    const { error } = await supabase
+      .from("players")
+      .update({
+        whatsapp: cleanWhatsapp,
+      })
+      .eq("id", data.playerId);
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath("/admin/coaching");
+    return { success: true };
+  });
+}

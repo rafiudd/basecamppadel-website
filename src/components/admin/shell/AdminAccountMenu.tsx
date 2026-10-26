@@ -6,7 +6,7 @@ import { UserIcon } from "@/components/ui/icons";
 import { SignOutForm } from "./SignOutForm";
 
 /** Mobile header account button: email, link to the public site, sign out. */
-export function AdminAccountMenu({ email }: { email: string }) {
+export function AdminAccountMenu({ email, isAdmin }: { email: string; isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -31,12 +31,27 @@ export function AdminAccountMenu({ email }: { email: string }) {
         <UserIcon />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 w-65 bg-ink-3 border border-snow/12 rounded-card p-2 shadow-pop flex flex-col">
-          <div className="px-3 py-2.5 text-caption text-snow/65 break-all">{email}</div>
-          <Link href="/" onClick={() => setOpen(false)} className="px-3 py-2.5 rounded-lg text-sm text-snow/80 no-underline hover:bg-snow/8">
+        <div className="absolute right-0 top-full mt-2 z-50 w-65 bg-ink-3 border border-snow/12 rounded-card p-2 shadow-pop flex flex-col gap-0.5">
+          <div className="px-3 py-2 text-caption text-snow/65 break-all border-b border-snow/8 mb-1">{email}</div>
+          {isAdmin && (
+            <>
+              <div className="px-3 pt-1 text-2xs uppercase tracking-wider font-semibold text-snow/40">User Management</div>
+              <Link href="/admin/users/admin" onClick={() => setOpen(false)} className="px-3 py-2 rounded-lg text-sm text-snow no-underline hover:bg-snow/8">
+                Admin
+              </Link>
+              <Link href="/admin/users/scorekeeper" onClick={() => setOpen(false)} className="px-3 py-2 rounded-lg text-sm text-snow no-underline hover:bg-snow/8">
+                Score Keeper
+              </Link>
+              <Link href="/admin/users/coach" onClick={() => setOpen(false)} className="px-3 py-2 rounded-lg text-sm text-snow no-underline hover:bg-snow/8">
+                Coach
+              </Link>
+              <div className="my-1 border-b border-snow/8" />
+            </>
+          )}
+          <Link href="/" onClick={() => setOpen(false)} className="px-3 py-2 rounded-lg text-sm text-snow/80 no-underline hover:bg-snow/8">
             Lihat situs ↗
           </Link>
-          <SignOutForm className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold text-snow bg-transparent border-none hover:bg-snow/8" />
+          <SignOutForm className="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold text-coral bg-transparent border-none hover:bg-snow/8" />
         </div>
       )}
     </div>
