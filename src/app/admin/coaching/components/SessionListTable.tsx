@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "nextjs-toploader/app";
 import type { CoachingSessionSummary } from "@/lib/coaching-db";
 import type { SessionTab } from "@/lib/coaching";
 import { formatDateShortIndo } from "@/lib/format";
@@ -37,6 +38,7 @@ function compareSessions(a: CoachingSessionSummary, b: CoachingSessionSummary, k
  *  status tab, searchable, sortable, and paginated — the <select> this replaced became unusable
  *  once a coach had run a hundred sessions. Click a row to open that session's workspace. */
 export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingSessionSummary[]; sessionTab: SessionTab }) {
+  const router = useRouter();
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>("date");
@@ -128,16 +130,17 @@ export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingS
                     </button>
                   </th>
                 ))}
-                <th className="pb-2.5" />
               </tr>
             </thead>
             <tbody>
               {paged.map((s) => (
-                <tr key={s.id} className="border-t border-[#FBF7F1]/8 hover:bg-[#FBF7F1]/[0.03] transition-colors">
+                <tr
+                  key={s.id}
+                  onClick={() => router.push(`/admin/coaching?when=${sessionTab}&session=${s.id}`)}
+                  className="border-t border-[#FBF7F1]/8 hover:bg-[#FBF7F1]/[0.03] transition-colors cursor-pointer"
+                >
                   <td className="py-3 pr-3">
-                    <Link href={`/admin/coaching?when=${sessionTab}&session=${s.id}`} className="no-underline font-bold text-[#FBF7F1] hover:text-[#FFD43B] transition-colors">
-                      {s.title}
-                    </Link>
+                    <span className="font-bold text-[#FBF7F1]">{s.title}</span>
                     {s.coaches.length > 0 && (
                       <div className="text-xs text-[#FBF7F1]/55 mt-0.5 truncate">{s.coaches.map((c) => c.name).join(", ")}</div>
                     )}
@@ -149,14 +152,6 @@ export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingS
                       {s.ratedPlayers}/{s.totalPlayers}
                     </div>
                     <div className="text-[10px] text-[#FBF7F1]/50">dinilai</div>
-                  </td>
-                  <td className="py-3 text-right">
-                    <Link
-                      href={`/admin/coaching?when=${sessionTab}&session=${s.id}`}
-                      className="no-underline text-xs font-bold text-[#FBF7F1]/70 hover:text-[#FFD43B] whitespace-nowrap"
-                    >
-                      Buka →
-                    </Link>
                   </td>
                 </tr>
               ))}
