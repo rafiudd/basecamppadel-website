@@ -342,6 +342,9 @@ export function CoachUsersClient({
           title={editingCoach ? `Edit ${editingCoach.name}` : "Tambah Coach"}
           onClose={closeModal}
           width={540}
+          closeOnBackdropClick={false}
+          closeOnEscape={false}
+          showCloseButton={false}
         >
           <CoachUserForm
             key={editingCoach?.id ?? "new"}
@@ -357,6 +360,9 @@ export function CoachUsersClient({
           title="Hapus Coach"
           onClose={() => setDeletingCoach(null)}
           width={420}
+          closeOnBackdropClick={false}
+          closeOnEscape={false}
+          showCloseButton={false}
         >
           <ActionForm
             action={async (state, fd) => {

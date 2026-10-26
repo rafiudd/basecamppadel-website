@@ -142,6 +142,9 @@ export function ScoreKeeperClient({
           title={editingSk ? `Edit ${editingSk.name}` : "Tambah Score Keeper"}
           onClose={closeModal}
           width={480}
+          closeOnBackdropClick={false}
+          closeOnEscape={false}
+          showCloseButton={false}
         >
           <ScoreKeeperForm
             key={editingSk?.id ?? "new"}
@@ -157,6 +160,9 @@ export function ScoreKeeperClient({
           title="Hapus Score Keeper"
           onClose={() => setDeletingSk(null)}
           width={420}
+          closeOnBackdropClick={false}
+          closeOnEscape={false}
+          showCloseButton={false}
         >
           <ActionForm
             action={async (state, fd) => {

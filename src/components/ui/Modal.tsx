@@ -9,20 +9,30 @@ export function Modal({
   onClose,
   width = 440,
   children,
+  closeOnBackdropClick = true,
+  closeOnEscape = true,
+  showCloseButton = true,
 }: {
   title: string;
   onClose: () => void;
   width?: number;
   children: React.ReactNode;
+  closeOnBackdropClick?: boolean;
+  closeOnEscape?: boolean;
+  showCloseButton?: boolean;
 }) {
   useEffect(() => {
+    if (!closeOnEscape) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, closeOnEscape]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-ink/70 flex items-center justify-center p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 bg-ink/70 flex items-center justify-center p-4"
+      onClick={closeOnBackdropClick ? onClose : undefined}
+    >
       <div
         role="dialog"
         aria-modal="true"
@@ -33,7 +43,7 @@ export function Modal({
       >
         <div className="flex items-center justify-between gap-2">
           <div className="font-display font-bold text-xl">{title}</div>
-          <CloseButton onClick={onClose} />
+          {showCloseButton && <CloseButton onClick={onClose} />}
         </div>
         {children}
       </div>

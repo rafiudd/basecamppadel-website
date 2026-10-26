@@ -151,6 +151,9 @@ export function AdminUsersClient({
           title={editingAdmin ? `Edit ${editingAdmin.name}` : "Tambah Super Admin"}
           onClose={closeModal}
           width={480}
+          closeOnBackdropClick={false}
+          closeOnEscape={false}
+          showCloseButton={false}
         >
           <AdminUserForm
             key={editingAdmin?.id ?? "new"}
@@ -166,6 +169,9 @@ export function AdminUsersClient({
           title="Hapus Super Admin"
           onClose={() => setDeletingAdmin(null)}
           width={420}
+          closeOnBackdropClick={false}
+          closeOnEscape={false}
+          showCloseButton={false}
         >
           <ActionForm
             action={async (state, fd) => {
