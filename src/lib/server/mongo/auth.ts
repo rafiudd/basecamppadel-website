@@ -1,6 +1,7 @@
 import { getDb } from "../../mongodb.ts";
 import { getSessionUser, setSessionCookie, clearSessionCookie } from "../session.ts";
 import bcrypt from "bcryptjs";
+import { staffLoginError, staffRole } from "../../accountRules.ts";
 
 /**
  * Creates the auth adapter emulating Supabase Auth via Mongo + session cookies.
@@ -39,14 +40,15 @@ export function createMongoAuthAdapter() {
         $or: [{ user_id: userId }, { _id: userId }],
       } as any);
 
-      if (!adminRow || (adminRow.role !== "admin" && adminRow.role !== "coach" && adminRow.role !== "scorekeeper")) {
-        return { data: { user: null }, error: { message: "Akun Anda tidak memiliki hak akses admin, coach, atau score keeper." } };
+      const role = staffRole(adminRow);
+      if (!adminRow || !role) {
+        return { data: { user: null }, error: { message: staffLoginError(adminRow) } };
       }
 
       await setSessionCookie({
         id: userId,
         email: user.email,
-        role: adminRow.role,
+        role,
         coach_id: adminRow.coach_id || null,
         user_metadata: user.raw_user_meta_data || {},
       });

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireScoreKeeperOrAdmin } from "@/lib/auth";
 import { matchSection } from "@/lib/compLabels";
 import { courtLabel } from "@/lib/format";
 import { findTeamClash } from "@/lib/matchRules";
@@ -56,7 +56,7 @@ async function putOnAir(supabase: Supa, eventId: string, matchId: string, { star
 /** "Live-kan" on the Live page: put this match ON AIR (`open=1` then opens its score control). */
 export async function goLive(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    await requireAdmin();
+    await requireScoreKeeperOrAdmin();
     const supabase = await createClient();
     const id = str(fd, "event_id");
     const matchId = str(fd, "match_id");
@@ -69,7 +69,7 @@ export async function goLive(_: ActionState, fd: FormData): Promise<ActionState>
 /** "Mulai": the match is being played (scores can be entered) but stays OFF AIR. */
 export async function startMatch(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    await requireAdmin();
+    await requireScoreKeeperOrAdmin();
     const supabase = await createClient();
     const m = await loadMatch(supabase, str(fd, "match_id"));
     if (m.status !== "scheduled") return;

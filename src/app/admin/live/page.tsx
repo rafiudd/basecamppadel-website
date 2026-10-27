@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/auth";
 import { courtLabel } from "@/lib/format";
 import { courtNameOf, loadCompetition } from "@/lib/compData";
 import { matchName } from "@/lib/compLabels";
@@ -17,6 +18,8 @@ import type { CompEvent, Court, Match } from "@/lib/database.types";
 export default async function LiveAdmin({ searchParams }: { searchParams: Promise<{ event?: string; match?: string; done?: string }> }) {
   const { event: eventParam, match: matchParam, done: doneParam } = await searchParams;
   const supabase = await createClient();
+  // score keepers only have this page: no links to the event pages
+  const { isAdmin: canManageEvents } = await getAdminUser();
   const [{ data: events }, { data: liveRows }, { data: courts }, { data: venues }, { data: freeformLive }, { data: players }] = await Promise.all([
     supabase.from("events").select("*").neq("status", "finished").order("event_date", { nullsFirst: false }).order("created_at", { ascending: false }),
     supabase.from("matches").select("event_id, is_live, status").neq("status", "finished").eq("is_bye", false).not("event_id", "is", null),
@@ -52,7 +55,7 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
       <div className="flex flex-col gap-5">
         <PageHeader title="Live" />
         {freeformSection}
-        <NoRunningEvent drafts={all.filter((e) => e.status === "draft")} />
+        <NoRunningEvent drafts={all.filter((e) => e.status === "draft")} canManageEvents={canManageEvents} />
       </div>
     );
   }
@@ -77,7 +80,7 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
       />
       {freeformSection}
       <LiveEventBar event={event} running={running} summaries={summaries} courts={data.courts.filter((c) => event.court_ids.includes(c.id))} />
-      {done && <FinishedNotice done={done} next={current} all={data.matches} dismissHref={`/admin/live?event=${event.id}${current ? `&match=${current.id}` : ""}`} />}
+      {done && <FinishedNotice done={done} next={current} all={data.matches} canManageEvents={canManageEvents} dismissHref={`/admin/live?event=${event.id}${current ? `&match=${current.id}` : ""}`} />}
       <div className="grid grid-cols-1 lg:grid-main-aside gap-6 items-start">
         {current ? (
           <LiveControl
@@ -86,9 +89,9 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
             label={[current.is_live ? "ON AIR" : current.status === "live" ? "Sedang dimainkan" : "Belum dimulai", matchName(current, data.matches), current.court_id ? courtNameOf(data.courts, current.court_id) : null].filter(Boolean).join(" · ")}
           />
         ) : (
-          <EmptyState>Belum ada match yang siap. {data.matches.length ? "Tunggu babak sebelumnya selesai." : "Buat jadwal dulu di halaman event."}</EmptyState>
+          <EmptyState>Belum ada match yang siap. {data.matches.length ? "Tunggu babak sebelumnya selesai." : canManageEvents ? "Buat jadwal dulu di halaman event." : "Jadwal match belum dibuat admin."}</EmptyState>
         )}
-        <MatchQueue data={data} currentId={current?.id ?? null} />
+        <MatchQueue data={data} currentId={current?.id ?? null} canManageEvents={canManageEvents} />
       </div>
     </div>
   );

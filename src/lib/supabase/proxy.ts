@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionToken } from "@/lib/server/session";
-import { accountHome } from "@/lib/accountRules";
+import { accountHome, canOpenAdminPath, staffRole, type StaffRole } from "@/lib/accountRules";
 import { getDb } from "@/lib/mongodb";
 
 export async function updateSession(request: NextRequest) {
@@ -16,17 +16,17 @@ export async function updateSession(request: NextRequest) {
   const isAdminArea = path.startsWith("/admin") && !path.startsWith("/admin/login");
   const isAdminLogin = path.startsWith("/admin/login");
 
-  // Always verify current admin/coach role from DB on admin routes so role revocation takes effect immediately
-  let liveRole: string | null = null;
+  // Always verify the current staff role from DB on admin routes so revocation / deactivation takes effect immediately
+  let liveRole: StaffRole | null = null;
   if (user && (isAdminArea || isAdminLogin)) {
     try {
       const db = await getDb();
       const adminRow = await db.collection("admin_users").findOne({
         $or: [{ _id: user.id }, { user_id: user.id }],
       } as any);
-      liveRole = (adminRow?.role as string | undefined) || null;
+      liveRole = staffRole(adminRow);
     } catch {
-      liveRole = user.role || null;
+      liveRole = staffRole({ role: user.role });
     }
   }
 
@@ -38,7 +38,7 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (liveRole !== "admin" && liveRole !== "coach") {
+    if (!liveRole) {
       // User biasa atau akses admin sudah dicabut: dilarang mengakses halaman admin
       const url = request.nextUrl.clone();
       url.pathname = "/";
@@ -46,13 +46,10 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (
-      liveRole === "coach" &&
-      !path.startsWith("/admin/coaching") &&
-      !path.startsWith("/admin/kelas")
-    ) {
+    // coach only the coaching area, score keeper only Live, /admin/users admin only
+    if (!canOpenAdminPath(liveRole, path)) {
       const url = request.nextUrl.clone();
-      url.pathname = "/admin/coaching";
+      url.pathname = accountHome(liveRole);
       url.search = "";
       return NextResponse.redirect(url);
     }
@@ -68,7 +65,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (isAdminLogin && user) {
-    if (liveRole === "admin" || liveRole === "coach") {
+    if (liveRole) {
       const url = request.nextUrl.clone();
       url.pathname = accountHome(liveRole);
       url.search = "";

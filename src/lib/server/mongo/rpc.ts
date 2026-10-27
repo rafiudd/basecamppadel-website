@@ -15,6 +15,7 @@ import {
   PLAY_DURATIONS,
   PLAY_DURATION_VALUES,
   SELF_LEVELS,
+  staffRole,
   type PlayDuration,
   type SelfLevel,
 } from "../../accountRules.ts";
@@ -27,17 +28,20 @@ import {
 
 async function getCallerAuth(db: Db, explicitUser?: any) {
   const user = explicitUser || (await getSessionUser());
-  if (!user) return { user: null, role: null, isAdmin: false, hasAdminAccess: false };
+  if (!user) return { user: null, role: null, isAdmin: false, hasAdminAccess: false, canScore: false };
 
   const adminDoc = await db.collection("admin_users").findOne({
     $or: [{ _id: user.id }, { user_id: user.id }],
   } as any);
-  const role = (adminDoc?.role as "admin" | "coach" | "scorekeeper" | undefined) || null;
+  const role = staffRole(adminDoc);
   return {
     user,
     role,
     isAdmin: role === "admin",
-    hasAdminAccess: role === "admin" || role === "coach" || role === "scorekeeper",
+    // coaching RPCs: admin or coach
+    hasAdminAccess: role === "admin" || role === "coach",
+    // match results from the Live page: admin or score keeper
+    canScore: role === "admin" || role === "scorekeeper",
   };
 }
 
@@ -792,8 +796,8 @@ export async function executeMongoRpc(
       }
 
       case "comp_set_result": {
-        const { user, isAdmin } = await getCallerAuth(db);
-        if (!isAdmin) {
+        const { user, canScore } = await getCallerAuth(db);
+        if (!canScore) {
           return { data: null, error: { message: "Not authorized" } };
         }
 

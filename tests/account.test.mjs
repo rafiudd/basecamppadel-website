@@ -85,3 +85,27 @@ test("akun: admin ke /admin/events, coach ke /admin/coaching, pemain ke /akun", 
   assert.equal(accountHome(null), "/akun");
   assert.equal(accountHome(undefined), "/akun");
 });
+
+test("staffRole: role dari admin_users, null kalau tidak dikenal atau dinonaktifkan", async () => {
+  const { staffRole, accountHome } = await import("../src/lib/accountRules.ts");
+  assert.equal(accountHome("scorekeeper"), "/admin/live");
+  assert.equal(staffRole({ role: "admin" }), "admin");
+  assert.equal(staffRole({ role: "coach", active: true }), "coach");
+  assert.equal(staffRole({ role: "scorekeeper", active: true }), "scorekeeper");
+  assert.equal(staffRole({ role: "scorekeeper", active: false }), null);
+  assert.equal(staffRole({ role: "authenticated" }), null);
+  assert.equal(staffRole(null), null);
+  assert.equal(staffRole(undefined), null);
+});
+
+test("canOpenAdminPath: coach hanya coaching, score keeper hanya live, admin semua", async () => {
+  const { canOpenAdminPath } = await import("../src/lib/accountRules.ts");
+  assert.ok(canOpenAdminPath("admin", "/admin/users/coach"));
+  assert.ok(canOpenAdminPath("coach", "/admin/coaching"));
+  assert.ok(canOpenAdminPath("coach", "/admin/coaching/rapor/1"));
+  assert.ok(!canOpenAdminPath("coach", "/admin/kelas"));
+  assert.ok(!canOpenAdminPath("coach", "/admin/coachingx"));
+  assert.ok(canOpenAdminPath("scorekeeper", "/admin/live/quick"));
+  assert.ok(!canOpenAdminPath("scorekeeper", "/admin/events/1"));
+  assert.ok(!canOpenAdminPath("scorekeeper", "/admin/users/scorekeeper"));
+});

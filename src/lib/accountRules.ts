@@ -102,7 +102,7 @@ export function profilePhoto(p: { photo_url: string | null; photo_source?: Photo
 
 /**
  * Where a signed-in account lands: the admin home for an admin_users role (coach only has the
- * coaching area), else the player profile.
+ * coaching area, score keeper only Live), else the player profile.
  */
 export function accountHome(role: string | null | undefined): string {
   return role === "admin"
@@ -112,4 +112,29 @@ export function accountHome(role: string | null | undefined): string {
     : role === "scorekeeper"
     ? "/admin/live"
     : "/akun";
+}
+
+export type StaffRole = "admin" | "coach" | "scorekeeper";
+
+/**
+ * The admin-area role an admin_users row grants, or null: no row, a role the app doesn't know, or a
+ * deactivated account (`active: false`; older rows without the field count as active).
+ */
+export function staffRole(row: Record<string, unknown> | null | undefined): StaffRole | null {
+  if (!row || row.active === false) return null;
+  return row.role === "admin" || row.role === "coach" || row.role === "scorekeeper" ? row.role : null;
+}
+
+/** Admin pages a role may open: admin everything, coach and score keeper only their home area. */
+export function canOpenAdminPath(role: StaffRole, pathname: string): boolean {
+  if (role === "admin") return true;
+  const area = accountHome(role);
+  return pathname === area || pathname.startsWith(`${area}/`);
+}
+
+/** Why an admin-area password login is refused (`staffRole` gave null for this row). */
+export function staffLoginError(row: Record<string, unknown> | null | undefined): string {
+  return row?.active === false
+    ? "Akun Anda sudah dinonaktifkan. Hubungi admin."
+    : "Akun Anda tidak memiliki hak akses admin, coach, atau score keeper.";
 }

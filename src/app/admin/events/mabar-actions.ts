@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireScoreKeeperOrAdmin } from "@/lib/auth";
 import type { ActionState } from "@/lib/actionState";
 import { isAmericanoFormat, isFixedFormat } from "@/lib/events";
 import { generateRound, pairKey, type Pool } from "@/lib/generator";
@@ -229,7 +229,7 @@ export async function saveMabarScore(eventId: string, genMatchId: string, a: num
 /** "Selesaikan Match" from Live / Skor Cepat on a mabar court (`matchId` = the matches row). */
 export async function finishMabarMatch(matchId: string, a: number, b: number): Promise<ActionState> {
   return guard(async () => {
-    await requireAdmin();
+    await requireScoreKeeperOrAdmin();
     const supabase = await createClient();
     const { data: m } = await supabase.from("matches").select("event_id, gen_match_id").eq("id", matchId).maybeSingle();
     if (!m?.event_id || !m.gen_match_id) throw new Error("Match mabar tidak ditemukan");

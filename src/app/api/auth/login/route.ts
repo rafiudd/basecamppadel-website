@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { setSessionCookie } from "@/lib/server/session";
 import bcrypt from "bcryptjs";
+import { staffLoginError, staffRole } from "@/lib/accountRules";
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,17 +30,15 @@ export async function POST(req: NextRequest) {
       $or: [{ user_id: userId }, { _id: userId }],
     } as any);
 
-    if (!adminRow || (adminRow.role !== "admin" && adminRow.role !== "coach" && adminRow.role !== "scorekeeper")) {
-      return NextResponse.json(
-        { error: "Akun Anda tidak memiliki hak akses admin, coach, atau score keeper." },
-        { status: 403 }
-      );
+    const role = staffRole(adminRow);
+    if (!adminRow || !role) {
+      return NextResponse.json({ error: staffLoginError(adminRow) }, { status: 403 });
     }
 
     await setSessionCookie({
       id: userId,
       email: user.email,
-      role: adminRow.role,
+      role,
       coach_id: adminRow.coach_id || null,
       user_metadata: user.raw_user_meta_data || {},
     });
@@ -49,7 +48,7 @@ export async function POST(req: NextRequest) {
       user: {
         id: userId,
         email: user.email,
-        role: adminRow?.role || null,
+        role,
       },
     });
   } catch (err: any) {

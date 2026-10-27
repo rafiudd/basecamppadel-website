@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { accountHome, googleIdentity, profilePhoto } from "@/lib/accountRules";
+import { accountHome, googleIdentity, profilePhoto, staffRole } from "@/lib/accountRules";
 
 /** `href`: where the nav chip goes, the admin area for an admin / coach, else the player profile. */
 export type AccountChip = { name: string; photoUrl: string | null; href: string; isStaff: boolean };
@@ -27,13 +27,14 @@ export function AccountChipProvider({ children }: { children: React.ReactNode })
         }
         const user = data.user;
         const profile = data.profile;
-        const staff = data.adminRow;
+        // a deactivated staff account is just a player account here
+        const role = staffRole(data.adminRow);
         const google = googleIdentity(user.user_metadata);
         setChip({
           name: profile?.nickname ?? (google.name || user.email || "Akun").split(/\s+/)[0],
           photoUrl: profile ? profilePhoto(profile, google.avatarUrl) : google.avatarUrl,
-          href: accountHome(staff?.role),
-          isStaff: !!staff,
+          href: accountHome(role),
+          isStaff: !!role,
         });
       })
       .catch(() => {

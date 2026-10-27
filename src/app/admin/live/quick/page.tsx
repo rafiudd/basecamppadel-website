@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getAdminUser } from "@/lib/auth";
 import { courtNameOf, loadCompetition } from "@/lib/compData";
 import { matchSection } from "@/lib/compLabels";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -10,6 +11,7 @@ import { pickCurrentMatch } from "@/components/admin/live/MatchQueue";
 export default async function QuickLiveAdmin({ searchParams }: { searchParams: Promise<{ match?: string; event?: string; done?: string }> }) {
   const { match: matchId, event: eventParam, done: doneParam } = await searchParams;
   const supabase = await createClient();
+  const { isAdmin: canManageEvents } = await getAdminUser();
 
   // the event: from the URL, else the event of the requested match, else the one ON AIR
   const { data: seed } = matchId
@@ -33,7 +35,7 @@ export default async function QuickLiveAdmin({ searchParams }: { searchParams: P
         }
       />
       {done && data && (
-        <FinishedNotice done={done} next={match} all={data.matches} dismissHref={`/admin/live/quick?event=${data.event.id}${match ? `&match=${match.id}` : ""}`} />
+        <FinishedNotice done={done} next={match} all={data.matches} canManageEvents={canManageEvents} dismissHref={`/admin/live/quick?event=${data.event.id}${match ? `&match=${match.id}` : ""}`} />
       )}
       {match && data ? (
         <>

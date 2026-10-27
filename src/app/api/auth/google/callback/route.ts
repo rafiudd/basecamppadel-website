@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { setSessionCookie } from "@/lib/server/session";
-import { accountStep, safeNext, stepPath } from "@/lib/accountRules";
+import { accountHome, accountStep, canOpenAdminPath, safeNext, stepPath, staffRole } from "@/lib/accountRules";
 import { createClient } from "@/lib/supabase/server";
 import { ensureDefaultPhoto } from "@/lib/accountPhoto";
 import crypto from "crypto";
@@ -154,16 +154,17 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    // 4. Check admin / coach role
+    // 4. Check admin / coach / score keeper role
     const adminRow = await db.collection("admin_users").findOne({
       $or: [{ user_id: userId }, { _id: userId }],
     } as any);
+    const role = staffRole(adminRow);
 
     // 5. Set session cookie
     await setSessionCookie({
       id: userId,
       email: cleanEmail,
-      role: adminRow?.role || "authenticated",
+      role: role || "authenticated",
       coach_id: adminRow?.coach_id || null,
       user_metadata: {
         name: googleUser.name,
@@ -173,13 +174,8 @@ export async function GET(request: NextRequest) {
     });
 
     // 6. Handle redirects
-    if (isAdmin) {
-      if (adminRow?.role === "admin") {
-        return NextResponse.redirect(`${origin}${next}`);
-      }
-      if (adminRow?.role === "coach") {
-        return NextResponse.redirect(`${origin}/admin/coaching`);
-      }
+    if (isAdmin && role) {
+      return NextResponse.redirect(`${origin}${canOpenAdminPath(role, next) ? next : accountHome(role)}`);
     }
 
     // Player flow
