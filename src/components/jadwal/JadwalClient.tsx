@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { EventCard } from "@/components/jadwal/EventCard";
 import type { EventItem } from "@/lib/events";
 
@@ -8,11 +8,23 @@ type Filter = "all" | "mabar" | "kompetisi";
 
 export function JadwalClient({ initialEvents }: { initialEvents: EventItem[] }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
   const events = initialEvents;
 
   const filterItem = (e: EventItem) => {
     if (filter === "all") return true;
     return e.type === filter;
+  };
+
+  const handleFilterChange = (newFilter: Filter) => {
+    setFilter(newFilter);
+    if (tabsContainerRef.current) {
+      const rect = tabsContainerRef.current.getBoundingClientRect();
+      const topOffset = window.innerWidth >= 768 ? 88 : 56;
+      if (rect.top < topOffset) {
+        tabsContainerRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    }
   };
 
   const upcomingEvents = events.filter((e) => e.status === "live" || e.status === "open");
@@ -25,43 +37,50 @@ export function JadwalClient({ initialEvents }: { initialEvents: EventItem[] }) 
   const kompCount = events.filter((e) => e.type === "kompetisi").length;
 
   return (
-    <section className="px-6 md:px-12 py-8 md:pt-12 md:pb-[72px] bg-snow">
-      <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-8">
-        {/* Filter Pills */}
-        <div className="flex gap-2 flex-wrap items-center">
-          <button
-            type="button"
-            onClick={() => setFilter("all")}
-            className={`rounded-full min-h-[44px] px-5 font-sans font-bold text-sm transition-colors cursor-pointer border-0 whitespace-nowrap ${
-              filter === "all"
-                ? "bg-indigo text-snow"
-                : "bg-ink/6 text-ink hover:bg-ink/10"
-            }`}
-          >
-            Semua <span className="font-normal opacity-70">{events.length}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("mabar")}
-            className={`rounded-full min-h-[44px] px-5 font-sans font-bold text-sm transition-colors cursor-pointer border-0 whitespace-nowrap ${
-              filter === "mabar"
-                ? "bg-indigo text-snow"
-                : "bg-ink/6 text-ink hover:bg-ink/10"
-            }`}
-          >
-            Mabar <span className="font-normal opacity-70">{mabarCount}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("kompetisi")}
-            className={`rounded-full min-h-[44px] px-5 font-sans font-bold text-sm transition-colors cursor-pointer border-0 whitespace-nowrap ${
-              filter === "kompetisi"
-                ? "bg-indigo text-snow"
-                : "bg-ink/6 text-ink hover:bg-ink/10"
-            }`}
-          >
-            Kompetisi <span className="font-normal opacity-70">{kompCount}</span>
-          </button>
+    <section className="px-6 md:px-12 pt-6 md:pt-8 pb-[72px] bg-snow">
+      <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-6 md:gap-8">
+        {/* Sticky Filter Bar: Seamless sticky background matching event detail */}
+        <div
+          ref={tabsContainerRef}
+          className="sticky top-[calc(56px+env(safe-area-inset-top,0px))] md:top-[88px] z-20 -mx-6 px-6 md:-mx-12 md:px-12 py-2.5 bg-snow/95 backdrop-blur-md"
+        >
+          <div className="w-full max-w-[1440px] mx-auto">
+            <div className="flex gap-2 items-center overflow-x-auto py-1 scrollbar-none">
+              <button
+                type="button"
+                onClick={() => handleFilterChange("all")}
+                className={`flex-none rounded-full min-h-[42px] px-5 font-sans font-bold text-sm transition-all border-0 cursor-pointer select-none whitespace-nowrap active:scale-95 ${
+                  filter === "all"
+                    ? "bg-indigo text-snow shadow-xs"
+                    : "bg-ink/6 text-ink/75 hover:bg-ink/10 hover:text-ink"
+                }`}
+              >
+                Semua <span className="font-normal opacity-70">{events.length}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFilterChange("mabar")}
+                className={`flex-none rounded-full min-h-[42px] px-5 font-sans font-bold text-sm transition-all border-0 cursor-pointer select-none whitespace-nowrap active:scale-95 ${
+                  filter === "mabar"
+                    ? "bg-indigo text-snow shadow-xs"
+                    : "bg-ink/6 text-ink/75 hover:bg-ink/10 hover:text-ink"
+                }`}
+              >
+                Mabar <span className="font-normal opacity-70">{mabarCount}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFilterChange("kompetisi")}
+                className={`flex-none rounded-full min-h-[42px] px-5 font-sans font-bold text-sm transition-all border-0 cursor-pointer select-none whitespace-nowrap active:scale-95 ${
+                  filter === "kompetisi"
+                    ? "bg-indigo text-snow shadow-xs"
+                    : "bg-ink/6 text-ink/75 hover:bg-ink/10 hover:text-ink"
+                }`}
+              >
+                Kompetisi <span className="font-normal opacity-70">{kompCount}</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Section: Akan Datang */}

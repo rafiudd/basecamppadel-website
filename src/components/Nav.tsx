@@ -84,9 +84,9 @@ export function Nav() {
       </nav>
 
 
-      {/* Mobile top bar: just branding — nav lives in the bottom tab bar instead */}
+      {/* Mobile top bar: Logo on left, Account profile picture on right */}
       <nav
-        className="md:hidden sticky top-0 z-30 flex items-center justify-center px-4 h-14 box-content bg-ink border-b border-snow/10"
+        className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14 box-content bg-ink border-b border-snow/10"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <Link href="/" className="flex items-center gap-2 no-underline">
@@ -95,6 +95,30 @@ export function Nav() {
             BASECAMP <span className="text-coral">PADEL</span>
           </div>
         </Link>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href={account?.href ?? (account === null ? `/masuk?next=${encodeURIComponent(pathname)}` : "/akun")}
+            title={account?.isStaff ? "Buka halaman admin" : "Akun saya"}
+            aria-label="Akun"
+            className={`relative flex items-center justify-center w-8 h-8 rounded-full no-underline transition-transform active:scale-95 ${
+              pathname.startsWith("/akun") || pathname.startsWith("/masuk") || Boolean(account?.isStaff && pathname.startsWith("/admin"))
+                ? "ring-2 ring-coral"
+                : "ring-1 ring-snow/20 hover:ring-snow/40"
+            }`}
+          >
+            {account?.name ? (
+              <Avatar name={account.name} photoUrl={account.photoUrl} size={32} />
+            ) : (
+              <span className="w-full h-full rounded-full bg-snow/10 flex items-center justify-center text-snow/75">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 21a8 8 0 0 1 16 0" />
+                </svg>
+              </span>
+            )}
+          </Link>
+        </div>
       </nav>
     </>
   );
