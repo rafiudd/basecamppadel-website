@@ -38,8 +38,10 @@ const TABS = [
 export type ProfileTab = (typeof TABS)[number]["id"];
 
 export function parseTab(tab: string | undefined): ProfileTab {
+  if (tab === "notes") return "catatan";
   return TABS.some((t) => t.id === tab) ? (tab as ProfileTab) : "statistik";
 }
+
 
 /** Outline pill on the indigo header ("Edit profil"). */
 const headerButton =

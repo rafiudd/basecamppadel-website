@@ -463,31 +463,30 @@ export function normalizeWhatsAppNumber(phone: string): string {
   return clean;
 }
 
-export function generateCoachingReportNotificationMessage({
-  evaluation,
-  nextPractice,
-}: {
+export function generateCoachingReportNotificationMessage(params?: {
+  playerName?: string | null;
+  coachName?: string | null;
   evaluation?: string | null;
   nextPractice?: string | null;
+  linkRapor?: string | null;
 }): string {
-  const parts: string[] = ["Halo! Catatan latihan dari coach sudah keluar nih 🎾\n"];
+  const nama = (params?.playerName || "").trim() || "Pemain";
+  const rawCoach = (params?.coachName || "").trim();
+  const namaCoach = rawCoach ? rawCoach.replace(/^coach\s+/i, "").trim() : "Basecamp";
+  const evaluasi = (params?.evaluation || "").trim() || "-";
+  const fokus = (params?.nextPractice || "").trim() || "-";
+  const linkRapor = (params?.linkRapor || "").trim() || "https://www.basecamppadel.id/akun?tab=catatan";
 
-  const cleanEval = (evaluation || "").trim();
-  if (cleanEval) {
-    parts.push(`*Evaluasi:*\n${cleanEval}\n`);
-  }
-
-  const cleanPractice = (nextPractice || "").trim();
-  if (cleanPractice) {
-    parts.push(`*Latihan berikutnya:*\n${cleanPractice}\n`);
-  }
-
-  parts.push(
-    "Untuk detail rapor lengkap dan perkembangan skill kamu, silakan cek di:\nhttps://www.basecamppadel.id/akun?tab=notes\n\nSampai ketemu di lapangan!"
-  );
-
-  return parts.join("\n").trim();
+  return [
+    `Halo ${nama}! 🎾`,
+    `Makasih udah join sesi latihan kemarin bareng Coach ${namaCoach}. Catatan evaluasi kamu udah siap nih:`,
+    `✨ Yang udah oke:\n${evaluasi}`,
+    `🎯 Fokus sesi berikutnya:\n${fokus}`,
+    `Detail rapor lengkap & progres skill kamu bisa langsung dicek di sini ya:\n👉 ${linkRapor}`,
+    `Sampai ketemu di sesi berikutnya! 🔥\nTim Basecamp Padel`,
+  ].join("\n\n");
 }
+
 
 export function generateCoachingWhatsAppUrl(phone: string, message: string): string {
   const clean = normalizeWhatsAppNumber(phone);

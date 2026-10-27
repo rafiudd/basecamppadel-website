@@ -6,6 +6,10 @@ import { guardResult } from "@/lib/server/action";
 import { requireAdminOrCoach, requireAdmin } from "@/lib/auth";
 import { computePlayerLevel, LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
 import { syncSessionStatus } from "@/lib/coaching-db";
+import { sendKirimdevWhatsAppMessage, checkKirimdevStatus } from "@/lib/server/kirimdev";
+import { sendBrevoEmail, generateCoachingReportEmailHtml, checkBrevoStatus, isValidEmail } from "@/lib/server/brevo";
+import { generateCoachingReportNotificationMessage } from "@/lib/coachingRules";
+import { loadNextCoachingSession } from "@/lib/profileData";
 
 /**
  * Sets a player's level through coaching_apply_level (0020): players is admin-write only under RLS,
@@ -367,3 +371,322 @@ export async function updatePlayerContactAction(data: {
     return { success: true };
   });
 }
+
+export async function sendCoachingReportWhatsAppAction(data: {
+  playerId: string;
+  whatsapp: string;
+  message: string;
+  sessionId?: string;
+}) {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    const supabase = await createClient();
+
+    let cleanWhatsapp: string | null = null;
+    if (data.whatsapp?.trim()) {
+      cleanWhatsapp = data.whatsapp.replace(/[^0-9]/g, "");
+      if (cleanWhatsapp.startsWith("0")) {
+        cleanWhatsapp = "62" + cleanWhatsapp.slice(1);
+      }
+      try {
+        await supabase
+          .from("players")
+          .update({ whatsapp: cleanWhatsapp })
+          .eq("id", data.playerId);
+      } catch {
+        // non-blocking
+      }
+    }
+
+    const result = await sendKirimdevWhatsAppMessage({
+      to: cleanWhatsapp || data.whatsapp,
+      message: data.message,
+      previewUrl: true,
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || "Gagal mengirim pesan melalui provider WhatsApp Kirimdev.");
+    }
+
+    if (data.sessionId) {
+      revalidatePath("/admin/coaching");
+    }
+
+    return {
+      success: true,
+      messageId: result.messageId,
+    };
+  });
+}
+
+export async function getKirimdevConfigStatusAction() {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    return await checkKirimdevStatus();
+  });
+}
+
+export async function sendCoachingReportEmailAction(data: {
+  playerId: string;
+  email: string;
+  playerName?: string;
+  coachName?: string;
+  sessionTitle?: string;
+  sessionDate?: string;
+  evaluation?: string;
+  nextPractice?: string;
+  message?: string;
+  sessionId?: string;
+  linkRapor?: string;
+}) {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    const supabase = await createClient();
+
+    let { playerName, coachName, sessionTitle, sessionDate } = data;
+
+    if (data.sessionId && (!sessionTitle || !sessionDate || !coachName)) {
+      const { data: sess } = await supabase
+        .from("coaching_sessions")
+        .select("title, session_date")
+        .eq("id", data.sessionId)
+        .maybeSingle();
+      if (sess) {
+        if (!sessionTitle) sessionTitle = sess.title;
+        if (!sessionDate) sessionDate = sess.session_date;
+      }
+
+      if (!coachName) {
+        const { data: sp } = await supabase
+          .from("coaching_session_players")
+          .select("group_id, coaching_groups(coach_id, coaches(name))")
+          .eq("session_id", data.sessionId)
+          .eq("player_id", data.playerId)
+          .maybeSingle();
+        const cName = (sp as any)?.coaching_groups?.coaches?.name;
+        if (cName) coachName = cName;
+      }
+    }
+
+    if (!playerName) {
+      const { data: pl } = await supabase
+        .from("players")
+        .select("name")
+        .eq("id", data.playerId)
+        .maybeSingle();
+      if (pl?.name) playerName = pl.name;
+    }
+
+    const nextSession = await loadNextCoachingSession(supabase);
+
+    const subject = playerName
+      ? `Rapor latihan kamu udah keluar, ${playerName}`
+      : "Rapor latihan kamu udah keluar";
+
+    const linkRapor = data.linkRapor || "https://www.basecamppadel.id/akun?tab=catatan";
+
+    const htmlContent = generateCoachingReportEmailHtml({
+      playerName,
+      coachName,
+      sessionTitle,
+      sessionDate,
+      evaluation: data.evaluation,
+      nextPractice: data.nextPractice,
+      linkRapor,
+      nextSession,
+    });
+
+    const result = await sendBrevoEmail({
+      to: {
+        email: data.email,
+        name: playerName,
+      },
+      subject,
+      htmlContent,
+      textContent: data.message,
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || "Gagal mengirim email via Brevo.");
+    }
+
+    if (data.sessionId) {
+      revalidatePath("/admin/coaching");
+    }
+
+    return {
+      success: true,
+      messageId: result.messageId,
+    };
+  });
+}
+
+export async function getBrevoConfigStatusAction() {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    return await checkBrevoStatus();
+  });
+}
+
+export async function sendAutoCoachingReportNotificationsAction(data: {
+  playerId: string;
+  playerName?: string;
+  coachName?: string;
+  whatsapp?: string | null;
+  email?: string | null;
+  sessionId?: string;
+  sessionTitle?: string;
+  sessionDate?: string;
+  evaluation?: string;
+  nextPractice?: string;
+  linkRapor?: string;
+}) {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    const supabase = await createClient();
+
+    let { playerName, coachName, sessionTitle, sessionDate, whatsapp, email } = data;
+
+    if (data.sessionId && (!sessionTitle || !sessionDate || !coachName)) {
+      const { data: sess } = await supabase
+        .from("coaching_sessions")
+        .select("title, session_date")
+        .eq("id", data.sessionId)
+        .maybeSingle();
+      if (sess) {
+        if (!sessionTitle) sessionTitle = sess.title;
+        if (!sessionDate) sessionDate = sess.session_date;
+      }
+
+      if (!coachName) {
+        const { data: sp } = await supabase
+          .from("coaching_session_players")
+          .select("group_id, coaching_groups(coach_id, coaches(name))")
+          .eq("session_id", data.sessionId)
+          .eq("player_id", data.playerId)
+          .maybeSingle();
+        const cName = (sp as any)?.coaching_groups?.coaches?.name;
+        if (cName) coachName = cName;
+      }
+    }
+
+    if (!playerName || !whatsapp || !email) {
+      const { data: pl } = await supabase
+        .from("players")
+        .select("name, whatsapp")
+        .eq("id", data.playerId)
+        .maybeSingle();
+      if (pl) {
+        if (!playerName) playerName = pl.name;
+        if (!whatsapp) whatsapp = pl.whatsapp;
+      }
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("email, whatsapp")
+        .eq("player_id", data.playerId)
+        .maybeSingle();
+      if (prof) {
+        if (!email) email = prof.email;
+        if (!whatsapp) whatsapp = prof.whatsapp;
+      }
+    }
+
+    const results = {
+      waSent: false,
+      emailSent: false,
+      waSkipped: false,
+      emailSkipped: false,
+      waError: null as string | null,
+      emailError: null as string | null,
+    };
+
+    const linkRapor = data.linkRapor || "https://www.basecamppadel.id/akun?tab=catatan";
+
+    const message = generateCoachingReportNotificationMessage({
+      playerName,
+      coachName,
+      evaluation: data.evaluation,
+      nextPractice: data.nextPractice,
+      linkRapor,
+    });
+
+    // 1. WhatsApp notification via Kirimdev
+    const rawWa = whatsapp?.trim();
+    if (rawWa) {
+      let cleanWhatsapp = rawWa.replace(/[^0-9]/g, "");
+      if (cleanWhatsapp.startsWith("0")) {
+        cleanWhatsapp = "62" + cleanWhatsapp.slice(1);
+      }
+
+      try {
+        const waRes = await sendKirimdevWhatsAppMessage({
+          to: cleanWhatsapp,
+          message,
+          previewUrl: true,
+        });
+
+        if (waRes.success) {
+          results.waSent = true;
+        } else {
+          results.waError = waRes.error || "Gagal mengirim WhatsApp via Kirimdev";
+        }
+      } catch (err: any) {
+        results.waError = err?.message || "Kesalahan sistem saat mengirim WhatsApp";
+      }
+    } else {
+      results.waSkipped = true;
+    }
+
+    // 2. Email notification via Brevo
+    const rawEmail = email?.trim();
+    if (rawEmail && isValidEmail(rawEmail)) {
+      try {
+        const nextSession = await loadNextCoachingSession(supabase);
+
+        const subject = playerName
+          ? `Rapor latihan kamu udah keluar, ${playerName}`
+          : "Rapor latihan kamu udah keluar";
+
+        const htmlContent = generateCoachingReportEmailHtml({
+          playerName,
+          coachName,
+          sessionTitle,
+          sessionDate,
+          evaluation: data.evaluation,
+          nextPractice: data.nextPractice,
+          linkRapor,
+          nextSession,
+        });
+
+        const emailRes = await sendBrevoEmail({
+          to: {
+            email: rawEmail,
+            name: playerName,
+          },
+          subject,
+          htmlContent,
+          textContent: message,
+        });
+
+        if (emailRes.success) {
+          results.emailSent = true;
+        } else {
+          results.emailError = emailRes.error || "Gagal mengirim email via Brevo";
+        }
+      } catch (err: any) {
+        results.emailError = err?.message || "Kesalahan sistem saat mengirim email";
+      }
+    } else {
+      results.emailSkipped = true;
+    }
+
+    if (data.sessionId) {
+      revalidatePath("/admin/coaching");
+    }
+
+    return results;
+  });
+}
+
+
+
