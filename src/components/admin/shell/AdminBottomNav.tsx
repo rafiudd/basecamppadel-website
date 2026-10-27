@@ -2,26 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ADMIN_NAV, isActive } from "./nav";
+import type { StaffRole } from "@/lib/accountRules";
+import { MOBILE_NAV, isActive, navFor } from "./nav";
 
-const MOBILE_NAV = [...ADMIN_NAV].sort((a, b) => a.mobileOrder - b.mobileOrder);
-
-/** Phone tab bar, fixed to the bottom (hidden from md up, where the header menu shows). */
-export function AdminBottomNav({
-  isCoachOnly,
-  isScoreKeeperOnly,
-  isAdmin,
-}: {
-  isCoachOnly?: boolean;
-  isScoreKeeperOnly?: boolean;
-  isAdmin?: boolean;
-}) {
+/** Phone tab bar, fixed to the bottom (hidden from md up, where the side menu shows). */
+export function AdminBottomNav({ role }: { role: StaffRole }) {
   const pathname = usePathname();
-  const navItems = isCoachOnly
-    ? MOBILE_NAV.filter((l) => l.href.startsWith("/admin/coaching") || l.href.startsWith("/admin/kelas"))
-    : isScoreKeeperOnly
-    ? MOBILE_NAV.filter((l) => l.href.startsWith("/admin/live"))
-    : MOBILE_NAV.filter((l) => !l.adminOnly);
+  const navItems = navFor(role, MOBILE_NAV);
 
   return (
     <nav

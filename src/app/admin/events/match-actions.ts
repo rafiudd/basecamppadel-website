@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireScoreKeeperOrAdmin } from "@/lib/auth";
 import {
   assignGroupSlots,
   assignSlots,
@@ -176,11 +176,14 @@ export async function setCompResult(
   gamesB: number,
   wo: Serve | null = null,
 ): Promise<ActionState> {
-  return guard(() => applyResult(matchId, gamesA, gamesB, wo));
+  return guard(async () => {
+    await requireScoreKeeperOrAdmin();
+    await applyResult(matchId, gamesA, gamesB, wo);
+  });
 }
 
+/** Callers check access first: Selesaikan Match is open to score keepers, Edit skor is admin only. */
 async function applyResult(matchId: string, gamesA: number, gamesB: number, wo: Serve | null) {
-  await requireAdmin();
   const supabase = await createClient();
   const { error } = await supabase.rpc("comp_set_result", { p_match_id: matchId, p_games_a: gamesA, p_games_b: gamesB, p_wo: wo });
   if (error) throw new Error(error.message);
@@ -192,6 +195,7 @@ async function applyResult(matchId: string, gamesA: number, gamesB: number, wo: 
 /** "Edit skor" form on the Match tab. */
 export async function correctScore(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
+    await requireAdmin();
     const wo = str(fd, "wo");
     await applyResult(str(fd, "match_id"), int(fd, "games_a", 0), int(fd, "games_b", 0), wo === "A" || wo === "B" ? wo : null);
   });

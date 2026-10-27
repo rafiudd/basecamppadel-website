@@ -4,9 +4,21 @@ import type { Match } from "@/lib/database.types";
 
 /**
  * Shown after "Selesaikan match": the result that was just saved, and which match the control moved
- * on to (or that there is none left).
+ * on to (or that there is none left). The event-page link is admin only (`canManageEvents`).
  */
-export function FinishedNotice({ done, next, all, dismissHref }: { done: Match; next: Match | null; all: Match[]; dismissHref: string }) {
+export function FinishedNotice({
+  done,
+  next,
+  all,
+  dismissHref,
+  canManageEvents = true,
+}: {
+  done: Match;
+  next: Match | null;
+  all: Match[];
+  dismissHref: string;
+  canManageEvents?: boolean;
+}) {
   const result = done.is_wo
     ? `${done.winner === "A" ? done.team_a_name : done.team_b_name} menang WO`
     : `${done.team_a_name} ${done.team_a_games}–${done.team_b_games} ${done.team_b_name}`;
@@ -20,8 +32,13 @@ export function FinishedNotice({ done, next, all, dismissHref }: { done: Match; 
             <>Sekarang: <b className="text-snow">{matchName(next, all)}</b> · {next.team_a_name} vs {next.team_b_name}</>
           ) : (
             <>
-              Tidak ada match lain yang siap.{" "}
-              <Link href={`/admin/events/${done.event_id}`} className="text-volt no-underline">Buka halaman event →</Link>
+              Tidak ada match lain yang siap.
+              {canManageEvents && (
+                <>
+                  {" "}
+                  <Link href={`/admin/events/${done.event_id}`} className="text-volt no-underline">Buka halaman event →</Link>
+                </>
+              )}
             </>
           )}
         </div>

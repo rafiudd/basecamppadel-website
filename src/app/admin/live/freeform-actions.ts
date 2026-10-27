@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireScoreKeeperOrAdmin } from "@/lib/auth";
 import { guard, str, type Supa } from "@/lib/server/action";
 import type { ActionState } from "@/lib/actionState";
 import type { Serve } from "@/lib/database.types";
@@ -27,7 +27,7 @@ async function resolveTeam(supabase: Supa, fd: FormData, side: "a" | "b") {
 
 export async function startFreeformMatch(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    await requireAdmin();
+    await requireScoreKeeperOrAdmin();
     const supabase = await createClient();
     const courtId = str(fd, "court_id") || null;
     const streamUrl = str(fd, "stream_url") || null;
@@ -63,7 +63,7 @@ export async function startFreeformMatch(_: ActionState, fd: FormData): Promise<
 /** Edits team names / stream link of a running freeform match (its score is controlled by LiveControl). */
 export async function updateFreeformMatch(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    await requireAdmin();
+    await requireScoreKeeperOrAdmin();
     const supabase = await createClient();
     const id = str(fd, "match_id");
     const teamA = await resolveTeam(supabase, fd, "a");
@@ -85,7 +85,7 @@ export async function updateFreeformMatch(_: ActionState, fd: FormData): Promise
  *  names, clearing any previously picked player ids so they don't go stale against the new text. */
 export async function renameFreeformMatch(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    await requireAdmin();
+    await requireScoreKeeperOrAdmin();
     const supabase = await createClient();
     const id = str(fd, "match_id");
     const row = {
@@ -103,7 +103,7 @@ export async function renameFreeformMatch(_: ActionState, fd: FormData): Promise
 /** "Selesaikan match" for a freeform match — just the final score, no bracket/mabar/leaderboard writes. */
 export async function finishFreeformMatch(matchId: string, gamesA: number, gamesB: number, wo: Serve | null = null): Promise<ActionState> {
   return guard(async () => {
-    await requireAdmin();
+    await requireScoreKeeperOrAdmin();
     const supabase = await createClient();
     const { data: m } = await supabase.from("matches").select("event_id").eq("id", matchId).maybeSingle();
     if (!m || m.event_id) throw new Error("Match tanpa event tidak ditemukan");
@@ -120,7 +120,7 @@ export async function finishFreeformMatch(matchId: string, gamesA: number, games
 /** Discards a freeform match entirely (no score to keep — operator just wants it gone). */
 export async function deleteFreeformMatch(_: ActionState, fd: FormData): Promise<ActionState> {
   return guard(async () => {
-    await requireAdmin();
+    await requireScoreKeeperOrAdmin();
     const supabase = await createClient();
     const id = str(fd, "match_id");
     const { error } = await supabase.from("matches").delete().eq("id", id).is("event_id", null);

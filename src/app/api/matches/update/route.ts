@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { getSessionUser } from "@/lib/server/session";
 import { sendPushToAll } from "@/lib/webpush";
+import { staffRole } from "@/lib/accountRules";
 
 // Must match the real Match fields (src/lib/database.types.ts) — useMatchControl.ts sends
 // Partial<Match> patches straight through this whitelist, so a stale/wrong name here silently
@@ -39,7 +40,8 @@ export async function POST(req: NextRequest) {
       $or: [{ _id: user.id }, { user_id: user.id }],
     } as any);
 
-    if (adminRow?.role !== "admin" && adminRow?.role !== "scorekeeper") {
+    const role = staffRole(adminRow);
+    if (role !== "admin" && role !== "scorekeeper") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 

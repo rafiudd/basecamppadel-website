@@ -538,9 +538,9 @@ export type Database = {
         Relationships: [];
       };
       admin_users: {
-        Row: { user_id: string; created_at: string; role?: string; coach_id?: string | null };
-        Insert: { user_id: string; created_at?: string; role?: string; coach_id?: string | null };
-        Update: { user_id?: string; role?: string; coach_id?: string | null };
+        Row: { user_id: string; created_at: string; role?: string; coach_id?: string | null; active?: boolean };
+        Insert: { user_id: string; created_at?: string; role?: string; coach_id?: string | null; active?: boolean };
+        Update: { user_id?: string; role?: string; coach_id?: string | null; active?: boolean };
         Relationships: [];
       };
       venues: {

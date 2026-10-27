@@ -12,9 +12,10 @@ const rank = (m: Match) => (m.is_live ? 0 : m.status === "live" ? 1 : awaitingTe
 
 /**
  * Unfinished matches of the event in two groups, "Sedang berjalan" and "Berikutnya"; each opens in
- * the score control, and the one being controlled is highlighted.
+ * the score control, and the one being controlled is highlighted. The link to the event page is
+ * admin only (`canManageEvents`).
  */
-export function MatchQueue({ data, currentId }: { data: CompetitionData; currentId: string | null }) {
+export function MatchQueue({ data, currentId, canManageEvents = true }: { data: CompetitionData; currentId: string | null; canManageEvents?: boolean }) {
   const { event, matches, courts } = data;
   const all = matches
     .filter((m) => !m.is_bye && m.status !== "finished")
@@ -74,10 +75,14 @@ export function MatchQueue({ data, currentId }: { data: CompetitionData; current
         </>
       )}
       {!all.length && <div className="py-3 border-t border-snow/8 text-caption text-snow/60">Semua match sudah selesai.</div>}
-      <Link href={`/admin/events/${event.id}${event.type === "mabar" ? "" : `?tab=${event.bracket_generated ? "playoff" : "match"}`}`} className="pt-3 border-t border-snow/8 text-sm font-bold text-volt no-underline">
-        {hidden > 0 && <span className="font-semibold text-snow/70">+{hidden} match lagi · </span>}
-        {event.type === "mabar" ? "Lihat semua ronde →" : event.bracket_generated ? "Lihat bracket →" : "Lihat semua match →"}
-      </Link>
+      {canManageEvents ? (
+        <Link href={`/admin/events/${event.id}${event.type === "mabar" ? "" : `?tab=${event.bracket_generated ? "playoff" : "match"}`}`} className="pt-3 border-t border-snow/8 text-sm font-bold text-volt no-underline">
+          {hidden > 0 && <span className="font-semibold text-snow/70">+{hidden} match lagi · </span>}
+          {event.type === "mabar" ? "Lihat semua ronde →" : event.bracket_generated ? "Lihat bracket →" : "Lihat semua match →"}
+        </Link>
+      ) : (
+        hidden > 0 && <div className="pt-3 border-t border-snow/8 text-sm font-semibold text-snow/70">+{hidden} match lagi</div>
+      )}
     </div>
   );
 }

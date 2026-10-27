@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { MountainMark } from "@/components/Logo";
 import { getAdminUser } from "@/lib/auth";
-import { AdminNavLinks } from "@/components/admin/shell/AdminNavLinks";
+import { accountHome, canOpenAdminPath, type StaffRole } from "@/lib/accountRules";
+import { AdminSideNav } from "@/components/admin/shell/AdminSideNav";
 import { AdminBottomNav } from "@/components/admin/shell/AdminBottomNav";
 import { AdminAccountMenu } from "@/components/admin/shell/AdminAccountMenu";
 import { Toaster } from "@/components/ui/Toast";
@@ -11,6 +12,8 @@ import { SignOutForm } from "@/components/admin/shell/SignOutForm";
 
 export const metadata = { title: "Admin — Basecamp Padel", robots: { index: false } };
 export const dynamic = "force-dynamic";
+
+const ROLE_LABEL: Record<StaffRole, string> = { admin: "Admin", coach: "Coach", scorekeeper: "Score Keeper" };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -22,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 }
 
 async function AdminContent({ children }: { children: React.ReactNode }) {
-  const { user, isAdmin, isCoach, isScoreKeeper } = await getAdminUser();
+  const { user, role } = await getAdminUser();
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") ?? "";
 
@@ -34,56 +37,49 @@ async function AdminContent({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // User biasa: dilarang masuk area admin sama sekali
-  if (!isAdmin && !isCoach && !isScoreKeeper) {
+  // User biasa (atau akun staf yang dinonaktifkan): dilarang masuk area admin sama sekali
+  if (!role) {
     redirect("/");
   }
 
-  const isCoachOnly = !isAdmin && isCoach;
-  const isScoreKeeperOnly = !isAdmin && isScoreKeeper;
-
-  // Coach hanya boleh mengakses area coaching & kelas
-  if (isCoachOnly && pathname && !pathname.startsWith("/admin/coaching") && !pathname.startsWith("/admin/kelas")) {
-    redirect("/admin/coaching");
+  // Coach hanya area coaching, score keeper hanya area live; /admin/users hanya admin
+  const home = accountHome(role);
+  if (pathname && !canOpenAdminPath(role, pathname)) {
+    redirect(home);
   }
 
-  // Score keeper hanya boleh mengakses area live
-  if (isScoreKeeperOnly && pathname && !pathname.startsWith("/admin/live")) {
-    redirect("/admin/live");
-  }
-
-  // User management pages are strictly for admin
-  if (!isAdmin && pathname && pathname.startsWith("/admin/users")) {
-    redirect(isCoachOnly ? "/admin/coaching" : isScoreKeeperOnly ? "/admin/live" : "/admin/events");
-  }
-
-  const roleLabel = isCoachOnly ? "Coach" : isScoreKeeperOnly ? "Score Keeper" : "Admin";
-  const homeHref = isCoachOnly ? "/admin/coaching" : isScoreKeeperOnly ? "/admin/live" : "/admin/events";
+  // the side menu is narrow: role label under the name there, next to it in the phone header
+  const brand = (stacked: boolean) => (
+    <Link href={home} className="flex items-center gap-2.5 no-underline text-snow">
+      <MountainMark size={28} />
+      <div className="font-display font-bold text-base leading-none whitespace-nowrap">
+        BASECAMP <span className="text-coral">PADEL</span>
+        <span className={`font-sans font-medium text-xs text-snow/65 ${stacked ? "block mt-1" : "ml-2"}`}>{ROLE_LABEL[role]}</span>
+      </div>
+    </Link>
+  );
 
   return (
-    <div className="min-h-screen bg-ink text-snow font-sans flex flex-col">
-      <header className="flex-none flex items-center justify-between gap-3 md:gap-4 h-14 md:h-auto pl-4 pr-2 py-1.5 md:px-6 md:py-3 border-b border-snow/10">
-        <Link href={homeHref} className="flex items-center gap-2.5 no-underline text-snow">
-          <MountainMark size={28} />
-          <div className="font-display font-bold text-base leading-none whitespace-nowrap">
-            BASECAMP <span className="text-coral">PADEL</span>
-            <span className="font-sans font-medium text-xs text-snow/65 ml-2">{roleLabel}</span>
-          </div>
-        </Link>
-        <div className="hidden md:block min-w-0">
-          <AdminNavLinks isCoachOnly={isCoachOnly} isScoreKeeperOnly={isScoreKeeperOnly} isAdmin={isAdmin} />
+    <div className="min-h-screen bg-ink text-snow font-sans md:flex">
+      <aside className="hidden md:flex flex-col flex-none w-60 sticky top-0 h-screen border-r border-snow/10">
+        <div className="flex-none px-5 pt-5 pb-6">{brand(true)}</div>
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-4">
+          <AdminSideNav role={role} />
         </div>
-        <div className="hidden md:flex items-center gap-3 text-caption text-snow/65">
-          <span className="hidden lg:inline">{user.email}</span>
+        <div className="flex-none border-t border-snow/10 px-5 py-4 flex flex-col gap-3 text-caption text-snow/65">
+          <span className="truncate" title={user.email ?? ""}>{user.email}</span>
           <Link href="/" className="text-snow/80 no-underline hover:text-volt whitespace-nowrap">Lihat situs ↗</Link>
-          <SignOutForm className="btn min-h-10 px-4.5 py-2.5 tracking-button whitespace-nowrap" />
+          <SignOutForm className="btn w-full min-h-10 px-4.5 py-2.5 tracking-button whitespace-nowrap" />
         </div>
-        <div className="md:hidden">
-          <AdminAccountMenu email={user.email ?? ""} isAdmin={isAdmin} />
-        </div>
-      </header>
-      <main className="flex-1 px-4 pt-5 pb-24 md:px-8 md:pt-8 md:pb-12 max-w-360 w-full box-border mx-auto">{children}</main>
-      <AdminBottomNav isCoachOnly={isCoachOnly} isScoreKeeperOnly={isScoreKeeperOnly} isAdmin={isAdmin} />
+      </aside>
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen">
+        <header className="md:hidden flex-none flex items-center justify-between gap-3 h-14 pl-4 pr-2 py-1.5 border-b border-snow/10">
+          {brand(false)}
+          <AdminAccountMenu email={user.email ?? ""} isAdmin={role === "admin"} />
+        </header>
+        <main className="flex-1 px-4 pt-5 pb-24 md:px-8 md:pt-8 md:pb-12 max-w-360 w-full box-border mx-auto">{children}</main>
+      </div>
+      <AdminBottomNav role={role} />
     </div>
   );
 }
