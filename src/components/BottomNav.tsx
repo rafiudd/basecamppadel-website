@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAccountChip } from "./account/useAccountChip";
 
 function Icon({ children }: { children: React.ReactNode }) {
   return (
@@ -12,13 +11,6 @@ function Icon({ children }: { children: React.ReactNode }) {
   );
 }
 
-const HomeIcon = () => (
-  <Icon>
-    <path d="M4 10.5 12 4l8 6.5" />
-    <path d="M6 9.5V20h12V9.5" />
-    <path d="M10 20v-6h4v6" />
-  </Icon>
-);
 const CalendarIcon = () => (
   <Icon>
     <rect x="4" y="5" width="16" height="15" rx="2.5" />
@@ -41,12 +33,6 @@ const ShieldIcon = () => (
     <path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6z" />
   </Icon>
 );
-const UserIcon = () => (
-  <Icon>
-    <circle cx="12" cy="8" r="4" />
-    <path d="M4 21a8 8 0 0 1 16 0" />
-  </Icon>
-);
 
 const AcademicCapIcon = () => (
   <Icon>
@@ -57,31 +43,23 @@ const AcademicCapIcon = () => (
 );
 
 const LINKS = [
-  { href: "/", label: "Home", icon: HomeIcon },
   { href: "/jadwal", label: "Jadwal", icon: CalendarIcon },
   { href: "/liga", label: "Liga", icon: ShieldIcon },
   { href: "/kelas", label: "Kelas", icon: AcademicCapIcon },
   { href: "/leaderboard", label: "Leaderboard", icon: TrophyIcon },
-  // signed out, /akun sends the visitor through /masuk first
-  { href: "/akun", label: "Akun", icon: UserIcon },
 ];
-
 
 /** Phone tab bar, fixed to the bottom (hidden from md up, where the top nav's links show instead). */
 export function BottomNav() {
   const pathname = usePathname();
-  const account = useAccountChip();
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : href === "/akun" ? pathname.startsWith("/akun") || pathname.startsWith("/masuk") : pathname.startsWith(href);
-  // admin / coach: the Akun tab opens the admin area instead of the player profile
-  const links = account?.isStaff ? LINKS.map((l) => (l.href === "/akun" ? { ...l, href: account.href, label: "Admin" } : l)) : LINKS;
+  const isActive = (href: string) => pathname.startsWith(href);
 
   return (
     <nav
       className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-ink border-t border-snow/10 flex items-stretch"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      {links.map((l) => {
+      {LINKS.map((l) => {
         const on = isActive(l.href);
         const Ico = l.icon;
         return (
@@ -89,10 +67,14 @@ export function BottomNav() {
             key={l.href}
             href={l.href}
             aria-current={on ? "page" : undefined}
-            className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 py-2.5 px-1 no-underline transition-colors active:scale-95 ${on ? "text-coral" : "text-snow/60"}`}
+            className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-1 py-2.5 px-2 no-underline transition-colors active:scale-95 ${
+              on ? "text-coral" : "text-snow/60 hover:text-snow/80"
+            }`}
           >
             <Ico />
-            <span className="w-full text-2xs font-semibold text-center truncate">{l.label}</span>
+            <span className={`w-full text-2xs text-center truncate ${on ? "font-bold" : "font-medium"}`}>
+              {l.label}
+            </span>
           </Link>
         );
       })}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { EventHeader } from "@/components/jadwal/EventHeader";
 import { LiveBanner } from "@/components/jadwal/LiveBanner";
 import { EventTabs, type TabType } from "@/components/jadwal/EventTabs";
@@ -26,6 +26,7 @@ export function EventDetailClient({
       : event.defaultTab;
 
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
@@ -42,17 +43,24 @@ export function EventDetailClient({
       <EventHeader event={event} />
 
       {/* Main Content Area */}
-      <section className="bg-snow px-6 md:px-12 pt-8 pb-[72px]">
-        <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-5">
+      <section className="bg-snow px-6 md:px-12 pt-6 md:pt-8 pb-[72px]">
+        <div className="w-full max-w-[1440px] mx-auto flex flex-col gap-6">
           {/* Live Score Banner (only if live event) */}
           <LiveBanner event={event} />
 
-          {/* Tab Navigation Buttons */}
-          <EventTabs
-            availableTabs={event.availableTabs}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-          />
+          {/* Sticky Tab Navigation Bar: Seamless sticky background without divider line across mobile & desktop */}
+          <div
+            ref={tabsContainerRef}
+            className="sticky top-[calc(56px+env(safe-area-inset-top,0px))] md:top-[88px] z-20 -mx-6 px-6 md:-mx-12 md:px-12 py-2.5 bg-snow/95 backdrop-blur-md"
+          >
+            <div className="w-full max-w-[1440px] mx-auto">
+              <EventTabs
+                availableTabs={event.availableTabs}
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+              />
+            </div>
+          </div>
 
           {/* TAB 1: INFO */}
           {activeTab === "info" && <InfoTab event={event} />}

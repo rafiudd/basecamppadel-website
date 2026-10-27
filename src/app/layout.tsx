@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { inter, spaceGrotesk } from "./fonts";
 import "./globals.css";
 import { TopLoader } from "@/components/TopLoader";
+import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
+import { PushNotifPermission } from "@/components/pwa/PushNotifPermission";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://basecamppadel.vercel.app";
 const title = "Basecamp Padel — Start. Settle in. Level up.";
@@ -46,6 +48,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         <TopLoader />
         {children}
+        <PwaInstallPrompt />
+        <PushNotifPermission />
       </body>
     </html>
   );

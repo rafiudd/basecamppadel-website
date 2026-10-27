@@ -10,6 +10,7 @@ import { isAmericanoFormat, isFixedFormat, presetPoints } from "@/lib/events";
 import { assertEditableRoster, friendly, guard, int, load, revalidateEvent, str, type Supa } from "./_shared";
 import { resetMabarEvent } from "./mabar-actions";
 import { resetCompetition } from "./match-actions";
+import { sendPushToAll } from "@/lib/webpush";
 
 /** Event lifecycle: create (wizard), edit, delete, and the team roster before the schedule exists. */
 
@@ -66,6 +67,16 @@ export async function createCompetition(_: ActionState, fd: FormData): Promise<A
     const { id, volume } =
       str(fd, "event_type") === "mabar" ? { id: await createMabar(supabase, fd), volume: null } : await createKompetisi(supabase, fd);
     revalidateEvent(id);
+
+    // Fire-and-forget: push notification to all subscribers about new event
+    const eventTitle = str(fd, "title") || "Event Baru";
+    const eventType = str(fd, "event_type") === "mabar" ? "Mabar" : "Kompetisi";
+    sendPushToAll({
+      title: `🏸 ${eventType} Baru — Basecamp Padel`,
+      body: eventTitle,
+      url: `/jadwal`,
+    }).catch(() => {}); // non-blocking, ignore errors
+
     // A league volume goes back to its league so the admin can carry on with the next volume.
     redirect(volume ? `/admin/liga/${volume.league_id}?created=${volume.volume_number}` : `/admin/events/${id}`);
   });

@@ -13,7 +13,7 @@ export function InfoTab({ event }: { event: EventItem }) {
       {/* Left Column (3fr) */}
       <div className="flex flex-col gap-5">
         {/* Tentang event */}
-        <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-xs">
+        <section className="bg-white border border-ink/12 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-sm">
           <h2 className="font-display font-bold text-[19px] m-0">Tentang event</h2>
           <p className="text-[15px] leading-relaxed text-ink/80 m-0">
             {event.aboutText}
@@ -21,7 +21,7 @@ export function InfoTab({ event }: { event: EventItem }) {
         </section>
 
         {/* Format */}
-        <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-xs">
+        <section className="bg-white border border-ink/12 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-sm">
           <h2 className="font-display font-bold text-[19px] m-0">Format</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {event.formatBoxes.map((box, i) => (
@@ -42,7 +42,7 @@ export function InfoTab({ event }: { event: EventItem }) {
 
         {/* Poin Leaderboard (Only for Kompetisi) */}
         {event.type === "kompetisi" && event.pointsRules && (
-          <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2 text-ink shadow-xs">
+          <section className="bg-white border border-ink/12 rounded-2xl p-6 flex flex-col gap-2 text-ink shadow-sm">
             <h2 className="font-display font-bold text-[19px] m-0">Poin leaderboard</h2>
             {[
               { label: "Juara", value: event.pointsRules.champion },
@@ -66,7 +66,7 @@ export function InfoTab({ event }: { event: EventItem }) {
         )}
 
         {/* Lokasi */}
-        <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2 text-ink shadow-xs">
+        <section className="bg-white border border-ink/12 rounded-2xl p-6 flex flex-col gap-2 text-ink shadow-sm">
           <h2 className="font-display font-bold text-[19px] m-0">Lokasi</h2>
           <div className="flex justify-between items-center py-2.5 border-t border-ink/7 text-[15px]">
             <span className="text-ink/70">Venue</span>
@@ -92,7 +92,7 @@ export function InfoTab({ event }: { event: EventItem }) {
         {/* 1. If Open: Registration Card */}
         {isOpen && (
           <>
-            <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-4 text-ink shadow-xs">
+            <section className="bg-white border border-ink/12 rounded-2xl p-6 flex flex-col gap-4 text-ink shadow-sm">
               <h2 className="font-display font-bold text-[19px] m-0">Pendaftaran</h2>
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm">
@@ -132,7 +132,7 @@ export function InfoTab({ event }: { event: EventItem }) {
             </section>
 
             {/* Registered participants/teams */}
-            <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-3 text-ink shadow-xs">
+            <section className="bg-white border border-ink/12 rounded-2xl p-6 flex flex-col gap-3 text-ink shadow-sm">
               <h2 className="font-display font-bold text-[19px] m-0">
                 {event.type === "kompetisi" ? "Tim terdaftar" : "Pemain terdaftar"}
               </h2>
@@ -159,7 +159,7 @@ export function InfoTab({ event }: { event: EventItem }) {
 
         {/* 2. If Live: who's playing right now + CTA to the real stream */}
         {isLive && event.liveScore && (
-          <section className="bg-white border border-ink/8 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-xs">
+          <section className="bg-white border border-ink/12 rounded-2xl p-6 flex flex-col gap-2.5 text-ink shadow-sm">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-coral animate-livepulse" />
               <h2 className="font-display font-bold text-[19px] m-0">Sedang main</h2>
