@@ -23,16 +23,22 @@ test("getBrevoSender: returns configured sender", () => {
 test("generateCoachingReportEmailHtml: produces styled HTML email with content and links", () => {
   const html = generateCoachingReportEmailHtml({
     playerName: "Andi Pratama",
+    coachName: "Alex",
     sessionTitle: "Clinic Sabtu Pagi",
+    sessionDate: "2026-10-24",
     evaluation: "Vibora akurat dan konsisten.",
     nextPractice: "Bandeja silang ke sudut.",
   });
 
   assert.ok(html.includes("Andi Pratama"));
   assert.ok(html.includes("Clinic Sabtu Pagi"));
+  assert.ok(html.includes("Coach Alex"));
   assert.ok(html.includes("Vibora akurat dan konsisten."));
   assert.ok(html.includes("Bandeja silang ke sudut."));
-  assert.ok(html.includes("https://www.basecamppadel.id/akun?tab=notes"));
+  assert.ok(html.includes("https://www.basecamppadel.id/akun?tab=catatan"));
+  assert.ok(html.includes("Yang udah oke"));
+  assert.ok(html.includes("Fokus sesi berikutnya"));
+  assert.ok(html.includes("Lihat rapor lengkap"));
   assert.ok(html.includes("Basecamp Padel"));
 });
 

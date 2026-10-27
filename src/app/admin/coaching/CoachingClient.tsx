@@ -306,16 +306,19 @@ export function CoachingClient({
   ) => {
     const evalText = overrideEval !== undefined ? overrideEval : (pItem.assessment?.evaluation || "");
     const practiceText = overridePractice !== undefined ? overridePractice : (pItem.assessment?.next_practice || "");
+    const coachName = pItem.coach?.name || sessionData?.coaches?.[0]?.name || "";
 
     try {
       const data = unwrap(
         await sendAutoCoachingReportNotificationsAction({
           playerId: pItem.player.id,
           playerName: pItem.player.name,
+          coachName,
           whatsapp: pItem.player.whatsapp,
           email: pItem.email,
           sessionId: sessionData?.session.id,
           sessionTitle: sessionData?.session.title,
+          sessionDate: sessionData?.session.session_date,
           evaluation: evalText,
           nextPractice: practiceText,
         })

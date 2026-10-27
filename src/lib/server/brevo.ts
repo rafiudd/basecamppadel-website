@@ -46,88 +46,211 @@ export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+import { formatDateShortIndo } from "../format.ts";
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+export interface CoachingReportEmailParams {
+  evaluation?: string | null;
+  nextPractice?: string | null;
+  playerName?: string | null;
+  coachName?: string | null;
+  sessionTitle?: string | null;
+  sessionDate?: string | null;
+  linkRapor?: string | null;
+  nextSession?: {
+    title: string;
+    date: string;
+    venue?: string | null;
+    href?: string | null;
+  } | null;
+  linkNotifikasi?: string | null;
+  linkUnsubscribe?: string | null;
+}
+
 /**
- * Membuat template HTML email responsif dan elegan dengan nuansa Basecamp Padel.
+ * Membuat template HTML email responsif dan elegan dengan nuansa Basecamp Padel
+ * berdasarkan desain docs/UI/email-rapor-coaching.html
  */
-export function generateCoachingReportEmailHtml(params: {
-  evaluation?: string;
-  nextPractice?: string;
-  playerName?: string;
-  sessionTitle?: string;
-}): string {
-  const { evaluation, nextPractice, playerName, sessionTitle } = params;
+export function generateCoachingReportEmailHtml(params: CoachingReportEmailParams): string {
+  const {
+    evaluation,
+    nextPractice,
+    playerName,
+    coachName,
+    sessionTitle,
+    sessionDate,
+    linkRapor = "https://www.basecamppadel.id/akun?tab=catatan",
+    nextSession,
+    linkNotifikasi = "https://www.basecamppadel.id/akun",
+    linkUnsubscribe = "https://www.basecamppadel.id/akun",
+  } = params;
 
-  const evalHtml = evaluation
-    ? `<div style="background-color: #221F30; border: 1px solid rgba(251, 247, 241, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-        <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #FFD43B; text-transform: uppercase; letter-spacing: 0.5px;">Evaluasi Coach:</p>
-        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #FBF7F1; white-space: pre-wrap;">${evaluation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
-      </div>`
-    : "";
+  const nama = escapeHtml((playerName || "").trim() || "Pemain");
+  const rawCoach = (coachName || "").trim();
+  const namaCoach = escapeHtml(rawCoach ? rawCoach.replace(/^coach\s+/i, "").trim() : "Basecamp");
+  const evaluasi = escapeHtml((evaluation || "").trim() || "-");
+  const fokus = escapeHtml((nextPractice || "").trim() || "-");
+  const safeLinkRapor = escapeHtml(linkRapor || "https://www.basecamppadel.id/akun?tab=catatan");
+  const safeLinkNotif = escapeHtml(linkNotifikasi || "https://www.basecamppadel.id/akun");
+  const safeLinkUnsub = escapeHtml(linkUnsubscribe || "https://www.basecamppadel.id/akun");
 
-  const nextHtml = nextPractice
-    ? `<div style="background-color: #221F30; border: 1px solid rgba(251, 247, 241, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-        <p style="margin: 0 0 8px 0; font-size: 13px; font-weight: bold; color: #2F9E5C; text-transform: uppercase; letter-spacing: 0.5px;">Fokus Latihan Berikutnya:</p>
-        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #FBF7F1; white-space: pre-wrap;">${nextPractice.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
-      </div>`
-    : "";
+  // Format tanggal sesi
+  let formattedDate = "";
+  if (sessionDate) {
+    formattedDate = sessionDate.includes("-") ? formatDateShortIndo(sessionDate) : sessionDate;
+  }
 
-  return `<!DOCTYPE html>
-<html lang="id">
+  const metaParts: string[] = [sessionTitle || "Clinic Evaluasi Latihan"];
+  if (formattedDate) metaParts.push(formattedDate);
+  metaParts.push(`Coach ${namaCoach}`);
+  const metaSubtitle = escapeHtml(metaParts.join(" · "));
+
+  // Sesi berikutnya section
+  const sesiBerikutNama = escapeHtml(nextSession?.title || "Clinic & Coaching Padel");
+  let sesiBerikutDate = "";
+  if (nextSession?.date) {
+    sesiBerikutDate = nextSession.date.includes("-") ? formatDateShortIndo(nextSession.date) : nextSession.date;
+  }
+  const sesiBerikutVenue = escapeHtml(nextSession?.venue || "Basecamp Padel");
+  const sesiBerikutDetail = sesiBerikutDate ? `${sesiBerikutDate} · ${sesiBerikutVenue}` : sesiBerikutVenue;
+  const rawLinkDaftar = nextSession?.href
+    ? (nextSession.href.startsWith("http") ? nextSession.href : `https://www.basecamppadel.id${nextSession.href}`)
+    : "https://www.basecamppadel.id/jadwal";
+  const linkDaftar = escapeHtml(rawLinkDaftar);
+
+  return `<!doctype html>
+<html lang="id" xmlns="http://www.w3.org/1999/xhtml">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Catatan Coaching & Rapor — Basecamp Padel</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Rapor latihan kamu udah keluar</title>
+<style>
+  body { margin:0; padding:0; background:#EFE9DF; }
+  a { color:#1B1650; }
+  @media (max-width: 620px) {
+    .container { width:100% !important; }
+    .px { padding-left:20px !important; padding-right:20px !important; }
+    .h1 { font-size:26px !important; }
+    .stack { display:block !important; width:100% !important; text-align:left !important; }
+    .stack-gap { padding-top:14px !important; }
+  }
+</style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0E0C15; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #FBF7F1;">
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #0E0C15; padding: 24px 12px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #17151F; border: 1px solid rgba(251, 247, 241, 0.12); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 28px 28px 20px 28px; background: linear-gradient(135deg, #1A162B 0%, #17151F 100%); border-bottom: 1px solid rgba(251, 247, 241, 0.08); text-align: left;">
-              <span style="display: inline-block; padding: 4px 10px; background-color: rgba(255, 212, 59, 0.15); color: #FFD43B; border-radius: 999px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px;">🎾 Basecamp Padel Clinic</span>
-              <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #FBF7F1; line-height: 1.3;">Catatan Latihan & Rapor Baru</h1>
-              ${sessionTitle ? `<p style="margin: 6px 0 0 0; font-size: 13px; color: rgba(251, 247, 241, 0.65);">${sessionTitle.replace(/</g, "&lt;")}</p>` : ""}
-            </td>
-          </tr>
+<body style="margin:0; padding:0; background:#EFE9DF;">
 
-          <!-- Body -->
-          <tr>
-            <td style="padding: 24px 28px;">
-              <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: rgba(251, 247, 241, 0.9);">
-                Halo${playerName ? ` <strong>${playerName.replace(/</g, "&lt;")}</strong>` : ""}! Catatan evaluasi latihan kamu dari coach sudah keluar dan siap dipelajari.
-              </p>
+<!-- Preheader: teks yang muncul di samping subject di inbox -->
+<div style="display:none; max-height:0; overflow:hidden; mso-hide:all; font-size:1px; line-height:1px; color:#EFE9DF;">
+  Catatan evaluasi kamu udah siap. Cek fokus latihan buat sesi berikutnya.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;
+</div>
 
-              ${evalHtml}
-              ${nextHtml}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EFE9DF;">
+<tr><td align="center" style="padding:32px 12px;">
 
-              <!-- Button CTA -->
-              <div style="text-align: center; margin: 32px 0 24px 0;">
-                <a href="https://www.basecamppadel.id/akun?tab=notes" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #2F9E5C; color: #FFFFFF; font-size: 14px; font-weight: bold; text-decoration: none; padding: 13px 28px; border-radius: 10px; box-shadow: 0 4px 12px rgba(47, 158, 92, 0.35);">
-                  Buka Rapor & Analisis Lengkap →
-                </a>
-              </div>
+<table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; background:#FBF7F1; border-radius:20px; overflow:hidden; border:1px solid #E4DED4;">
 
-              <p style="margin: 0; font-size: 13px; line-height: 1.6; color: rgba(251, 247, 241, 0.6); text-align: center;">
-                Sampai ketemu di sesi latihan berikutnya di lapangan Basecamp Padel! 🚀
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 18px 28px; background-color: rgba(14, 12, 21, 0.6); border-top: 1px solid rgba(251, 247, 241, 0.08); text-align: center; font-size: 11px; color: rgba(251, 247, 241, 0.45); line-height: 1.5;">
-              © ${new Date().getFullYear()} Basecamp Padel Indonesia. Email ini dikirim otomatis untuk peserta klinik padel.
-            </td>
-          </tr>
-        </table>
+  <!-- Header -->
+  <tr><td class="px" style="background:#17151F; padding:22px 32px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td style="font-family:'Space Grotesk',Arial,sans-serif; font-weight:700; font-size:15px; line-height:1.1; color:#FBF7F1;">
+        <span style="color:#FF5A3C;">BASECAMP</span><br>PADEL
       </td>
-    </tr>
-  </table>
+      <td align="right" style="font-family:Inter,Arial,sans-serif; font-size:12px; font-weight:600; letter-spacing:1px; color:#FFD43B;">RAPOR LATIHAN</td>
+    </tr></table>
+  </td></tr>
+
+  <!-- Judul -->
+  <tr><td class="px" style="padding:36px 32px 0; font-family:Inter,Arial,sans-serif;">
+    <h1 class="h1" style="margin:0; font-family:'Space Grotesk',Arial,sans-serif; font-weight:700; font-size:30px; line-height:1.15; color:#17151F;">Rapor latihan kamu udah keluar</h1>
+    <p style="margin:12px 0 0; font-size:14px; line-height:1.5; color:#6B6870;">${metaSubtitle}</p>
+  </td></tr>
+
+  <!-- Pembuka -->
+  <tr><td class="px" style="padding:24px 32px 0; font-family:Inter,Arial,sans-serif; font-size:16px; line-height:1.6; color:#17151F;">
+    <p style="margin:0 0 16px;">Halo ${nama},</p>
+    <p style="margin:0;">Makasih udah ikut sesi kemarin. Coach udah nulis catatan buat kamu, ini ringkasannya:</p>
+  </td></tr>
+
+  <!-- Yang udah oke -->
+  <tr><td class="px" style="padding:24px 32px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF; border:1px solid #ECE7EF; border-radius:16px;">
+      <tr><td style="padding:20px 22px; font-family:Inter,Arial,sans-serif;">
+        <span style="display:inline-block; background:#FFF1B8; color:#17151F; font-size:12px; font-weight:700; border-radius:999px; padding:4px 12px;">Yang udah oke</span>
+        <p style="margin:10px 0 0; font-size:16px; line-height:1.55; color:#17151F; white-space: pre-wrap;">${evaluasi}</p>
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <!-- Fokus berikutnya -->
+  <tr><td class="px" style="padding:12px 32px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF; border:1px solid #ECE7EF; border-radius:16px;">
+      <tr><td style="padding:20px 22px; font-family:Inter,Arial,sans-serif;">
+        <span style="display:inline-block; background:#FFE3DD; color:#B8321A; font-size:12px; font-weight:700; border-radius:999px; padding:4px 12px;">Fokus sesi berikutnya</span>
+        <p style="margin:10px 0 0; font-size:16px; line-height:1.55; color:#17151F; white-space: pre-wrap;">${fokus}</p>
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <!-- CTA (bulletproof button) -->
+  <tr><td class="px" align="center" style="padding:28px 32px 0; font-family:Inter,Arial,sans-serif;">
+    <!--[if mso]>
+    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${safeLinkRapor}" style="height:52px;v-text-anchor:middle;width:240px;" arcsize="50%" fillcolor="#FF5A3C" stroke="f">
+    <center style="color:#17151F;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">Lihat rapor lengkap</center>
+    </v:roundrect>
+    <![endif]-->
+    <!--[if !mso]><!-->
+    <a href="${safeLinkRapor}" style="display:inline-block; background:#FF5A3C; color:#17151F; font-size:16px; font-weight:700; line-height:52px; padding:0 32px; border-radius:999px; text-decoration:none;">Lihat rapor lengkap</a>
+    <!--<![endif]-->
+    <p style="margin:12px 0 0; font-size:13px; line-height:1.5; color:#6B6870;">Ada nilai per teknik dan grafik progres kamu dari sesi ke sesi.</p>
+  </td></tr>
+
+  <!-- Sesi berikutnya -->
+  <tr><td class="px" style="padding:28px 32px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1B1650; border-radius:16px;">
+      <tr>
+        <td class="stack" style="padding:20px 22px; font-family:Inter,Arial,sans-serif; color:#FBF7F1;">
+          <div style="font-size:12px; font-weight:700; letter-spacing:1px; color:#FFD43B;">SESI BERIKUTNYA</div>
+          <div style="margin-top:4px; font-family:'Space Grotesk',Arial,sans-serif; font-size:18px; font-weight:700;">${sesiBerikutNama}</div>
+          <div style="margin-top:4px; font-size:14px; color:#D5D2E0;">${sesiBerikutDetail}</div>
+        </td>
+        <td class="stack stack-gap" align="right" style="padding:20px 22px; white-space:nowrap;">
+          <a href="${linkDaftar}" style="display:inline-block; background:#FBF7F1; color:#17151F; font-family:Inter,Arial,sans-serif; font-size:14px; font-weight:700; line-height:44px; padding:0 20px; border-radius:999px; text-decoration:none;">Daftar sesi</a>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- Penutup -->
+  <tr><td class="px" style="padding:28px 32px 36px; font-family:Inter,Arial,sans-serif; font-size:16px; line-height:1.6; color:#17151F;">
+    <p style="margin:0 0 14px;">Ada yang mau ditanyain soal catatannya? Balas aja email ini, nanti dibantu jawab.</p>
+    <p style="margin:0;">Sampai ketemu di lapangan!<br><strong>Coach ${namaCoach}</strong> &amp; tim Basecamp Padel</p>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td class="px" style="border-top:1px solid #E4DED4; padding:24px 32px 28px; font-family:Inter,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6B6870;">
+    <div style="font-family:'Space Grotesk',Arial,sans-serif; font-weight:700; font-size:13px; color:#17151F;">BASECAMP PADEL &middot; <a href="https://instagram.com/basecamppadel.id" style="color:#17151F; text-decoration:none;">@basecamppadel.id</a></div>
+    <div style="margin-top:8px;">Kamu dapat email ini karena ikut sesi coaching di Basecamp Padel.</div>
+    <div>Jakarta, Indonesia</div>
+    <div style="margin-top:8px;"><a href="${safeLinkNotif}" style="color:#1B1650; font-weight:600;">Atur notifikasi</a> &middot; <a href="${safeLinkUnsub}" style="color:#1B1650; font-weight:600;">Berhenti berlangganan</a></div>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
 </body>
 </html>`;
 }
+
 
 /**
  * Mengirim email transaksional via Brevo REST API v3.
