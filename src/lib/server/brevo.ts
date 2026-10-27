@@ -251,14 +251,15 @@ export async function checkBrevoStatus(): Promise<{
       cache: "no-store",
     });
 
+    const data = await res.json().catch(() => null);
+
     if (!res.ok) {
       return {
         configured: false,
-        error: `Autentikasi Brevo gagal (HTTP ${res.status})`,
+        error: data?.message || `Autentikasi Brevo gagal (HTTP ${res.status})`,
       };
     }
 
-    const data = await res.json();
     return {
       configured: true,
       email: data?.email,

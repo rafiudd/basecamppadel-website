@@ -13,6 +13,7 @@ import type {
 import type {
   CoachingSessionSummary,
   SessionFullData,
+  SessionPlayerItem,
 } from "@/lib/coaching-db";
 import {
   computePlayerLevel,
@@ -23,12 +24,12 @@ import {
   saveAssessmentDraftAction,
   submitAssessmentAction,
   publishAllSessionDraftsAction,
+  sendAutoCoachingReportNotificationsAction,
 } from "./actions";
 import { MasterTeknikModal } from "./components/MasterTeknikModal";
 import { CreateSessionModal } from "./components/CreateSessionModal";
 import { OverrideLevelModal } from "./components/OverrideLevelModal";
 import { ImportRekapModal } from "./components/ImportRekapModal";
-import { SendNotificationModal } from "./components/SendNotificationModal";
 import { CoachingHeader } from "./components/CoachingHeader";
 import { SessionListTable } from "./components/SessionListTable";
 import { PlayerListTable } from "./components/PlayerListTable";
@@ -90,14 +91,7 @@ export function CoachingClient({
   const [showImportRekap, setShowImportRekap] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overridePlayerTarget, setOverridePlayerTarget] = useState<Player | null>(null);
-  const [notificationTarget, setNotificationTarget] = useState<{
-    player: Player;
-    email?: string | null;
-    sessionTitle?: string;
-    evaluation?: string;
-    nextPractice?: string;
-    nextPlayerId?: string | null;
-  } | null>(null);
+
 
   // Form State for current assessment editor
   const [scores, setScores] = useState<Record<string, number>>({});
@@ -305,9 +299,50 @@ export function CoachingClient({
     });
   };
 
-  // Simpan & Kirim (Submit) lalu lanjut ke pemain berikutnya
+  const handleSendAutomaticNotification = async (
+    pItem: SessionPlayerItem,
+    overrideEval?: string,
+    overridePractice?: string
+  ) => {
+    const evalText = overrideEval !== undefined ? overrideEval : (pItem.assessment?.evaluation || "");
+    const practiceText = overridePractice !== undefined ? overridePractice : (pItem.assessment?.next_practice || "");
+
+    try {
+      const data = unwrap(
+        await sendAutoCoachingReportNotificationsAction({
+          playerId: pItem.player.id,
+          playerName: pItem.player.name,
+          whatsapp: pItem.player.whatsapp,
+          email: pItem.email,
+          sessionId: sessionData?.session.id,
+          sessionTitle: sessionData?.session.title,
+          evaluation: evalText,
+          nextPractice: practiceText,
+        })
+      );
+
+      const { waSent, emailSent, waSkipped, emailSkipped, waError, emailError } = data;
+      const sentParts: string[] = [];
+      if (waSent) sentParts.push("WhatsApp");
+      if (emailSent) sentParts.push("Email");
+
+      if (sentParts.length > 0) {
+        toast.success(`Notifikasi ${pItem.player.name} terkirim ke ${sentParts.join(" & ")}!`);
+      } else if (waSkipped && emailSkipped) {
+        toast.success(`Penilaian ${pItem.player.name} tersimpan (WA & Email kosong, pengiriman di-skip).`);
+      }
+
+      if (waError) toast.error(`WhatsApp: ${waError}`);
+      if (emailError) toast.error(`Email: ${emailError}`);
+    } catch (err: any) {
+      toast.error(err?.message || "Gagal mengirim notifikasi otomatis");
+    }
+  };
+
+  // Simpan Penilaian & Maju ke Pemain Berikutnya
   const handleSubmitAndNext = () => {
     if (!currentPlayerItem || !sessionData) return;
+    flushPendingAutoSave();
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = null;
@@ -332,17 +367,14 @@ export function CoachingClient({
           publishedToPlayer,
         }));
         setSaveStatus("Terkirim");
-        toast.success(`Penilaian ${currentPlayerItem.player.name} berhasil disimpan & dikirim`);
 
-        // Automatically trigger notification modal
-        setNotificationTarget({
-          player: currentPlayerItem.player,
-          email: currentPlayerItem.email || null,
-          sessionTitle: sessionData.session.title,
-          evaluation,
-          nextPractice,
-          nextPlayerId,
-        });
+        // Otomatis kirim notifikasi ke Email & WA tanpa popup modal
+        await handleSendAutomaticNotification(currentPlayerItem, evaluation, nextPractice);
+
+        // Langsung maju ke pemain berikutnya jika ada
+        if (nextPlayerId) {
+          setSelectedPlayerId(nextPlayerId);
+        }
 
         router.refresh();
       } catch (err: any) {
@@ -477,14 +509,7 @@ export function CoachingClient({
               setShowAssessment(true);
             }}
             onOpenNotificationModal={(pItem) => {
-              setNotificationTarget({
-                player: pItem.player,
-                email: pItem.email || null,
-                sessionTitle: sessionData?.session.title,
-                evaluation: pItem.assessment?.evaluation || "",
-                nextPractice: pItem.assessment?.next_practice || "",
-                nextPlayerId: null,
-              });
+              handleSendAutomaticNotification(pItem);
             }}
           />
 
@@ -541,18 +566,7 @@ export function CoachingClient({
               }}
               onOpenNotificationModal={() => {
                 if (currentPlayerItem) {
-                  const nextPlayerId =
-                    activePlayerIndex < filteredPlayers.length - 1
-                      ? filteredPlayers[activePlayerIndex + 1].player.id
-                      : null;
-                  setNotificationTarget({
-                    player: currentPlayerItem.player,
-                    email: currentPlayerItem.email || null,
-                    sessionTitle: sessionData?.session.title,
-                    evaluation,
-                    nextPractice,
-                    nextPlayerId,
-                  });
+                  handleSendAutomaticNotification(currentPlayerItem, evaluation, nextPractice);
                 }
               }}
               onClose={() => {
@@ -627,28 +641,6 @@ export function CoachingClient({
           onSuccess={() => {
             router.refresh();
           }}
-        />
-      )}
-
-      {notificationTarget && (
-        <SendNotificationModal
-          isOpen={Boolean(notificationTarget)}
-          onClose={() => setNotificationTarget(null)}
-          player={notificationTarget.player}
-          initialEmail={notificationTarget.email}
-          sessionId={activeSessionId}
-          sessionTitle={notificationTarget.sessionTitle}
-          evaluation={notificationTarget.evaluation}
-          nextPractice={notificationTarget.nextPractice}
-          hasNext={Boolean(notificationTarget.nextPlayerId)}
-          onNextPlayer={
-            notificationTarget.nextPlayerId
-              ? () => {
-                  setSelectedPlayerId(notificationTarget.nextPlayerId!);
-                  setNotificationTarget(null);
-                }
-              : null
-          }
         />
       )}
     </div>

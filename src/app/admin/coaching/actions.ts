@@ -7,7 +7,8 @@ import { requireAdminOrCoach, requireAdmin } from "@/lib/auth";
 import { computePlayerLevel, LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
 import { syncSessionStatus } from "@/lib/coaching-db";
 import { sendKirimdevWhatsAppMessage, checkKirimdevStatus } from "@/lib/server/kirimdev";
-import { sendBrevoEmail, generateCoachingReportEmailHtml, checkBrevoStatus } from "@/lib/server/brevo";
+import { sendBrevoEmail, generateCoachingReportEmailHtml, checkBrevoStatus, isValidEmail } from "@/lib/server/brevo";
+import { generateCoachingReportNotificationMessage } from "@/lib/coachingRules";
 
 /**
  * Sets a player's level through coaching_apply_level (0020): players is admin-write only under RLS,
@@ -476,4 +477,101 @@ export async function getBrevoConfigStatusAction() {
     return await checkBrevoStatus();
   });
 }
+
+export async function sendAutoCoachingReportNotificationsAction(data: {
+  playerId: string;
+  playerName?: string;
+  whatsapp?: string | null;
+  email?: string | null;
+  sessionId?: string;
+  sessionTitle?: string;
+  evaluation?: string;
+  nextPractice?: string;
+}) {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+
+    const results = {
+      waSent: false,
+      emailSent: false,
+      waSkipped: false,
+      emailSkipped: false,
+      waError: null as string | null,
+      emailError: null as string | null,
+    };
+
+    const message = generateCoachingReportNotificationMessage({
+      evaluation: data.evaluation,
+      nextPractice: data.nextPractice,
+    });
+
+    // 1. WhatsApp notification via Kirimdev
+    const rawWa = data.whatsapp?.trim();
+    if (rawWa) {
+      let cleanWhatsapp = rawWa.replace(/[^0-9]/g, "");
+      if (cleanWhatsapp.startsWith("0")) {
+        cleanWhatsapp = "62" + cleanWhatsapp.slice(1);
+      }
+
+      try {
+        const waRes = await sendKirimdevWhatsAppMessage({
+          to: cleanWhatsapp,
+          message,
+          previewUrl: true,
+        });
+
+        if (waRes.success) {
+          results.waSent = true;
+        } else {
+          results.waError = waRes.error || "Gagal mengirim WhatsApp via Kirimdev";
+        }
+      } catch (err: any) {
+        results.waError = err?.message || "Kesalahan sistem saat mengirim WhatsApp";
+      }
+    } else {
+      results.waSkipped = true;
+    }
+
+    // 2. Email notification via Brevo
+    const rawEmail = data.email?.trim();
+    if (rawEmail && isValidEmail(rawEmail)) {
+      try {
+        const subject = `Catatan Coaching & Rapor — Basecamp Padel${data.sessionTitle ? ` (${data.sessionTitle})` : ""}`;
+        const htmlContent = generateCoachingReportEmailHtml({
+          playerName: data.playerName,
+          sessionTitle: data.sessionTitle,
+          evaluation: data.evaluation,
+          nextPractice: data.nextPractice,
+        });
+
+        const emailRes = await sendBrevoEmail({
+          to: {
+            email: rawEmail,
+            name: data.playerName,
+          },
+          subject,
+          htmlContent,
+          textContent: message,
+        });
+
+        if (emailRes.success) {
+          results.emailSent = true;
+        } else {
+          results.emailError = emailRes.error || "Gagal mengirim email via Brevo";
+        }
+      } catch (err: any) {
+        results.emailError = err?.message || "Kesalahan sistem saat mengirim email";
+      }
+    } else {
+      results.emailSkipped = true;
+    }
+
+    if (data.sessionId) {
+      revalidatePath("/admin/coaching");
+    }
+
+    return results;
+  });
+}
+
 
