@@ -5,7 +5,7 @@ import { getEventByIdOrSlug, getEventMatches } from "@/lib/events";
 import { EventDetailClient } from "@/components/jadwal/EventDetailClient";
 import type { TabType } from "@/components/jadwal/EventTabs";
 
-export const revalidate = 0;
+export const revalidate = 30;
 
 interface PageProps {
   params: Promise<{ id: string }>;

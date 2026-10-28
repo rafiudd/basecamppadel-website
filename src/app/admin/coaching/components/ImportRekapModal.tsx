@@ -28,9 +28,9 @@ export function ImportRekapModal({
   const [isParsing, setIsParsing] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
     try {
-      const buffer = generateRekapTemplateExcel(skills);
+      const buffer = await generateRekapTemplateExcel(skills);
       const blob = new Blob([buffer as unknown as BlobPart], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
@@ -55,7 +55,7 @@ export function ImportRekapModal({
 
     try {
       const buffer = await selectedFile.arrayBuffer();
-      const res = parseRekapClinicExcel(new Uint8Array(buffer), skills, players);
+      const res = await parseRekapClinicExcel(new Uint8Array(buffer), skills, players);
       if (!res.success) {
         setError(res.error || "Gagal memproses file Excel");
         setPreviews([]);

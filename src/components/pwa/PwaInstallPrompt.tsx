@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { MountainMark } from "@/components/Logo";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -15,12 +16,14 @@ interface BeforeInstallPromptEvent extends Event {
 const STORAGE_KEY = "bcp_pwa_prompt_status";
 
 export function PwaInstallPrompt() {
+  const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
+    if (pathname?.startsWith("/overlay")) return;
     // 1. Check if already installed / standalone mode
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
@@ -109,7 +112,7 @@ export function PwaInstallPrompt() {
     setIsOpen(false);
   };
 
-  if (!isOpen || isInstalled) return null;
+  if (pathname?.startsWith("/overlay") || !isOpen || isInstalled) return null;
 
   return (
     <div

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { MABAR_FORMAT_LABEL, scoreModeBox } from "./eventFormats";
 import eventsData from "@/data/events.json";
@@ -284,7 +285,7 @@ export async function getPastEvents(): Promise<EventItem[]> {
   return events.filter((e) => e.status === "finished");
 }
 
-export async function getEventByIdOrSlug(idOrSlug: string): Promise<EventItem | null> {
+export const getEventByIdOrSlug = cache(async (idOrSlug: string): Promise<EventItem | null> => {
   try {
     const supabase = getPublicClient();
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
@@ -310,7 +311,7 @@ export async function getEventByIdOrSlug(idOrSlug: string): Promise<EventItem | 
   const events = eventsData.events as EventItem[];
   const found = events.find((e) => e.id === idOrSlug || e.slug === idOrSlug);
   return found || null;
-}
+});
 
 function mapCompetitionToEventItem(data: CompetitionData): EventItem {
   const { event, venue, courts, teams, matches } = data;
@@ -545,7 +546,7 @@ async function mapMabarToEventItem(supabase: any, event: CompEvent): Promise<Eve
   };
 }
 
-export async function getEventMatches(slugOrId: string): Promise<EventMatchesData | null> {
+export const getEventMatches = cache(async (slugOrId: string): Promise<EventMatchesData | null> => {
   try {
     const supabase = getPublicClient();
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slugOrId);
@@ -573,7 +574,7 @@ export async function getEventMatches(slugOrId: string): Promise<EventMatchesDat
   if (!event) return null;
   const matchRecord = (matchesData.matches as unknown as Record<string, EventMatchesData>)[event.slug];
   return matchRecord || null;
-}
+});
 
 function mapCompetitionToMatchesData(data: CompetitionData): EventMatchesData {
   const { event, courts, teams, matches, groups } = data;

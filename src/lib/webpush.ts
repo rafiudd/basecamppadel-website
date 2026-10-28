@@ -2,11 +2,24 @@ import webpush from "web-push";
 import { getDb } from "@/lib/mongodb";
 
 // Configure web-push with VAPID keys once (module-level side-effect)
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+function configureVapid() {
+  if (
+    process.env.VAPID_EMAIL &&
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY &&
+    process.env.VAPID_PRIVATE_KEY
+  ) {
+    try {
+      webpush.setVapidDetails(
+        process.env.VAPID_EMAIL,
+        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY
+      );
+    } catch (err) {
+      console.warn("Failed to configure web-push VAPID details:", err);
+    }
+  }
+}
+configureVapid();
 
 export type PushSubscriptionDoc = {
   endpoint: string;
@@ -60,6 +73,7 @@ async function sendToOne(
   payload: object
 ): Promise<boolean> {
   try {
+    configureVapid();
     await webpush.sendNotification(
       { endpoint: sub.endpoint, keys: sub.keys },
       JSON.stringify(payload)
@@ -97,17 +111,40 @@ export async function sendPushToAll(payload: PushPayload) {
   return { sent, total: subs.length };
 }
 
+export type PushUserIdentifier =
+  | { userId?: string | null; email?: string | null; playerId?: string | null }
+  | { userId: string }
+  | { email: string };
+
 /**
- * Sends a push notification to a specific user (by userId or email).
+ * Sends a push notification to a specific user (by userId, email, or playerId).
  */
 export async function sendPushToUser(
-  identifier: { userId: string } | { email: string },
+  identifier: PushUserIdentifier,
   payload: PushPayload
 ) {
   const coll = await getCollection();
-  const filter = "userId" in identifier
-    ? { userId: identifier.userId }
-    : { email: identifier.email };
+  const conditions: any[] = [];
+
+  if ("userId" in identifier && identifier.userId) {
+    conditions.push({ userId: identifier.userId });
+  }
+  if ("playerId" in identifier && (identifier as any).playerId) {
+    conditions.push({ userId: (identifier as any).playerId });
+  }
+  if ("email" in identifier && identifier.email) {
+    const trimmed = identifier.email.trim();
+    if (trimmed) {
+      const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      conditions.push({ email: { $regex: new RegExp(`^${escaped}$`, "i") } });
+    }
+  }
+
+  if (conditions.length === 0) {
+    return { sent: 0, total: 0 };
+  }
+
+  const filter = conditions.length === 1 ? conditions[0] : { $or: conditions };
   const subs = await coll.find(filter).toArray();
   const results = await Promise.allSettled(
     subs.map((sub) => sendToOne(sub, { ...payload, icon: payload.icon ?? "/BasecampPadel_logo.png" }))
@@ -115,3 +152,4 @@ export async function sendPushToUser(
   const sent = results.filter((r) => r.status === "fulfilled" && r.value).length;
   return { sent, total: subs.length };
 }
+

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import leaderboardData from "@/data/leaderboard.json";
 import { getActivePlayers, getPlayerWithHistory, rankByGender, type RankedPlayer } from "@/lib/queries";
 
@@ -89,7 +90,7 @@ export async function getLeaderboard(): Promise<LeaderboardData> {
   return leaderboardData as LeaderboardData;
 }
 
-export async function getPlayerById(playerId: string): Promise<PlayerDetail | null> {
+export const getPlayerById = cache(async (playerId: string): Promise<PlayerDetail | null> => {
   try {
     const data = await getPlayerWithHistory(playerId);
     if (data && data.player) {
@@ -172,4 +173,4 @@ export async function getPlayerById(playerId: string): Promise<PlayerDetail | nu
   }
 
   return null;
-}
+});

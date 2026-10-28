@@ -8,38 +8,62 @@ export type AccountChip = { name: string; photoUrl: string | null; href: string;
 
 const AccountChipContext = createContext<AccountChip | null | undefined>(undefined);
 
+let cachedChip: AccountChip | null | undefined = undefined;
+let inFlightFetch: Promise<AccountChip | null> | null = null;
+
+export function clearAccountChipCache() {
+  cachedChip = undefined;
+  inFlightFetch = null;
+}
+
 /**
  * Reads the signed-in account once for the whole public shell (top nav + bottom tab bar), in the
- * browser so public pages stay static.
+ * browser so public pages stay static. Caches in memory to eliminate redundant requests across transitions.
  */
 export function AccountChipProvider({ children }: { children: React.ReactNode }) {
-  const [chip, setChip] = useState<AccountChip | null | undefined>(undefined);
+  const [chip, setChip] = useState<AccountChip | null | undefined>(cachedChip);
 
   useEffect(() => {
+    if (cachedChip !== undefined) {
+      setChip(cachedChip);
+      return;
+    }
+
     let alive = true;
-    fetch("/api/auth/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!alive) return;
-        if (!data?.user) {
-          setChip(null);
-          return;
-        }
-        const user = data.user;
-        const profile = data.profile;
-        // a deactivated staff account is just a player account here
-        const role = staffRole(data.adminRow);
-        const google = googleIdentity(user.user_metadata);
-        setChip({
-          name: profile?.nickname ?? (google.name || user.email || "Akun").split(/\s+/)[0],
-          photoUrl: profile ? profilePhoto(profile, google.avatarUrl) : google.avatarUrl,
-          href: accountHome(role),
-          isStaff: !!role,
+
+    if (!inFlightFetch) {
+      inFlightFetch = fetch("/api/auth/me")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data?.user) {
+            cachedChip = null;
+            return null;
+          }
+          const user = data.user;
+          const profile = data.profile;
+          const role = staffRole(data.adminRow);
+          const google = googleIdentity(user.user_metadata);
+          const computed: AccountChip = {
+            name: profile?.nickname ?? (google.name || user.email || "Akun").split(/\s+/)[0],
+            photoUrl: profile ? profilePhoto(profile, google.avatarUrl) : google.avatarUrl,
+            href: accountHome(role),
+            isStaff: !!role,
+          };
+          cachedChip = computed;
+          return computed;
+        })
+        .catch(() => {
+          cachedChip = null;
+          return null;
+        })
+        .finally(() => {
+          inFlightFetch = null;
         });
-      })
-      .catch(() => {
-        if (alive) setChip(null);
-      });
+    }
+
+    inFlightFetch.then((res) => {
+      if (alive) setChip(res);
+    });
 
     return () => {
       alive = false;

@@ -170,42 +170,96 @@ export async function recomputePlayerStats(
   const historyColl = db.collection("match_history");
   const awardsColl = db.collection("player_awards");
 
-  for (const pid of uniqueIds) {
-    const player = await playersColl.findOne({
-      $or: [{ _id: pid }, { id: pid }],
-    } as any);
-    if (!player) continue;
+  // 1. Fetch all target players in a single batched query
+  const players = await playersColl
+    .find({
+      $or: [{ _id: { $in: uniqueIds } }, { id: { $in: uniqueIds } }],
+    } as any)
+    .toArray();
 
-    const historyRows = await historyColl.find({ player_id: pid }).toArray();
-    let wins = 0;
-    let losses = 0;
-    let matchPoints = 0;
-    for (const row of historyRows) {
-      if (row.result === "W") wins += 1;
-      else if (row.result === "L") losses += 1;
-      matchPoints += Number(row.points_delta || 0);
-    }
+  if (players.length === 0) return;
 
-    const awardRows = await awardsColl.find({ player_id: pid }).toArray();
-    let awardPoints = 0;
-    for (const award of awardRows) {
-      awardPoints += Number(award.points || 0);
-    }
+  // Collect both _id and custom id strings for aggregation matching
+  const allTargetIds = Array.from(
+    new Set([
+      ...uniqueIds,
+      ...players.map((p) => String(p._id)),
+      ...players.map((p) => (p.id ? String(p.id) : "")).filter(Boolean),
+    ])
+  );
+
+  // 2. Aggregate history stats grouped by player_id
+  const historyStats = await historyColl
+    .aggregate([
+      { $match: { player_id: { $in: allTargetIds } } },
+      {
+        $group: {
+          _id: "$player_id",
+          wins: { $sum: { $cond: [{ $eq: ["$result", "W"] }, 1, 0] } },
+          losses: { $sum: { $cond: [{ $eq: ["$result", "L"] }, 1, 0] } },
+          matchPoints: { $sum: { $toDouble: { $ifNull: ["$points_delta", 0] } } },
+        },
+      },
+    ])
+    .toArray();
+
+  const historyMap = new Map<string, { wins: number; losses: number; matchPoints: number }>();
+  for (const h of historyStats) {
+    historyMap.set(String(h._id), {
+      wins: Number(h.wins || 0),
+      losses: Number(h.losses || 0),
+      matchPoints: Number(h.matchPoints || 0),
+    });
+  }
+
+  // 3. Aggregate awards stats grouped by player_id
+  const awardStats = await awardsColl
+    .aggregate([
+      { $match: { player_id: { $in: allTargetIds } } },
+      {
+        $group: {
+          _id: "$player_id",
+          awardPoints: { $sum: { $toDouble: { $ifNull: ["$points", 0] } } },
+        },
+      },
+    ])
+    .toArray();
+
+  const awardsMap = new Map<string, number>();
+  for (const a of awardStats) {
+    awardsMap.set(String(a._id), Number(a.awardPoints || 0));
+  }
+
+  // 4. Batch updates with bulkWrite
+  const bulkOps = players.map((player) => {
+    const pId = String(player._id);
+    const altId = player.id ? String(player.id) : "";
+
+    const hStats =
+      historyMap.get(pId) ||
+      (altId ? historyMap.get(altId) : null) || { wins: 0, losses: 0, matchPoints: 0 };
+    const aPoints = awardsMap.get(pId) ?? (altId ? awardsMap.get(altId) : null) ?? 0;
 
     const adjustment = Number(player.points_adjustment || 0);
-    const totalPoints = Math.max(0, matchPoints + awardPoints + adjustment);
+    const totalPoints = Math.max(0, hStats.matchPoints + aPoints + adjustment);
 
-    await playersColl.updateOne(
-      { _id: player._id },
-      {
-        $set: {
-          wins,
-          losses,
-          points: totalPoints,
-          updated_at: new Date(),
+    return {
+      updateOne: {
+        filter: { _id: player._id },
+        update: {
+          $set: {
+            wins: hStats.wins,
+            losses: hStats.losses,
+            points: totalPoints,
+            updated_at: new Date(),
+          },
         },
-      }
-    );
+      },
+    };
+  });
+
+  if (bulkOps.length > 0) {
+    await playersColl.bulkWrite(bulkOps as any, { ordered: false });
   }
 }
 

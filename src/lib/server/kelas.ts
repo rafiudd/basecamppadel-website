@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { filterAndSortClasses, formatScheduleFriendly, type FilterParams } from "@/lib/kelasRules";
 
@@ -138,7 +139,7 @@ export async function getPublicClasses(filters: FilterParams = {}) {
 }
 
 /** Fetch single public class by slug */
-export async function getClassBySlug(slug: string): Promise<ClassDetailData | null> {
+export const getClassBySlug = cache(async (slug: string): Promise<ClassDetailData | null> => {
   const supabase = await createClient();
 
   const { data: c, error } = await supabase
@@ -303,7 +304,7 @@ export async function getClassBySlug(slug: string): Promise<ClassDetailData | nu
     averageRating: avgRating,
     totalReviews: reviews?.length ?? 0,
   };
-}
+});
 
 /** Admin classes list with stat counters */
 export async function getAdminClasses() {

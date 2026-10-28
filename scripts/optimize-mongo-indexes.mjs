@@ -35,7 +35,7 @@ async function run() {
           options: {
             name: "idx_profiles_user_id",
             unique: true,
-            partialFilterExpression: { user_id: { $type: "string" } },
+            sparse: true,
           },
         },
         {
@@ -43,7 +43,7 @@ async function run() {
           options: {
             name: "profiles_player_id_key",
             unique: true,
-            partialFilterExpression: { player_id: { $type: "string" } },
+            sparse: true,
           },
         },
         {
@@ -51,7 +51,7 @@ async function run() {
           options: {
             name: "profiles_whatsapp_key",
             unique: true,
-            partialFilterExpression: { whatsapp: { $type: "string" } },
+            sparse: true,
           },
         },
       ],
@@ -64,10 +64,17 @@ async function run() {
           options: {
             name: "idx_admin_users_user_id",
             unique: true,
-            partialFilterExpression: { user_id: { $type: "string" } },
+            sparse: true,
           },
         },
         { key: { role: 1 }, options: { name: "idx_admin_users_role" } },
+      ],
+    },
+    {
+      collection: "push_subscriptions",
+      indexes: [
+        { key: { userId: 1 }, options: { name: "idx_push_subscriptions_user_id", sparse: true } },
+        { key: { email: 1 }, options: { name: "idx_push_subscriptions_email", sparse: true } },
       ],
     },
     {
@@ -124,6 +131,8 @@ async function run() {
           },
         },
         { key: { status: 1, event_date: -1 }, options: { name: "idx_events_status_date" } },
+        { key: { published: 1, event_date: -1, created_at: -1 }, options: { name: "idx_events_published_date" } },
+        { key: { published: 1, status: 1, event_date: 1 }, options: { name: "idx_events_home_next" } },
         { key: { venue_id: 1 }, options: { name: "idx_events_venue_id" } },
         { key: { league_id: 1 }, options: { name: "idx_events_league_id" } },
       ],
@@ -132,6 +141,9 @@ async function run() {
       collection: "players",
       indexes: [
         { key: { id: 1 }, options: { name: "idx_players_id", sparse: true } },
+        { key: { active: 1, gender: 1, points: -1, name: 1 }, options: { name: "idx_players_active_gender_pts_name" } },
+        { key: { active: 1, points: -1, name: 1 }, options: { name: "idx_players_active_pts_name" } },
+        { key: { active: 1, name: 1 }, options: { name: "idx_players_active_name" } },
         { key: { points: -1 }, options: { name: "idx_players_points" } },
         { key: { name: 1 }, options: { name: "idx_players_name" } },
         {

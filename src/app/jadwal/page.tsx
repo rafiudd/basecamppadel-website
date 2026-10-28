@@ -3,7 +3,7 @@ import { PublicShell } from "@/components/PublicShell";
 import { getEvents } from "@/lib/events";
 import { JadwalClient } from "@/components/jadwal/JadwalClient";
 
-export const revalidate = 0;
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Jadwal Mabar & Kompetisi — Basecamp Padel",
