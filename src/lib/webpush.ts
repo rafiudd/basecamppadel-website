@@ -79,9 +79,10 @@ async function sendToOne(
       JSON.stringify(payload)
     );
     return true;
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err as { statusCode?: number };
     // 410 Gone / 404 Not Found = subscription expired → remove from DB
-    if (err?.statusCode === 410 || err?.statusCode === 404) {
+    if (error?.statusCode === 410 || error?.statusCode === 404) {
       const coll = await getCollection();
       await coll.deleteOne({ endpoint: sub.endpoint });
     }
@@ -124,13 +125,18 @@ export async function sendPushToUser(
   payload: PushPayload
 ) {
   const coll = await getCollection();
-  const conditions: any[] = [];
+  const conditions: Array<Record<string, unknown>> = [];
 
   if ("userId" in identifier && identifier.userId) {
     conditions.push({ userId: identifier.userId });
   }
-  if ("playerId" in identifier && (identifier as any).playerId) {
-    conditions.push({ userId: (identifier as any).playerId });
+  if ("playerId" in identifier && identifier.playerId) {
+    const db = await getDb();
+    const profile = await db.collection("profiles").findOne({ player_id: identifier.playerId });
+    if (profile?.user_id) {
+      conditions.push({ userId: String(profile.user_id) });
+    }
+    conditions.push({ userId: identifier.playerId });
   }
   if ("email" in identifier && identifier.email) {
     const trimmed = identifier.email.trim();

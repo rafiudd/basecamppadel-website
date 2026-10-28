@@ -6,10 +6,10 @@ import { toast } from "@/components/ui/Toast";
 import { compressImage } from "@/lib/imageCompress";
 
 const PRESET_COURT_PHOTOS = [
-  { name: "Coach Drill", url: "/images/classes/coach-drill.jpg" },
-  { name: "Backglass Shot", url: "/images/classes/backglass-shot.jpg" },
-  { name: "Volley Drill", url: "/images/classes/volley-drill.jpg" },
-  { name: "Court Cover", url: "/images/cover.jpg" },
+  { name: "Coach Drill", url: "/images/classes/coach-drill.webp" },
+  { name: "Backglass Shot", url: "/images/classes/backglass-shot.webp" },
+  { name: "Volley Drill", url: "/images/classes/volley-drill.webp" },
+  { name: "Court Cover", url: "/images/cover.webp" },
   { name: "Court Hero", url: "/images/hero.jpg" },
   { name: "Community", url: "/images/community.webp" },
 ];

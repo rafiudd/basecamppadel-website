@@ -797,10 +797,10 @@ async function seedClasses() {
   for (const c of CLASSES_DATA) {
     const coachId = c.coachName ? (coachMap[c.coachName] || null) : null;
     const defaultPhotos = [
-      "/images/classes/coach-drill.jpg",
-      "/images/classes/backglass-shot.jpg",
-      "/images/classes/volley-drill.jpg",
-      "/images/cover.jpg",
+      "/images/classes/coach-drill.webp",
+      "/images/classes/backglass-shot.webp",
+      "/images/classes/volley-drill.webp",
+      "/images/cover.webp",
       "/images/hero.jpg",
       "/images/community.webp",
     ];

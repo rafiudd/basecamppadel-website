@@ -35,7 +35,7 @@ async function run() {
           options: {
             name: "idx_profiles_user_id",
             unique: true,
-            sparse: true,
+            partialFilterExpression: { user_id: { $type: "string" } },
           },
         },
         {
@@ -43,7 +43,7 @@ async function run() {
           options: {
             name: "profiles_player_id_key",
             unique: true,
-            sparse: true,
+            partialFilterExpression: { player_id: { $type: "string" } },
           },
         },
         {
@@ -51,7 +51,7 @@ async function run() {
           options: {
             name: "profiles_whatsapp_key",
             unique: true,
-            sparse: true,
+            partialFilterExpression: { whatsapp: { $type: "string" } },
           },
         },
       ],
@@ -64,7 +64,7 @@ async function run() {
           options: {
             name: "idx_admin_users_user_id",
             unique: true,
-            sparse: true,
+            partialFilterExpression: { user_id: { $type: "string" } },
           },
         },
         { key: { role: 1 }, options: { name: "idx_admin_users_role" } },

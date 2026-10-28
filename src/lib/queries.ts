@@ -57,20 +57,25 @@ export type RankedPlayer = Player & { rank: number };
  * Computes a single player's rank directly from database via index scan (IXSCAN)
  * avoiding pulling the entire players table into memory.
  */
+export const LEADERBOARD_COLLATION = { locale: "en", strength: 2 } as const;
+
 export async function getPlayerRank(player: { id?: string; gender?: string; points?: number; name?: string }): Promise<number> {
   const db = await getDb();
   const gender = player.gender === "F" ? "F" : "M";
   const points = Number(player.points || 0);
   const name = player.name || "";
 
-  const higherRankedCount = await db.collection("players").countDocuments({
-    active: true,
-    gender,
-    $or: [
-      { points: { $gt: points } },
-      { points, name: { $lt: name } },
-    ],
-  });
+  const higherRankedCount = await db.collection("players").countDocuments(
+    {
+      active: true,
+      gender,
+      $or: [
+        { points: { $gt: points } },
+        { points, name: { $lt: name } },
+      ],
+    },
+    { collation: LEADERBOARD_COLLATION }
+  );
 
   return higherRankedCount + 1;
 }
@@ -84,6 +89,7 @@ export async function getTopPlayers(gender: "M" | "F" = "M", limit = 3): Promise
   const docs = await db
     .collection("players")
     .find({ active: true, gender })
+    .collation(LEADERBOARD_COLLATION)
     .sort({ points: -1, name: 1 })
     .limit(limit)
     .toArray();
@@ -98,7 +104,7 @@ export function rankByGender(players: Player[]) {
   const rank = (list: Player[]): RankedPlayer[] =>
     list
       .slice()
-      .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name))
+      .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, "en", { sensitivity: "base" }) || a.name.localeCompare(b.name))
       .map((p, i) => ({ ...p, rank: i + 1 }));
   return {
     men: rank(players.filter((p) => p.gender === "M")),

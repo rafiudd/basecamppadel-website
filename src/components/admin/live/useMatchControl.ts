@@ -105,6 +105,8 @@ export function useMatchControl(initial: Match, { confirmFirst = false } = {}) {
     fd.set("match_id", m.id);
     start(() =>
       guarded(key, async () => {
+        const res = await startMatch(null, fd);
+        if (!toast.result(res, "Match dimulai")) return;
         if (!confirmFirst) {
           remember();
           setLocal((cur) => ({ ...cur, status: "live", ...patch }));

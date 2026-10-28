@@ -149,7 +149,6 @@ export function LiveCard({ initial }: { initial?: Match[] }) {
                   sizes="(max-width: 1440px) 100vw, 1440px"
                   className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                   priority
-                  unoptimized
                   onError={() => setImgError(true)}
                 />
 

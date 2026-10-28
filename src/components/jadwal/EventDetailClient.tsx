@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { EventHeader } from "@/components/jadwal/EventHeader";
 import { LiveBanner } from "@/components/jadwal/LiveBanner";
 import { EventTabs, type TabType } from "@/components/jadwal/EventTabs";
@@ -20,9 +21,13 @@ export function EventDetailClient({
   matches: EventMatchesData | null;
   queryTab?: TabType | null;
 }) {
+  const searchParams = useSearchParams();
+  const paramTab = (searchParams?.get("tab") as TabType | null) ?? null;
+  const preferredTab = queryTab || paramTab;
+
   const initialTab =
-    queryTab && event.availableTabs.includes(queryTab)
-      ? queryTab
+    preferredTab && event.availableTabs.includes(preferredTab)
+      ? preferredTab
       : event.defaultTab;
 
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);

@@ -25,7 +25,6 @@ export function AccountChipProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (cachedChip !== undefined) {
-      setChip(cachedChip);
       return;
     }
 

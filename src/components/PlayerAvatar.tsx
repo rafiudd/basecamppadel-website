@@ -183,7 +183,6 @@ export function PlayerAvatar({
             width={cfg.px}
             height={cfg.px}
             priority={priority}
-            unoptimized
             onError={() => setHasError(true)}
             className="w-full h-full object-cover object-top"
           />

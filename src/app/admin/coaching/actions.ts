@@ -21,6 +21,12 @@ async function applyPlayerLevel(supabase: Awaited<ReturnType<typeof createClient
   if (error) throw new Error(error.message);
 }
 
+type SessionPlayerCoachJoin = {
+  coaching_groups?: {
+    coaches?: { name?: string } | null;
+  } | null;
+};
+
 export async function saveAssessmentDraftAction(data: {
   sessionId: string;
   playerId: string;
@@ -464,7 +470,7 @@ export async function sendCoachingReportEmailAction(data: {
           .eq("session_id", data.sessionId)
           .eq("player_id", data.playerId)
           .maybeSingle();
-        const cName = (sp as any)?.coaching_groups?.coaches?.name;
+        const cName = (sp as unknown as SessionPlayerCoachJoin)?.coaching_groups?.coaches?.name;
         if (cName) coachName = cName;
       }
     }
@@ -563,7 +569,7 @@ export async function sendCoachingReportPwaAction(data: {
           .eq("session_id", data.sessionId)
           .eq("player_id", data.playerId)
           .maybeSingle();
-        const cName = (sp as any)?.coaching_groups?.coaches?.name;
+        const cName = (sp as unknown as SessionPlayerCoachJoin)?.coaching_groups?.coaches?.name;
         if (cName) coachName = cName;
       }
     }
@@ -663,7 +669,7 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
           .eq("session_id", data.sessionId)
           .eq("player_id", data.playerId)
           .maybeSingle();
-        const cName = (sp as any)?.coaching_groups?.coaches?.name;
+        const cName = (sp as unknown as SessionPlayerCoachJoin)?.coaching_groups?.coaches?.name;
         if (cName) coachName = cName;
       }
     }
@@ -742,8 +748,8 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
         } else {
           results.waError = waRes.error || "Gagal mengirim WhatsApp via Kirimdev";
         }
-      } catch (err: any) {
-        results.waError = err?.message || "Kesalahan sistem saat mengirim WhatsApp";
+      } catch (err: unknown) {
+        results.waError = (err as Error)?.message || "Kesalahan sistem saat mengirim WhatsApp";
       }
     } else {
       results.waSkipped = true;
@@ -785,8 +791,8 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
         } else {
           results.emailError = emailRes.error || "Gagal mengirim email via Brevo";
         }
-      } catch (err: any) {
-        results.emailError = err?.message || "Kesalahan sistem saat mengirim email";
+      } catch (err: unknown) {
+        results.emailError = (err as Error)?.message || "Kesalahan sistem saat mengirim email";
       }
     } else {
       results.emailSkipped = true;
@@ -812,8 +818,8 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
       } else {
         results.pwaSkipped = true;
       }
-    } catch (err: any) {
-      results.pwaError = err?.message || "Kesalahan sistem saat mengirim notifikasi PWA";
+    } catch (err: unknown) {
+      results.pwaError = (err as Error)?.message || "Kesalahan sistem saat mengirim notifikasi PWA";
     }
 
     if (data.sessionId) {

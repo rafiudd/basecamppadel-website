@@ -162,7 +162,6 @@ export default async function PlayerPage({ params }: Props) {
               width={420}
               height={540}
               priority
-              unoptimized
               className="relative block w-full h-full object-contain object-bottom origin-bottom scale-[1.2] drop-shadow-[0_6px_14px_rgba(0,0,0,0.35)]"
             />
           </div>
