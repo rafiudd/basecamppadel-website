@@ -1,6 +1,6 @@
 "use client";
 
-import { unwrap } from "@/lib/actionState";
+import { unwrap, isRedirect } from "@/lib/actionState";
 import { useState, useEffect, useTransition, useMemo, useRef } from "react";
 import { useRouter } from "nextjs-toploader/app";
 import { useTopLoaderWhile } from "@/components/TopLoader";
@@ -18,6 +18,7 @@ import type {
 import {
   computePlayerLevel,
   type SessionTab,
+  type SessionStatus,
 } from "@/lib/coaching";
 import { generateRekapClinicExcel } from "@/lib/coaching-excel";
 import {
@@ -26,6 +27,7 @@ import {
   publishAllSessionDraftsAction,
   sendAutoCoachingReportNotificationsAction,
 } from "./actions";
+import { setCoachingSessionStatusAction } from "./session-actions";
 import { MasterTeknikModal } from "./components/MasterTeknikModal";
 import { CreateSessionModal } from "./components/CreateSessionModal";
 import { OverrideLevelModal } from "./components/OverrideLevelModal";
@@ -104,9 +106,10 @@ export function CoachingClient({
   const [isPending, startTransition] = useTransition();
   const [saveStatus, setSaveStatus] = useState<string>("Tersimpan otomatis");
   const [isPublishingAll, setIsPublishingAll] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   /** Which footer button is running, so only that one shows the spinner. */
   const [busyAction, setBusyAction] = useState<"draft" | "submit" | null>(null);
-  useTopLoaderWhile(busyAction !== null || isPublishingAll);
+  useTopLoaderWhile(busyAction !== null || isPublishingAll || isUpdatingStatus);
 
   // Debounce ref for auto-saving
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -405,6 +408,29 @@ export function CoachingClient({
     }
   };
 
+  const handleStatusChange = (newStatus: SessionStatus) => {
+    if (!sessionData) return;
+    setIsUpdatingStatus(true);
+    startTransition(async () => {
+      try {
+        const res = await setCoachingSessionStatusAction(sessionData.session.id, newStatus);
+        if (res && "error" in res && res.error) {
+          toast.error(res.error);
+          setIsUpdatingStatus(false);
+        } else {
+          toast.success("Status sesi berhasil diubah");
+        }
+      } catch (err: any) {
+        if (isRedirect(err)) {
+          toast.success("Status sesi berhasil diubah");
+          throw err;
+        }
+        toast.error(err?.message || "Gagal mengubah status sesi");
+        setIsUpdatingStatus(false);
+      }
+    });
+  };
+
   // Export Rekap (.xlsx)
   const handleExportXlsx = () => {
     if (!sessionData) return;
@@ -489,9 +515,11 @@ export function CoachingClient({
         sessionData={sessionData}
         isAdmin={isAdmin}
         isPublishingAll={isPublishingAll}
+        isUpdatingStatus={isUpdatingStatus}
         onOpenImportRekap={() => setShowImportRekap(true)}
         onExportXlsx={handleExportXlsx}
         onPublishAll={handlePublishAll}
+        onStatusChange={handleStatusChange}
       />
 
       {sessionData ? (

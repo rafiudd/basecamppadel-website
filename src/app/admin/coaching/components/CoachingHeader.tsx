@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { SessionFullData } from "@/lib/coaching-db";
-import { SESSION_TABS, type SessionTab } from "@/lib/coaching";
+import { SESSION_TABS, type SessionTab, type SessionStatus, TAB_STATUS, statusTab } from "@/lib/coaching";
 import { formatDateShortIndo } from "@/lib/format";
 import {
   PlusIcon,
@@ -10,6 +10,7 @@ import {
   ChartIcon,
   UploadIcon,
   ImageIcon,
+  EditIcon,
 } from "@/components/ui/icons";
 
 const TAB_LABELS: Record<SessionTab, string> = { draft: "Draft", berjalan: "Berjalan", selesai: "Selesai" };
@@ -27,24 +28,28 @@ export function CoachingHeader({
   sessionData,
   isAdmin,
   isPublishingAll,
+  isUpdatingStatus = false,
   onOpenImportRekap,
   onExportXlsx,
   onPublishAll,
+  onStatusChange,
 }: {
   sessionTab: SessionTab;
   sessionCounts: Record<SessionTab, number>;
   sessionData: SessionFullData | null;
   isAdmin: boolean;
   isPublishingAll: boolean;
+  isUpdatingStatus?: boolean;
   onOpenImportRekap: () => void;
   onExportXlsx: () => void;
   onPublishAll: () => void;
+  onStatusChange?: (newStatus: SessionStatus) => void;
 }) {
-  // ── Session open: a compact back/actions row + progress. Status is automatic now (derived from
-  // assessment progress — see deriveSessionStatus), so no manual Draft/Berjalan/Selesai switch here,
-  // just a read-only badge; "lihat tanggal/venue/peserta" lives in the session list, not repeated here.
+  // ── Session open: a compact back/actions row + progress.
   if (sessionData) {
     const session = sessionData.session;
+    const currentStatus = (session.status as SessionStatus) || TAB_STATUS[sessionTab] || "draft";
+    const currentTab = statusTab(currentStatus);
     const pct = sessionData.progress.total > 0 ? Math.round((sessionData.progress.rated / sessionData.progress.total) * 100) : 0;
     return (
       <div className="flex flex-col gap-3">
@@ -60,13 +65,40 @@ export function CoachingHeader({
                 {session.venue_name ? ` · ${session.venue_name}` : ""}
               </div>
             </div>
-            <span className={`flex-none rounded-full px-2.5 py-1 text-xs font-bold whitespace-nowrap ${STATUS_BADGE_TONE[sessionTab]}`}>
-              {TAB_LABELS[sessionTab]}
-            </span>
+
+            {/* Dropdown status sesi */}
+            <select
+              aria-label="Status sesi"
+              value={currentStatus}
+              disabled={isUpdatingStatus}
+              onChange={(e) => onStatusChange?.(e.target.value as SessionStatus)}
+              className={`rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap cursor-pointer border border-transparent hover:border-[#FBF7F1]/20 focus:outline-none focus:ring-1 focus:ring-[#FFD43B] transition-all ${STATUS_BADGE_TONE[currentTab]} disabled:opacity-50 flex-none`}
+            >
+              <option value="draft" className="bg-[#1F1C2B] text-[#FBF7F1]">
+                Draft
+              </option>
+              <option value="active" className="bg-[#1F1C2B] text-[#FFD43B]">
+                Berjalan
+              </option>
+              <option value="finished" className="bg-[#1F1C2B] text-[#6FD39A]">
+                Selesai
+              </option>
+            </select>
           </div>
 
-          {/* Just import / export / poster / kirim semua — everything else lives on the list view or the session edit page */}
+          {/* Action buttons: edit session / import / poster / export / kirim semua */}
           <div className="flex items-center gap-1.5 flex-wrap flex-none">
+            {isAdmin && (
+              <Link
+                href={`/admin/coaching/sessions/${session.id}`}
+                title="Edit sesi"
+                aria-label="Edit sesi"
+                className={`${iconBtn} gap-1.5 sm:w-auto sm:px-2.5`}
+              >
+                <EditIcon size={15} />
+                <span className="hidden sm:inline text-xs font-semibold">Edit sesi</span>
+              </Link>
+            )}
             {isAdmin && (
               <button type="button" onClick={onOpenImportRekap} title="Import Excel" aria-label="Import Excel" className={iconBtn}>
                 <UploadIcon size={16} />

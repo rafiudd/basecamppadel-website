@@ -283,7 +283,14 @@ export async function setCoachingSessionStatusAction(sessionId: string, status: 
     await requireAdminOrCoach();
     const supabase = await createClient();
     const { error } = await supabase.rpc("coaching_set_session_status", { p_session_id: sessionId, p_status: status });
-    if (error) throw new Error(error.message);
+    if (error) {
+      const { error: updateErr } = await supabase
+        .from("coaching_sessions")
+        .update({ status })
+        .eq("id", sessionId);
+      if (updateErr) throw new Error(error.message || updateErr.message);
+    }
+    revalidatePath("/admin/coaching");
     revalidatePath(`/admin/coaching/sessions/${sessionId}`);
     redirect(`/admin/coaching?when=${statusTab(status)}&session=${sessionId}`);
   });
