@@ -30,15 +30,14 @@ export default async function CoachingAdminPage({
   // page's default view now, not an auto-picked workspace.
   const activeSessionId = paramSessionId && sessions.some((s) => s.id === paramSessionId) ? paramSessionId : "";
 
-  // Fetch session full data, all master skills, coaches, players, venues, events
-  const [sessionData, allSkills, allCoaches, { data: allPlayers }, { data: venues }, { data: events }] =
+  // Fetch session full data, all master skills, coaches, venues, events (players loaded on demand)
+  const [sessionData, allSkills, allCoaches, { data: venues }, { data: events }] =
     await Promise.all([
       activeSessionId ? getSessionFullData(activeSessionId) : null,
       getCoachingSkills(),
       getCoaches(),
-      supabase.from("players").select("*").eq("active", true).order("name"),
-      supabase.from("venues").select("*").eq("active", true).order("name"),
-      supabase.from("events").select("id, title, event_date, venue_id").order("event_date", { ascending: false }),
+      supabase.from("venues").select("id, name").eq("active", true).order("name"),
+      supabase.from("events").select("id, title, event_date, venue_id").order("event_date", { ascending: false }).limit(50),
     ]);
 
   return (
@@ -50,7 +49,6 @@ export default async function CoachingAdminPage({
       activeSessionId={activeSessionId}
       allSkills={allSkills}
       allCoaches={allCoaches}
-      allPlayers={allPlayers ?? []}
       venues={venues ?? []}
       events={events ?? []}
       isAdmin={isAdmin}

@@ -5,7 +5,8 @@ import { useState, useTransition } from "react";
 import { Modal } from "@/components/ui/Modal";
 import type { CoachingSkill, Player } from "@/lib/database.types";
 import { parseRekapClinicExcel, generateRekapTemplateExcel, type RekapRowPreview } from "@/lib/coaching-excel";
-import { importRekapDraftsAction } from "../actions";
+import { useEffect } from "react";
+import { importRekapDraftsAction, getActivePlayersForCoachingAction } from "../actions";
 import { toast } from "@/components/ui/Toast";
 
 export function ImportRekapModal({
@@ -17,7 +18,7 @@ export function ImportRekapModal({
 }: {
   sessionId: string;
   skills: CoachingSkill[];
-  players: Player[];
+  players?: Player[];
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -27,6 +28,17 @@ export function ImportRekapModal({
   const [error, setError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [activePlayers, setActivePlayers] = useState<Player[]>(players ?? []);
+
+  useEffect(() => {
+    if (!players || players.length === 0) {
+      getActivePlayersForCoachingAction().then((res) => {
+        if (!("error" in res)) {
+          setActivePlayers(res as unknown as Player[]);
+        }
+      });
+    }
+  }, [players]);
 
   const handleDownloadTemplate = async () => {
     try {
@@ -54,8 +66,17 @@ export function ImportRekapModal({
     setError(null);
 
     try {
+      let candidatePlayers = activePlayers;
+      if (candidatePlayers.length === 0) {
+        const resPlayers = await getActivePlayersForCoachingAction();
+        if (!("error" in resPlayers)) {
+          candidatePlayers = resPlayers as unknown as Player[];
+          setActivePlayers(candidatePlayers);
+        }
+      }
+
       const buffer = await selectedFile.arrayBuffer();
-      const res = await parseRekapClinicExcel(new Uint8Array(buffer), skills, players);
+      const res = await parseRekapClinicExcel(new Uint8Array(buffer), skills, candidatePlayers);
       if (!res.success) {
         setError(res.error || "Gagal memproses file Excel");
         setPreviews([]);
@@ -71,7 +92,7 @@ export function ImportRekapModal({
   };
 
   const handleManualMatch = (idx: number, playerId: string) => {
-    const matchedP = players.find((p) => p.id === playerId);
+    const matchedP = activePlayers.find((p) => p.id === playerId);
     setPreviews((prev) =>
       prev.map((r, i) =>
         i === idx
@@ -215,7 +236,7 @@ export function ImportRekapModal({
                             className="bg-ink-3 border border-coral text-snow rounded px-2 py-1 text-xs w-48"
                           >
                             <option value="">-- Pilih Manual --</option>
-                            {players.map((p) => (
+                            {activePlayers.map((p) => (
                               <option key={p.id} value={p.id}>
                                 {p.name}
                               </option>

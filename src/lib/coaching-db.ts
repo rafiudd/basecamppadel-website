@@ -193,57 +193,77 @@ export async function getSessionFullData(
 
   if (sErr || !session) return null;
 
-  // Groups
-  const { data: groups } = await supabase
-    .from("coaching_groups")
-    .select("*")
-    .eq("session_id", sessionId)
-    .order("name", { ascending: true });
-
-  // Coaches
-  const { data: coaches } = await supabase
-    .from("coaches")
-    .select("*")
-    .eq("active", true)
-    .order("name", { ascending: true });
-
-  // Skills
-  const { data: skills } = await supabase
-    .from("coaching_skills")
-    .select("*")
-    .order("sort_order", { ascending: true });
-
-  // Session Players
-  const { data: sessionPlayers } = await supabase
-    .from("coaching_session_players")
-    .select("player_id, group_id, players(*)")
-    .eq("session_id", sessionId);
-
-  // Assessments for this session
-  const { data: assessments } = await supabase
-    .from("coaching_assessments")
-    .select("*")
-    .eq("session_id", sessionId);
+  // 1. Parallel batch for session children
+  const [
+    { data: groups },
+    { data: coaches },
+    { data: skills },
+    { data: sessionPlayers },
+    { data: assessments },
+  ] = await Promise.all([
+    supabase
+      .from("coaching_groups")
+      .select("*")
+      .eq("session_id", sessionId)
+      .order("name", { ascending: true }),
+    supabase
+      .from("coaches")
+      .select("*")
+      .eq("active", true)
+      .order("name", { ascending: true }),
+    supabase
+      .from("coaching_skills")
+      .select("*")
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("coaching_session_players")
+      .select("player_id, group_id, players(*)")
+      .eq("session_id", sessionId),
+    supabase
+      .from("coaching_assessments")
+      .select("*")
+      .eq("session_id", sessionId),
+  ]);
 
   const playerIds = (sessionPlayers || []).map((sp) => sp.player_id);
 
-  // Direct fetch fallback for players in case adapter join was not populated
-  const { data: directPlayers } = playerIds.length > 0
-    ? await supabase.from("players").select("*").in("id", playerIds)
-    : { data: [] };
+  // 2. Parallel batch for player-dependent data
+  const [
+    { data: directPlayers },
+    { data: pastAssessments },
+    { data: mabarCounts },
+    { data: profiles },
+  ] = await Promise.all([
+    playerIds.length > 0
+      ? supabase.from("players").select("*").in("id", playerIds)
+      : Promise.resolve({ data: [] }),
+    playerIds.length > 0
+      ? supabase
+          .from("coaching_assessments")
+          .select("player_id, scores, coaching_sessions(session_date)")
+          .in("player_id", playerIds)
+          .eq("status", "submitted")
+          .neq("session_id", sessionId)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    playerIds.length > 0
+      ? supabase
+          .from("gen_participants")
+          .select("player_id")
+          .in("player_id", playerIds)
+      : Promise.resolve({ data: [] }),
+    playerIds.length > 0
+      ? supabase
+          .from("profiles")
+          .select("player_id, email, whatsapp")
+          .in("player_id", playerIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const profileMap = new Map((profiles || []).map((prof) => [prof.player_id, prof]));
   const playerMap = new Map((directPlayers || []).map((p) => [p.id, p]));
-
-  // Previous submitted assessments for delta computation
-  // Find submitted assessments before this session date
-  const { data: pastAssessments } = playerIds.length > 0
-    ? await supabase
-        .from("coaching_assessments")
-        .select("player_id, scores, coaching_sessions(session_date)")
-        .in("player_id", playerIds)
-        .eq("status", "submitted")
-        .neq("session_id", sessionId)
-        .order("created_at", { ascending: false })
-    : { data: [] };
+  const groupMap = new Map((groups || []).map((g) => [g.id, g]));
+  const coachMap = new Map((coaches || []).map((c) => [c.id, c]));
+  const assessmentMap = new Map((assessments || []).map((a) => [a.player_id, a]));
 
   const pastScoresMap: Record<string, Record<string, number>> = {};
   if (pastAssessments) {
@@ -254,30 +274,12 @@ export async function getSessionFullData(
     }
   }
 
-  // Check mabar history per player (wins + losses or gen_participants count)
-  const { data: mabarCounts } = playerIds.length > 0
-    ? await supabase
-        .from("gen_participants")
-        .select("player_id")
-        .in("player_id", playerIds)
-    : { data: [] };
-
   const mabarSet = new Set<string>();
   if (mabarCounts) {
     for (const row of mabarCounts) {
       if (row.player_id) mabarSet.add(row.player_id);
     }
   }
-
-  const groupMap = new Map((groups || []).map((g) => [g.id, g]));
-  const coachMap = new Map((coaches || []).map((c) => [c.id, c]));
-  const assessmentMap = new Map((assessments || []).map((a) => [a.player_id, a]));
-
-  // Profiles to get email and connected contact data
-  const { data: profiles } = playerIds.length > 0
-    ? await supabase.from("profiles").select("player_id, email, whatsapp").in("player_id", playerIds)
-    : { data: [] };
-  const profileMap = new Map((profiles || []).map((prof) => [prof.player_id, prof]));
 
   const playerItems: SessionPlayerItem[] = [];
 

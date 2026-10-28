@@ -58,7 +58,7 @@ export function CoachingClient({
   activeSessionId: string;
   allSkills: CoachingSkill[];
   allCoaches: Coach[];
-  allPlayers: Player[];
+  allPlayers?: Player[];
   venues: Venue[];
   events: Array<{ id: string; title: string; event_date?: string | null; venue_id?: string | null }>;
   isAdmin: boolean;

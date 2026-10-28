@@ -824,6 +824,16 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
   });
 }
 
-
-
-
+export async function getActivePlayersForCoachingAction() {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("players")
+      .select("id, name, gender, level, region, points")
+      .eq("active", true)
+      .order("name");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+}

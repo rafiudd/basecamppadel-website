@@ -16,14 +16,58 @@ const PAGE_SIZE = 25;
 export default async function EventsAdmin({ searchParams }: { searchParams: Promise<{ type?: string; league?: string; page?: string }> }) {
   const { type, league, page: pageParam } = await searchParams;
   const supabase = await createClient();
-  const [{ data: events }, { data: venues }, { data: leagues }] = await Promise.all([
-    supabase.from("events").select("*").order("created_at", { ascending: false }),
+  const [{ data: metaEvents }, { data: venues }, { data: leagues }] = await Promise.all([
+    supabase.from("events").select("id, type, league_id").order("created_at", { ascending: false }),
     supabase.from("venues").select("id, name"),
     supabase.from("leagues").select("id, name").order("created_at", { ascending: false }),
   ]);
   const leagueIds = new Set((leagues ?? []).map((l) => l.id));
 
-  const rows: EventRow[] = (events ?? []).map((e) => ({
+  const filter: Filter = type === "kompetisi" || type === "mabar" || type === "liga" ? type : "semua";
+  const leagueFilter = filter === "liga" && league && leagueIds.has(league) ? league : "";
+
+  const validLeagueId = (lid?: string | null) => (lid && leagueIds.has(lid) ? lid : null);
+  const matchesMeta = (e: { type: string; league_id?: string | null }, t: Filter) =>
+    t === "semua" || (t === "liga" ? !!validLeagueId(e.league_id) : e.type === t);
+
+  const shownMeta = (metaEvents ?? []).filter(
+    (e) => matchesMeta(e, filter) && (!leagueFilter || validLeagueId(e.league_id) === leagueFilter),
+  );
+
+  const leagueOptions = (leagues ?? []).map((l) => ({
+    id: l.id,
+    name: l.name,
+    count: (metaEvents ?? []).filter((e) => validLeagueId(e.league_id) === l.id).length,
+  }));
+
+  const tabs = (["semua", "mabar", "kompetisi", "liga"] as const).map((t) => ({
+    value: t,
+    label: `${FILTER_LABEL[t]} ${(metaEvents ?? []).filter((e) => matchesMeta(e, t)).length}`,
+    href: t === "semua" ? "/admin/events" : `/admin/events?type=${t}`,
+  }));
+
+  const totalPages = Math.max(1, Math.ceil(shownMeta.length / PAGE_SIZE));
+  const page = Math.min(Math.max(1, Number(pageParam) || 1), totalPages);
+  const offset = (page - 1) * PAGE_SIZE;
+
+  let pageQuery = supabase
+    .from("events")
+    .select("id, type, title, event_date, start_time, venue_id, status, league_id, match_format, game_format, target_points, points_type")
+    .order("created_at", { ascending: false });
+
+  if (filter === "kompetisi" || filter === "mabar") {
+    pageQuery = pageQuery.eq("type", filter);
+  } else if (filter === "liga") {
+    if (leagueFilter) {
+      pageQuery = pageQuery.eq("league_id", leagueFilter);
+    } else {
+      pageQuery = pageQuery.in("league_id", Array.from(leagueIds));
+    }
+  }
+
+  const { data: pageEvents } = await pageQuery.range(offset, offset + PAGE_SIZE - 1);
+
+  const pageRows: EventRow[] = (pageEvents ?? []).map((e) => ({
     id: e.id,
     type: e.type,
     title: e.title,
@@ -31,24 +75,8 @@ export default async function EventsAdmin({ searchParams }: { searchParams: Prom
     date: e.event_date ? formatSessionDay(e.event_date) : "—",
     venue: venues?.find((v) => v.id === e.venue_id)?.name ?? "—",
     status: e.status,
-    // only a league that still exists: events of a deleted league keep no badge
     leagueId: e.league_id && leagueIds.has(e.league_id) ? e.league_id : null,
   }));
-  const filter: Filter = type === "kompetisi" || type === "mabar" || type === "liga" ? type : "semua";
-  const matches = (r: EventRow, t: Filter) => t === "semua" || (t === "liga" ? !!r.leagueId : r.type === t);
-  // under the Liga tab, `?league=` narrows to one league; an unknown id falls back to all leagues
-  const leagueFilter = filter === "liga" && league && leagueIds.has(league) ? league : "";
-  const shown = rows.filter((r) => matches(r, filter) && (!leagueFilter || r.leagueId === leagueFilter));
-  const leagueOptions = (leagues ?? []).map((l) => ({ id: l.id, name: l.name, count: rows.filter((r) => r.leagueId === l.id).length }));
-  const tabs = (["semua", "mabar", "kompetisi", "liga"] as const).map((t) => ({
-    value: t,
-    label: `${FILTER_LABEL[t]} ${rows.filter((r) => matches(r, t)).length}`,
-    href: t === "semua" ? "/admin/events" : `/admin/events?type=${t}`,
-  }));
-
-  const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
-  const page = Math.min(Math.max(1, Number(pageParam) || 1), totalPages);
-  const pageRows = shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const hrefFor = (p: number) => {
     const params = new URLSearchParams();
     if (type) params.set("type", type);
