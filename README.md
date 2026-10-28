@@ -61,6 +61,23 @@ Supabase → Authentication → Providers → **Google**: isi Client ID/Secret d
 `https://<domain>/auth/callback` (dan `http://localhost:3000/auth/callback`) di **URL Configuration → Redirect URLs**.
 Aturan akun ada di `supabase/migrations/0012_player_accounts.sql` (RPC `account_*`).
 
+## Analytics & SEO (Google Analytics, Search Console)
+
+Isi di env hosting (Production saja, supaya data preview/dev tidak tercampur):
+
+```
+NEXT_PUBLIC_SITE_URL=https://www.basecamppadel.id   # dipakai metadataBase, robots.txt, sitemap.xml
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX                      # GA4 → Admin → Data streams → Measurement ID
+GOOGLE_SITE_VERIFICATION=…                          # opsional: kode dari Search Console metode "HTML tag"
+```
+
+- GA4 dimuat dari `src/components/Analytics.tsx`; mati kalau `NEXT_PUBLIC_GA_ID` kosong. `/admin`, `/overlay`,
+  `/akun-demo` tidak dilacak.
+- `robots.txt` (`src/app/robots.ts`) memblokir halaman admin/akun/overlay/API; di preview Vercel memblokir semua.
+- `sitemap.xml` (`src/app/sitemap.ts`) berisi halaman publik + liga & kelas yang `published`, diperbarui per jam.
+- Search Console: pakai properti **Domain** (verifikasi DNS TXT, tanpa env), atau properti URL-prefix dengan
+  `GOOGLE_SITE_VERIFICATION`. Lalu Sitemaps → submit `sitemap.xml`. Hubungkan ke GA4 di GA Admin → Search Console links.
+
 ## Alur live match
 
 1. `/admin/live` → **+ Match baru** (opsional pilih sesi → label & venue terisi).

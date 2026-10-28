@@ -1,5 +1,8 @@
 import { LEVEL_NAMES } from "@/lib/coaching";
 
+/** Canonical origin (no trailing slash): metadataBase, robots.txt and sitemap.xml. Set to the production domain on prod. */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://basecamppadel.vercel.app").replace(/\/+$/, "");
+
 /** Contact for players (privacy & terms pages); also the consent screen's support email. */
 export const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "padellensid@gmail.com";
 export const WHATSAPP_URL = process.env.NEXT_PUBLIC_WHATSAPP_URL ?? "https://wa.me/";
