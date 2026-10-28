@@ -123,7 +123,7 @@ export interface EventMatchesData {
   quarterfinals?: KnockoutMatch[];
   groupMatches?: GroupMatch[];
   groups?: GroupData[];
-  rounds?: Array<{ round: string; time: string; status: string; p1: string; p2: string; s1: number; s2: number; p1Key?: string; p2Key?: string }>;
+  rounds?: Array<{ round: string; time: string; status: string; p1: string; p2: string; s1: number; s2: number; p1Key?: string; p2Key?: string; courtId?: string | null }>;
   roundsDone?: number;
   roundsTotal?: number;
   /** Mabar only: every pair/player's full match history, keyed the same as `GroupRow.key` — for a "lihat jadwal lawan" popup. */
@@ -724,8 +724,9 @@ function formatKnockoutMatch(m: Match, teams: { id: string; name: string }[], co
 }
 
 function mapMabarToMatchesData(event: CompEvent, roundsData: any): EventMatchesData {
-  const { participants, rounds, matches, live } = roundsData;
+  const { participants, rounds, matches, live, courts } = roundsData;
   const pMap = new Map((participants ?? []).map((p: GenParticipant) => [p.id, p.display_name]));
+  const courtNameById = new Map<string, string>((courts ?? []).map((c: Pick<Court, "id" | "name">) => [c.id, c.name]));
 
   const table = mabarTable(participants, matches, event.mabar_format, event.draw_seed);
   const groups: GroupData[] = [
@@ -753,7 +754,7 @@ function mapMabarToMatchesData(event: CompEvent, roundsData: any): EventMatchesD
     return p ? unitKey(p, event.mabar_format) : undefined;
   };
 
-  const roundList: Array<{ round: string; time: string; status: string; p1: string; p2: string; s1: number; s2: number; p1Key?: string; p2Key?: string }> = [];
+  const roundList: Array<{ round: string; time: string; status: string; p1: string; p2: string; s1: number; s2: number; p1Key?: string; p2Key?: string; courtId?: string | null }> = [];
   for (const r of rounds ?? []) {
     const rMatches = (matches ?? []).filter((m: any) => m.round_id === r.id);
     for (let i = 0; i < rMatches.length; i++) {
@@ -761,9 +762,10 @@ function mapMabarToMatchesData(event: CompEvent, roundsData: any): EventMatchesD
       const p1 = (m.team_a_participant_ids ?? []).map((id: string) => pMap.get(id) || "?").join(" / ");
       const p2 = (m.team_b_participant_ids ?? []).map((id: string) => pMap.get(id) || "?").join(" / ");
       const finished = m.team_a_points != null && m.team_b_points != null;
+      const courtName = courtNameById.get(m.court_id);
       roundList.push({
         round: `Ronde ${r.round_no}`,
-        time: rMatches.length > 1 ? `Court ${i + 1}` : "—",
+        time: rMatches.length > 1 ? (courtName ? courtLabel(courtName) : `Court ${i + 1}`) : "—",
         status: finished ? "finished" : "waiting",
         p1: p1 || "Tim A",
         p2: p2 || "Tim B",
@@ -771,6 +773,7 @@ function mapMabarToMatchesData(event: CompEvent, roundsData: any): EventMatchesD
         s2: m.team_b_points ?? 0,
         p1Key: unitKeyOfIds(m.team_a_participant_ids ?? []),
         p2Key: unitKeyOfIds(m.team_b_participant_ids ?? []),
+        courtId: m.court_id ?? null,
       });
     }
   }
