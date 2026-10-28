@@ -4,9 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { toast } from "@/components/ui/Toast";
-import { initials } from "@/lib/format";
+import { formatDateShortIndo, initials } from "@/lib/format";
 import type { CoachingSkill } from "@/lib/database.types";
 import { LEVEL_DEFINITIONS, type computePlayerLevel } from "@/lib/coaching";
+import { splitNotes } from "@/lib/coachingRules";
 import type { SessionPlayerItem } from "@/lib/coaching-db";
 import { generateCoachNote } from "../ai-actions";
 import { ScoringRow } from "./ScoringRow";
@@ -256,6 +257,36 @@ export function AssessmentEditor({
 
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto p-3.5 lg:p-6 flex flex-col gap-4">
+          {currentPlayerItem.previousNote && (
+            <div className="bg-[#1F1C2B] rounded-xl p-4 lg:p-4.5 border border-[#FBF7F1]/5 flex flex-col gap-2">
+              <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-[#FFD43B]">
+                Catatan sesi sebelumnya
+              </span>
+              <span className="text-xs text-[#FBF7F1]/60 -mt-1">
+                {currentPlayerItem.previousNote.sessionTitle} · {formatDateShortIndo(currentPlayerItem.previousNote.sessionDate)}
+              </span>
+              {splitNotes(currentPlayerItem.previousNote.evaluation).length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-bold text-[#FBF7F1]/80">Evaluasi</span>
+                  <ul className="m-0 pl-4 flex flex-col gap-0.5 text-[13px] text-[#FBF7F1]/85 leading-snug">
+                    {splitNotes(currentPlayerItem.previousNote.evaluation).map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {splitNotes(currentPlayerItem.previousNote.nextPractice).length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-bold text-[#FBF7F1]/80">Latihan berikutnya</span>
+                  <ul className="m-0 pl-4 flex flex-col gap-0.5 text-[13px] text-[#FBF7F1]/85 leading-snug">
+                    {splitNotes(currentPlayerItem.previousNote.nextPractice).map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
           <div>
             <span className="text-[12px] tracking-[0.08em] text-[#FBF7F1]/70 uppercase mb-2 block font-medium">
               Nilai teknik &amp; in-game

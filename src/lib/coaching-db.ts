@@ -24,6 +24,7 @@ export interface SessionPlayerItem {
   assessment: CoachingAssessment | null;
   status: "unrated" | "draft" | "submitted";
   previousScores: Record<string, number>;
+  previousNote: { evaluation: string; nextPractice: string; sessionTitle: string; sessionDate: string } | null;
   computedLevel: {
     level: PlayerLevelName;
     color: string;
@@ -238,7 +239,7 @@ export async function getSessionFullData(
   const { data: pastAssessments } = playerIds.length > 0
     ? await supabase
         .from("coaching_assessments")
-        .select("player_id, scores, coaching_sessions(session_date)")
+        .select("player_id, scores, evaluation, next_practice, coaching_sessions(title, session_date)")
         .in("player_id", playerIds)
         .eq("status", "submitted")
         .neq("session_id", sessionId)
@@ -246,10 +247,20 @@ export async function getSessionFullData(
     : { data: [] };
 
   const pastScoresMap: Record<string, Record<string, number>> = {};
+  const pastNoteMap: Record<string, { evaluation: string; nextPractice: string; sessionTitle: string; sessionDate: string }> = {};
   if (pastAssessments) {
     for (const pa of pastAssessments) {
       if (!pastScoresMap[pa.player_id]) {
         pastScoresMap[pa.player_id] = (pa.scores as Record<string, number>) || {};
+      }
+      const sess = pa.coaching_sessions as unknown as { title: string; session_date: string } | null;
+      if (!pastNoteMap[pa.player_id] && sess && ((pa.evaluation ?? "").trim() || (pa.next_practice ?? "").trim())) {
+        pastNoteMap[pa.player_id] = {
+          evaluation: pa.evaluation ?? "",
+          nextPractice: pa.next_practice ?? "",
+          sessionTitle: sess.title,
+          sessionDate: sess.session_date,
+        };
       }
     }
   }
@@ -320,6 +331,7 @@ export async function getSessionFullData(
       assessment: asm,
       status,
       previousScores: prevScores,
+      previousNote: pastNoteMap[p.id] || null,
       computedLevel: levelCalc,
       email,
     });
