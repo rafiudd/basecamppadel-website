@@ -32,11 +32,18 @@ export async function loadMabarRounds(supabase: Supa, eventId: string, genId: st
   const { data: matches } = roundIds.length
     ? await supabase.from("gen_matches").select("*").in("round_id", roundIds).order("created_at")
     : { data: [] as GenMatch[] };
+
+  const courtIds = [...new Set((matches ?? []).map((m) => m.court_id).filter((id): id is string => !!id))];
+  const { data: courts } = courtIds.length
+    ? await supabase.from("courts").select("id, name").in("id", courtIds)
+    : { data: [] as Pick<Court, "id" | "name">[] };
+
   return {
     participants: participants ?? [],
     rounds: rounds ?? [],
     matches: matches ?? [],
     live: Object.fromEntries((live ?? []).map((m) => [m.gen_match_id!, m])),
+    courts: courts ?? [],
   };
 }
 

@@ -43,12 +43,30 @@ export function MatchTab({
 
     const filtered = filterKey ? matches.rounds.filter((r) => r.p1Key === filterKey || r.p2Key === filterKey) : matches.rounds;
 
-    // Group consecutive rows that share a round label (one per court) into one block.
+    // Courts in first-seen order, so the same court always lands in the same grid slot (left/right)
+    // and — for "Mabar with Coach", which runs two separate groups side by side, each locked to its
+    // own court — always gets the same color, instead of swapping sides/colors round to round.
+    const courtOrder = new Map<string, number>();
+    for (const r of matches.rounds) {
+      if (r.courtId && !courtOrder.has(r.courtId)) courtOrder.set(r.courtId, courtOrder.size);
+    }
+    const isCoachMabar = /mabar with coach/i.test(event.title);
+    const COURT_COLORS = ["#FFD43B", "#7C9CFF"]; // court 1 (volt), court 2 (periwinkle); more courts just go borderless
+    const courtColor = new Map<string, string>();
+    if (isCoachMabar) {
+      for (const [courtId, idx] of courtOrder) courtColor.set(courtId, COURT_COLORS[idx % COURT_COLORS.length]);
+    }
+
+    // Group consecutive rows that share a round label (one per court) into one block, each block's
+    // rows sorted into the same court order every time.
     const groups: { round: string; rows: typeof filtered }[] = [];
     for (const r of filtered) {
       const last = groups.at(-1);
       if (last && last.round === r.round) last.rows.push(r);
       else groups.push({ round: r.round, rows: [r] });
+    }
+    for (const g of groups) {
+      g.rows.sort((a, b) => (courtOrder.get(a.courtId ?? "") ?? 0) - (courtOrder.get(b.courtId ?? "") ?? 0));
     }
 
     const name = (label: string, key: string | undefined) =>
@@ -122,9 +140,19 @@ export function MatchTab({
                         ? "border-ink/20 bg-ink/5"
                         : "border-ink/8"
                       : "border-ink/8";
+                    const dot = r.courtId ? courtColor.get(r.courtId) : undefined;
                     return (
-                      <div key={j} className={`rounded-lg border p-2.5 flex flex-col gap-1 ${cardClass}`}>
-                        {g.rows.length > 1 && <div className="text-[10px] font-bold text-ink/35 uppercase tracking-wide">{r.time}</div>}
+                      <div
+                        key={j}
+                        className={`rounded-lg border p-2.5 flex flex-col gap-1 ${cardClass}`}
+                        style={dot ? { borderLeft: `3px solid ${dot}` } : undefined}
+                      >
+                        {g.rows.length > 1 && (
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-ink/35 uppercase tracking-wide">
+                            {dot && <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ backgroundColor: dot }} />}
+                            {r.time}
+                          </div>
+                        )}
                         <div className={`flex items-center justify-between gap-2.5 min-h-[28px] px-1.5 rounded-md ${aWin ? "bg-[#2f9e5c]/12" : ""}`}>
                           <span className={`text-sm truncate ${aWin ? "font-bold text-ink" : bWin ? "font-semibold text-ink/50" : "font-semibold text-ink"}`}>
                             {name(r.p1, r.p1Key)}

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: "Data apa yang dikumpulkan Basecamp Padel, untuk apa, siapa yang bisa melihatnya, dan cara menghapusnya.",
 };
 
-const UPDATED = "13 Oktober 2026";
+const UPDATED = "28 Oktober 2026";
 const mail = <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>;
 
 const SECTIONS: LegalSection[] = [
@@ -82,7 +82,8 @@ const SECTIONS: LegalSection[] = [
         </ul>
         <p>
           Kami <b>tidak menjual</b> data kamu dan tidak membagikannya ke pengiklan. Data hanya diproses oleh penyedia layanan
-          yang kami pakai untuk menjalankan situs: Supabase (database, login, dan penyimpanan foto) dan Google (login).
+          yang kami pakai untuk menjalankan situs: Supabase (database, login, dan penyimpanan foto) dan Google (login, serta
+          Google Analytics untuk statistik kunjungan).
         </p>
       </>
     ),
@@ -92,7 +93,16 @@ const SECTIONS: LegalSection[] = [
     body: (
       <ul>
         <li>Data disimpan di database Supabase dengan akses dibatasi per akun (row level security).</li>
-        <li>Login memakai cookie sesi yang berlaku 30 hari sejak kunjungan terakhir. Kami tidak memakai cookie iklan atau pelacak pihak ketiga.</li>
+        <li>Login memakai cookie sesi yang berlaku 30 hari sejak kunjungan terakhir.</li>
+        <li>
+          Kami memakai Google Analytics untuk statistik kunjungan anonim (halaman yang dibuka, perangkat, perkiraan lokasi
+          setingkat kota). Google Analytics memasang cookie <code>_ga</code>. Data ini tidak dihubungkan ke akun atau
+          profilmu, dan tidak dipakai untuk iklan. Kamu bisa menolaknya lewat pengaturan cookie browser atau{" "}
+          <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">
+            add-on opt-out Google Analytics
+          </a>
+          .
+        </li>
         <li>Semua koneksi ke situs memakai HTTPS.</li>
       </ul>
     ),
@@ -166,7 +176,8 @@ export default function PrivasiPage() {
           </p>
           <p>
             We do not sell or share your data with advertisers. Data is processed by Supabase (database, authentication,
-            storage) and Google (sign-in). You can delete your account at any time from Edit profile → Delete account, which
+            storage) and Google (sign-in, and Google Analytics for anonymous visit statistics via the <code>_ga</code> cookie,
+            not linked to your account or used for ads). You can delete your account at any time from Edit profile → Delete account, which
             permanently removes your login and profile; recorded match results stay on the leaderboard unless you ask us to
             remove them. Contact: {mail}.
           </p>

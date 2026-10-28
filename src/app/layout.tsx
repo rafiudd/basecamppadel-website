@@ -4,14 +4,17 @@ import "./globals.css";
 import { TopLoader } from "@/components/TopLoader";
 import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
 import { PushNotifPermission } from "@/components/pwa/PushNotifPermission";
+import { Analytics } from "@/components/Analytics";
+import { SITE_URL } from "@/lib/config";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://basecamppadel.vercel.app";
+/** Search Console "HTML tag" verification code (content="…" only). Not needed when verified via DNS. */
+const googleVerification = process.env.GOOGLE_SITE_VERIFICATION;
 const title = "Basecamp Padel — Start. Settle in. Level up.";
 const description =
   "Komunitas mabar padel buat siapa aja — dari yang baru pegang raket sampai yang udah rutin naik level.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
   title,
   description,
   keywords: ["padel", "mabar padel", "komunitas padel", "live score padel", "Basecamp Padel"],
@@ -29,6 +32,7 @@ export const metadata: Metadata = {
     description,
   },
   robots: { index: true, follow: true },
+  ...(googleVerification ? { verification: { google: googleVerification } } : {}),
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -51,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PwaInstallPrompt />
         <PushNotifPermission />
       </body>
+      <Analytics />
     </html>
   );
 }
