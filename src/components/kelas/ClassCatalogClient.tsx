@@ -205,6 +205,8 @@ export function ClassCatalogClient({ initialClasses }: { initialClasses: any[] }
                 <img
                   src={k.coverImageUrl || "/images/classes/coach-drill.webp"}
                   alt={k.title}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-transparent opacity-80" />
