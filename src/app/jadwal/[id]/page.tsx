@@ -6,6 +6,11 @@ import { EventDetailClient } from "@/components/jadwal/EventDetailClient";
 
 export const revalidate = 30;
 
+// Prerender nothing at build; each event page is generated on first visit, then cached and refreshed every 30s (ISR).
+export async function generateStaticParams() {
+  return [];
+}
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
