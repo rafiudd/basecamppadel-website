@@ -18,6 +18,7 @@ import { SessionPlayersTable } from "./SessionPlayersTable";
 import { SessionSkillsSelector } from "./SessionSkillsSelector";
 import { PlayerPickerModal } from "./PlayerPickerModal";
 import { toast } from "@/components/ui/Toast";
+import { ReclubImportModal, type ReclubImportResult } from "@/components/admin/ReclubImportModal";
 
 const COLOR_PRESETS = [
   "#FFD43B", "#2563EB", "#FF5A3C", "#2F9E5C", "#A855F7", "#EC4899", "#06B6D4", "#F97316",
@@ -51,7 +52,7 @@ export function SessionFormClient({
   events,
   coaches,
   skills,
-  allPlayers,
+  allPlayers: serverPlayers,
 }: {
   sessionId?: string;
   initialTitle?: string;
@@ -72,6 +73,19 @@ export function SessionFormClient({
 }) {
   const router = useRouter();
   const isEdit = Boolean(sessionId);
+  // The page's players plus those a Reclub import just created
+  const [extraPlayers, setExtraPlayers] = useState<Player[]>([]);
+  const allPlayers = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Player[] = [];
+    for (const p of [...serverPlayers, ...extraPlayers]) {
+      if (!p?.id || seen.has(p.id)) continue;
+      seen.add(p.id);
+      out.push(p);
+    }
+    return out;
+  }, [serverPlayers, extraPlayers]);
+  const [showReclubModal, setShowReclubModal] = useState(false);
 
   // 1. Session Details State
   const [title, setTitle] = useState(initialTitle);
@@ -232,6 +246,22 @@ export function SessionFormClient({
     });
     setSessionPlayerIds([...sessionPlayerIds, ...toAdd]);
     setPlayerGroupMap(nextMap);
+  };
+
+  // Reclub import: participants into the target group, the meet's name (and date, for a new session) into the details
+  const handleReclubImport = ({ meet, players: imported, newPlayers }: ReclubImportResult) => {
+    setExtraPlayers((prev) => {
+      const existing = new Set([...serverPlayers.map((p) => p.id), ...prev.map((p) => p.id)]);
+      const fresh = newPlayers.filter((p) => !existing.has(p.id));
+      return [...prev, ...fresh];
+    });
+    const toAdd = [...new Set(imported.map((p) => p.playerId))].filter((id) => !sessionPlayerIds.includes(id));
+    setSessionPlayerIds([...sessionPlayerIds, ...toAdd]);
+    setPlayerGroupMap({ ...playerGroupMap, ...Object.fromEntries(toAdd.map((id) => [id, addTargetId])) });
+    if (!title.trim()) setTitle(meet.name);
+    if (!isEdit) setSessionDate(meet.date);
+    const group = groups.find((g) => (g.id || g.tempId) === addTargetId);
+    toast.success(`${toAdd.length} pemain dari Reclub masuk ke ${group?.name ?? "sesi"}.`);
   };
 
   const handleClearAllPlayers = () => {
@@ -477,6 +507,7 @@ export function SessionFormClient({
         playerSearchQuery={playerSearchQuery}
         onSearchQueryChange={setPlayerSearchQuery}
         onOpenAddModal={() => setShowAddPlayerModal(true)}
+        onOpenReclub={() => setShowReclubModal(true)}
         onAddPlayer={handleAddPlayer}
         onRemovePlayers={handleRemovePlayers}
         onAssignPlayerGroup={handleAssignPlayerGroup}
@@ -503,6 +534,10 @@ export function SessionFormClient({
         onSelectAllShown={handleSelectAllShown}
         onClearAll={handleClearAllPlayers}
       />
+
+      {showReclubModal && (
+        <ReclubImportModal players={allPlayers} onClose={() => setShowReclubModal(false)} onImport={handleReclubImport} />
+      )}
     </form>
   );
 }

@@ -8,14 +8,29 @@ import { compactInputClass, inputClass, invalidIf } from "@/components/ui/Field"
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { groupLabel } from "@/lib/competition";
 import type { PlayerSummary } from "@/components/admin/event/types";
+import { ReclubImportModal } from "@/components/admin/ReclubImportModal";
+import { toast } from "@/components/ui/Toast";
 import type { EventWizard } from "./useEventWizard";
 import { Panel, ShuffleButton, StepSection } from "./parts";
 
 /** Participants: fixed pairs (kompetisi / fixed-partner mabar) or a player checklist (free mabar). */
 export function StepPeserta({ w, players }: { w: EventWizard; players: PlayerSummary[] }) {
   const sub = !w.isMabar ? "Atur pasangan tim, lalu bagi ke grup" : w.fixed ? "Atur pasangan tetap untuk mabar ini" : "Pilih pemain yang ikut, pairing diacak per ronde";
+  const [reclubOpen, setReclubOpen] = useState(false);
   return (
     <StepSection title="Peserta" sub={sub}>
+      <div className="flex items-center justify-between gap-3 flex-wrap rounded-xl bg-snow/6 px-4 py-3">
+        <span className="text-caption text-snow/75">Peserta sudah daftar di Reclub? Ambil sekaligus, tanpa input satu-satu.</span>
+        <button type="button" onClick={() => setReclubOpen(true)} className="btn min-h-10 px-3.5 py-2 tracking-button whitespace-nowrap">Ambil dari Reclub</button>
+      </div>
+      {reclubOpen && (
+        <ReclubImportModal
+          players={players}
+          teamNote={w.usesPairs ? "Peserta berpasangan di Reclub otomatis dimasukkan ke satu tim." : undefined}
+          onClose={() => setReclubOpen(false)}
+          onImport={(result) => toast.success(w.importReclub(result))}
+        />
+      )}
       {w.usesPairs ? (
         <div className={`grid grid-cols-1 ${w.isMabar ? "" : "lg:grid-cols-2"} gap-3.5 items-start min-w-0`}>
           <TeamPairsEditor w={w} players={players} />

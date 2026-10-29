@@ -229,7 +229,7 @@ export function SearchSelect({
           >
             {shown.map((o, i) => (
               <li
-                key={o.value}
+                key={`${o.value}-${i}`}
                 id={`${listId}-${i}`}
                 data-i={i}
                 role="option"

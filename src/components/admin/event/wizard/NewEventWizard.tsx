@@ -53,7 +53,7 @@ export function NewEventWizard({
 
       {w.step === 1 && <StepType w={w} />}
       {w.step === 2 && <StepFormat w={w} />}
-      {w.step === 3 && <StepPeserta w={w} players={players} />}
+      {w.step === 3 && <StepPeserta w={w} players={w.players} />}
 
       {w.step < 4 ? (
         <>

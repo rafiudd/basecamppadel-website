@@ -25,6 +25,7 @@ export type Player = {
   level_override_reason?: string | null;
   active: boolean;
   whatsapp: string | null; // normalized 628…, filled by admin so a new account can link to this player
+  reclub_user_id?: number | null; // Reclub userId, linked on a confirmed Reclub participant import
   created_at: string;
 };
 
