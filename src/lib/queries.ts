@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getDb } from "@/lib/mongodb";
+import { normalizeDoc } from "@/lib/server/mongo/utils";
 import type { Player } from "@/lib/database.types";
 import { addHoursHHMM, eventDurationHours, eventPrice, parseDateParts } from "@/lib/format";
 import { WHATSAPP_URL } from "@/lib/config";
@@ -51,11 +53,58 @@ export async function getActivePlayers(): Promise<Player[]> {
 
 export type RankedPlayer = Player & { rank: number };
 
+/**
+ * Computes a single player's rank directly from database via index scan (IXSCAN)
+ * avoiding pulling the entire players table into memory.
+ */
+export const LEADERBOARD_COLLATION = { locale: "en", strength: 2 } as const;
+
+export async function getPlayerRank(player: { id?: string; gender?: string; points?: number; name?: string }): Promise<number> {
+  const db = await getDb();
+  const gender = player.gender === "F" ? "F" : "M";
+  const points = Number(player.points || 0);
+  const name = player.name || "";
+
+  const higherRankedCount = await db.collection("players").countDocuments(
+    {
+      active: true,
+      gender,
+      $or: [
+        { points: { $gt: points } },
+        { points, name: { $lt: name } },
+      ],
+    },
+    { collation: LEADERBOARD_COLLATION }
+  );
+
+  return higherRankedCount + 1;
+}
+
+/**
+ * Efficiently fetches top N players by gender using MongoDB composite index.
+ * Used by Home to load top-3 without fetching all players.
+ */
+export async function getTopPlayers(gender: "M" | "F" = "M", limit = 3): Promise<RankedPlayer[]> {
+  const db = await getDb();
+  const docs = await db
+    .collection("players")
+    .find({ active: true, gender })
+    .collation(LEADERBOARD_COLLATION)
+    .sort({ points: -1, name: 1 })
+    .limit(limit)
+    .toArray();
+
+  return docs.map((d, i) => ({
+    ...normalizeDoc(d),
+    rank: i + 1,
+  })) as RankedPlayer[];
+}
+
 export function rankByGender(players: Player[]) {
   const rank = (list: Player[]): RankedPlayer[] =>
     list
       .slice()
-      .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name))
+      .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, "en", { sensitivity: "base" }) || a.name.localeCompare(b.name))
       .map((p, i) => ({ ...p, rank: i + 1 }));
   return {
     men: rank(players.filter((p) => p.gender === "M")),
@@ -73,7 +122,7 @@ export function rankByGender(players: Player[]) {
  */
 export async function getPlayerWithHistory(playerId: string) {
   const supabase = await createClient();
-  const [{ data: player }, { data: history }, { data: awards }, players] = await Promise.all([
+  const [{ data: player }, { data: history }, { data: awards }] = await Promise.all([
     supabase.from("players").select("*").eq("id", playerId).maybeSingle(),
     supabase
       .from("match_history")
@@ -81,12 +130,10 @@ export async function getPlayerWithHistory(playerId: string) {
       .eq("player_id", playerId)
       .order("created_at", { ascending: false }),
     supabase.from("player_awards").select("event_id, points").eq("player_id", playerId),
-    getActivePlayers(),
   ]);
   if (!player) return null;
-  const { men, women } = rankByGender(players);
-  const group = player.gender === "F" ? women : men;
-  const rank = group.find((p) => p.id === player.id)?.rank ?? group.length + 1;
+
+  const rank = await getPlayerRank(player);
 
   const matchIds = [...new Set((history ?? []).map((h) => h.match_id).filter((id): id is string => !!id))];
   const { data: matches } = matchIds.length

@@ -105,10 +105,16 @@ export function useMatchControl(initial: Match, { confirmFirst = false } = {}) {
     fd.set("match_id", m.id);
     start(() =>
       guarded(key, async () => {
-        if (!toast.result(await startMatch(null, fd), "Match dimulai")) return;
-        if (!confirmFirst) remember();
+        const res = await startMatch(null, fd);
+        if (!toast.result(res, "Match dimulai")) return;
+        if (!confirmFirst) {
+          remember();
+          setLocal((cur) => ({ ...cur, status: "live", ...patch }));
+        }
         if ((await update({ ...patch, status: "live" })) && confirmFirst) remember();
-        router.refresh();
+        start(() => {
+          router.refresh();
+        });
       }),
     );
   };
@@ -146,16 +152,33 @@ export function useMatchControl(initial: Match, { confirmFirst = false } = {}) {
   // ---- ON AIR
   const toggleOnAir = () => {
     if (m.is_live) {
-      update({ is_live: false }).then((ok) => ok && toast.success("Match tidak lagi ON AIR"));
+      setLocal((cur) => ({ ...cur, is_live: false }));
+      update({ is_live: false }).then((ok) => {
+        if (ok) {
+          toast.success("Match tidak lagi ON AIR");
+          start(() => {
+            router.refresh();
+          });
+        } else {
+          setLocal((cur) => ({ ...cur, is_live: true }));
+        }
+      });
       return;
     }
     const fd = new FormData();
     fd.set("event_id", m.event_id ?? "");
     fd.set("match_id", m.id);
     start(async () => {
+      setLocal((cur) => ({ ...cur, is_live: true }));
       const res = await goLive(null, fd);
       setError(res?.error ?? null);
-      if (toast.result(res, "Match ON AIR")) router.refresh();
+      if (toast.result(res, "Match ON AIR")) {
+        start(() => {
+          router.refresh();
+        });
+      } else {
+        setLocal((cur) => ({ ...cur, is_live: false }));
+      }
     });
   };
 

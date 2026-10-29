@@ -1,7 +1,8 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { staffRole, type StaffRole } from "@/lib/accountRules";
 
-export async function getAdminUser() {
+export const getAdminUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -21,7 +22,7 @@ export async function getAdminUser() {
   const isCoach = role === "coach" || isAdmin;
   const isScoreKeeper = role === "scorekeeper" || isAdmin;
   return { user, isAdmin, isCoach, isScoreKeeper, role, coachId: adminRow?.coach_id ?? null };
-}
+});
 
 export async function requireAdmin() {
   const { user, isAdmin } = await getAdminUser();

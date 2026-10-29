@@ -10,6 +10,7 @@ import { sendKirimdevWhatsAppMessage, checkKirimdevStatus } from "@/lib/server/k
 import { sendBrevoEmail, generateCoachingReportEmailHtml, checkBrevoStatus, isValidEmail } from "@/lib/server/brevo";
 import { generateCoachingReportNotificationMessage } from "@/lib/coachingRules";
 import { loadNextCoachingSession } from "@/lib/profileData";
+import { sendPushToUser } from "@/lib/webpush";
 
 /**
  * Sets a player's level through coaching_apply_level (0020): players is admin-write only under RLS,
@@ -19,6 +20,12 @@ async function applyPlayerLevel(supabase: Awaited<ReturnType<typeof createClient
   const { error } = await supabase.rpc("coaching_apply_level", { p_player_id: playerId, p_level: level });
   if (error) throw new Error(error.message);
 }
+
+type SessionPlayerCoachJoin = {
+  coaching_groups?: {
+    coaches?: { name?: string } | null;
+  } | null;
+};
 
 export async function saveAssessmentDraftAction(data: {
   sessionId: string;
@@ -463,7 +470,7 @@ export async function sendCoachingReportEmailAction(data: {
           .eq("session_id", data.sessionId)
           .eq("player_id", data.playerId)
           .maybeSingle();
-        const cName = (sp as any)?.coaching_groups?.coaches?.name;
+        const cName = (sp as unknown as SessionPlayerCoachJoin)?.coaching_groups?.coaches?.name;
         if (cName) coachName = cName;
       }
     }
@@ -528,6 +535,102 @@ export async function getBrevoConfigStatusAction() {
   });
 }
 
+export async function sendCoachingReportPwaAction(data: {
+  playerId: string;
+  email?: string | null;
+  playerName?: string;
+  coachName?: string;
+  sessionTitle?: string;
+  sessionDate?: string;
+  sessionId?: string;
+}) {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    const supabase = await createClient();
+
+    let { playerName, coachName, sessionTitle, sessionDate, email } = data;
+    let authUserId: string | null = null;
+
+    if (data.sessionId && (!sessionTitle || !coachName)) {
+      const { data: sess } = await supabase
+        .from("coaching_sessions")
+        .select("title, session_date")
+        .eq("id", data.sessionId)
+        .maybeSingle();
+      if (sess) {
+        if (!sessionTitle) sessionTitle = sess.title;
+        if (!sessionDate) sessionDate = sess.session_date;
+      }
+
+      if (!coachName) {
+        const { data: sp } = await supabase
+          .from("coaching_session_players")
+          .select("group_id, coaching_groups(coach_id, coaches(name))")
+          .eq("session_id", data.sessionId)
+          .eq("player_id", data.playerId)
+          .maybeSingle();
+        const cName = (sp as unknown as SessionPlayerCoachJoin)?.coaching_groups?.coaches?.name;
+        if (cName) coachName = cName;
+      }
+    }
+
+    if (!playerName || !email || !authUserId) {
+      const { data: pl } = await supabase
+        .from("players")
+        .select("name")
+        .eq("id", data.playerId)
+        .maybeSingle();
+      if (pl?.name && !playerName) playerName = pl.name;
+
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("user_id, email")
+        .or(`player_id.eq.${data.playerId},claim_player_id.eq.${data.playerId}`)
+        .maybeSingle();
+      if (prof) {
+        if (!email) email = prof.email;
+        if (prof.user_id) authUserId = prof.user_id;
+      }
+      if (!authUserId && email) {
+        const { data: profByEmail } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("email", email)
+          .maybeSingle();
+        if (profByEmail?.user_id) {
+          authUserId = profByEmail.user_id;
+        }
+      }
+    }
+
+    const pushRes = await sendPushToUser(
+      {
+        userId: authUserId,
+        email: email,
+        playerId: data.playerId,
+      },
+      {
+        title: sessionTitle ? `📊 Rapor ${sessionTitle} Siap!` : "📊 Rapor Coaching Kamu Sudah Keluar!",
+        body: `Halo ${playerName || "Pemain"}! Catatan evaluasi dari coach kamu sudah siap. Tap untuk melihat rapor & progres skill kamu.`,
+        url: "/akun?tab=catatan",
+      }
+    );
+
+    if (pushRes.total === 0) {
+      throw new Error("Pemain belum mengaktifkan izin notifikasi PWA di perangkat/browsernya.");
+    }
+    if (pushRes.sent === 0) {
+      throw new Error("Gagal mengirim notifikasi PWA (token langganan perangkat mungkin sudah kedaluwarsa).");
+    }
+
+    return {
+      success: true,
+      sent: pushRes.sent,
+      total: pushRes.total,
+    };
+  });
+}
+
 export async function sendAutoCoachingReportNotificationsAction(data: {
   playerId: string;
   playerName?: string;
@@ -546,6 +649,7 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
     const supabase = await createClient();
 
     let { playerName, coachName, sessionTitle, sessionDate, whatsapp, email } = data;
+    let authUserId: string | null = null;
 
     if (data.sessionId && (!sessionTitle || !sessionDate || !coachName)) {
       const { data: sess } = await supabase
@@ -565,12 +669,12 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
           .eq("session_id", data.sessionId)
           .eq("player_id", data.playerId)
           .maybeSingle();
-        const cName = (sp as any)?.coaching_groups?.coaches?.name;
+        const cName = (sp as unknown as SessionPlayerCoachJoin)?.coaching_groups?.coaches?.name;
         if (cName) coachName = cName;
       }
     }
 
-    if (!playerName || !whatsapp || !email) {
+    if (!playerName || !whatsapp || !email || !authUserId) {
       const { data: pl } = await supabase
         .from("players")
         .select("name, whatsapp")
@@ -582,22 +686,36 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
       }
       const { data: prof } = await supabase
         .from("profiles")
-        .select("email, whatsapp")
-        .eq("player_id", data.playerId)
+        .select("user_id, email, whatsapp")
+        .or(`player_id.eq.${data.playerId},claim_player_id.eq.${data.playerId}`)
         .maybeSingle();
       if (prof) {
         if (!email) email = prof.email;
         if (!whatsapp) whatsapp = prof.whatsapp;
+        if (prof.user_id) authUserId = prof.user_id;
+      }
+      if (!authUserId && email) {
+        const { data: profByEmail } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("email", email)
+          .maybeSingle();
+        if (profByEmail?.user_id) {
+          authUserId = profByEmail.user_id;
+        }
       }
     }
 
     const results = {
       waSent: false,
       emailSent: false,
+      pwaSent: false,
       waSkipped: false,
       emailSkipped: false,
+      pwaSkipped: false,
       waError: null as string | null,
       emailError: null as string | null,
+      pwaError: null as string | null,
     };
 
     const linkRapor = data.linkRapor || "https://www.basecamppadel.id/akun?tab=catatan";
@@ -630,8 +748,8 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
         } else {
           results.waError = waRes.error || "Gagal mengirim WhatsApp via Kirimdev";
         }
-      } catch (err: any) {
-        results.waError = err?.message || "Kesalahan sistem saat mengirim WhatsApp";
+      } catch (err: unknown) {
+        results.waError = (err as Error)?.message || "Kesalahan sistem saat mengirim WhatsApp";
       }
     } else {
       results.waSkipped = true;
@@ -673,11 +791,35 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
         } else {
           results.emailError = emailRes.error || "Gagal mengirim email via Brevo";
         }
-      } catch (err: any) {
-        results.emailError = err?.message || "Kesalahan sistem saat mengirim email";
+      } catch (err: unknown) {
+        results.emailError = (err as Error)?.message || "Kesalahan sistem saat mengirim email";
       }
     } else {
       results.emailSkipped = true;
+    }
+
+    // 3. PWA Push Notification via webpush
+    try {
+      const pwaRes = await sendPushToUser(
+        {
+          userId: authUserId,
+          email: email,
+          playerId: data.playerId,
+        },
+        {
+          title: sessionTitle ? `📊 Rapor ${sessionTitle} Siap!` : "📊 Rapor Coaching Kamu Sudah Keluar!",
+          body: `Halo ${playerName || "Pemain"}! Catatan evaluasi dari coach kamu sudah siap. Tap untuk melihat rapor & progres skill kamu.`,
+          url: "/akun?tab=catatan",
+        }
+      );
+
+      if (pwaRes.sent > 0) {
+        results.pwaSent = true;
+      } else {
+        results.pwaSkipped = true;
+      }
+    } catch (err: unknown) {
+      results.pwaError = (err as Error)?.message || "Kesalahan sistem saat mengirim notifikasi PWA";
     }
 
     if (data.sessionId) {
@@ -688,5 +830,16 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
   });
 }
 
-
-
+export async function getActivePlayersForCoachingAction() {
+  return guardResult(async () => {
+    await requireAdminOrCoach();
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("players")
+      .select("id, name, gender, level, region, points")
+      .eq("active", true)
+      .order("name");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+}

@@ -85,7 +85,7 @@ import {
   parseRekapClinicExcel,
 } from "../src/lib/coaching-excel.ts";
 
-test("Excel: Generate dan Parse Rekap Clinic roundtrip", () => {
+test("Excel: Generate dan Parse Rekap Clinic roundtrip", async () => {
   const dummySkills = [
     { id: "sk-1", name: "Forehand", type: "teknik", category: "Groundstroke", sort_order: 1, active: true },
     { id: "sk-2", name: "Backhand", type: "teknik", category: "Groundstroke", sort_order: 2, active: true },
@@ -95,7 +95,7 @@ test("Excel: Generate dan Parse Rekap Clinic roundtrip", () => {
     { id: "pl-2", name: "Salsa Amalia", level: "Beginner" },
   ];
 
-  const buffer = generateRekapClinicExcel({
+  const buffer = await generateRekapClinicExcel({
     sessionTitle: "Clinic Mabar 1",
     sessionDate: "2026-10-09",
     skills: dummySkills,
@@ -115,7 +115,7 @@ test("Excel: Generate dan Parse Rekap Clinic roundtrip", () => {
     ],
   });
 
-  const parsed = parseRekapClinicExcel(buffer, dummySkills, dummyPlayers);
+  const parsed = await parseRekapClinicExcel(buffer, dummySkills, dummyPlayers);
   assert.equal(parsed.success, true);
   assert.equal(parsed.previews.length, 2);
 

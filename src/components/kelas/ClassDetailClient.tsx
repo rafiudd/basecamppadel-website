@@ -33,9 +33,9 @@ export function ClassDetailClient({ classData }: { classData: any }) {
   );
 
   const defaultGallery = [
-    "/images/classes/coach-drill.jpg",
-    "/images/classes/backglass-shot.jpg",
-    "/images/classes/volley-drill.jpg",
+    "/images/classes/coach-drill.webp",
+    "/images/classes/backglass-shot.webp",
+    "/images/classes/volley-drill.webp",
   ];
   const galleryPhotos: string[] =
     classData.galleryUrls && classData.galleryUrls.length > 0

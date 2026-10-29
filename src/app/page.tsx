@@ -3,10 +3,10 @@ import Link from "next/link";
 import { PublicShell } from "@/components/PublicShell";
 import { LiveCard } from "@/components/LiveCard";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { getActivePlayers, getLiveMatches, getNextUpcomingEvent, rankByGender } from "@/lib/queries";
+import { getLiveMatches, getNextUpcomingEvent, getTopPlayers } from "@/lib/queries";
 import { WHATSAPP_URL } from "@/lib/config";
 
-export const revalidate = 0;
+export const revalidate = 30;
 
 const WHY = [
   {
@@ -27,13 +27,11 @@ const WHY = [
 ];
 
 export default async function HomePage() {
-  const [live, players, nextEvent] = await Promise.all([
+  const [live, topMen, nextEvent] = await Promise.all([
     getLiveMatches(),
-    getActivePlayers(),
+    getTopPlayers("M", 3),
     getNextUpcomingEvent(),
   ]);
-  const { men } = rankByGender(players);
-  const topMen = men.slice(0, 3);
 
   return (
     <PublicShell>
@@ -44,7 +42,6 @@ export default async function HomePage() {
           alt="Basecamp Padel"
           fill
           priority
-          unoptimized
           sizes="100vw"
           className="object-cover"
           style={{ objectPosition: "50% 22%" }}
@@ -253,7 +250,6 @@ export default async function HomePage() {
               src="/images/community.webp"
               alt="Sesi mabar Basecamp Padel"
               fill
-              unoptimized
               sizes="(max-width: 768px) 100vw, 600px"
               className="object-cover"
             />

@@ -58,7 +58,7 @@ export function CoachingClient({
   activeSessionId: string;
   allSkills: CoachingSkill[];
   allCoaches: Coach[];
-  allPlayers: Player[];
+  allPlayers?: Player[];
   venues: Venue[];
   events: Array<{ id: string; title: string; event_date?: string | null; venue_id?: string | null }>;
   isAdmin: boolean;
@@ -327,19 +327,25 @@ export function CoachingClient({
         })
       );
 
-      const { waSent, emailSent, waSkipped, emailSkipped, waError, emailError } = data;
+      const { waSent, emailSent, pwaSent, waSkipped, emailSkipped, pwaSkipped, waError, emailError, pwaError } = data;
       const sentParts: string[] = [];
       if (waSent) sentParts.push("WhatsApp");
       if (emailSent) sentParts.push("Email");
+      if (pwaSent) sentParts.push("PWA");
 
       if (sentParts.length > 0) {
-        toast.success(`Notifikasi ${pItem.player.name} terkirim ke ${sentParts.join(" & ")}!`);
-      } else if (waSkipped && emailSkipped) {
-        toast.success(`Penilaian ${pItem.player.name} tersimpan (WA & Email kosong, pengiriman di-skip).`);
+        const channelsLabel =
+          sentParts.length === 1
+            ? sentParts[0]
+            : sentParts.slice(0, -1).join(", ") + " & " + sentParts[sentParts.length - 1];
+        toast.success(`Notifikasi ${pItem.player.name} terkirim ke ${channelsLabel}!`);
+      } else if (waSkipped && emailSkipped && pwaSkipped) {
+        toast.success(`Penilaian ${pItem.player.name} tersimpan.`);
       }
 
       if (waError) toast.error(`WhatsApp: ${waError}`);
       if (emailError) toast.error(`Email: ${emailError}`);
+      if (pwaError) toast.error(`PWA: ${pwaError}`);
     } catch (err: any) {
       toast.error(err?.message || "Gagal mengirim notifikasi otomatis");
     }
@@ -432,10 +438,10 @@ export function CoachingClient({
   };
 
   // Export Rekap (.xlsx)
-  const handleExportXlsx = () => {
+  const handleExportXlsx = async () => {
     if (!sessionData) return;
     try {
-      const buffer = generateRekapClinicExcel({
+      const buffer = await generateRekapClinicExcel({
         sessionTitle: sessionData.session.title,
         sessionDate: sessionData.session.session_date,
         venueName: sessionData.session.venue_name,

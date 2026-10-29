@@ -21,10 +21,10 @@ export default async function LiveAdmin({ searchParams }: { searchParams: Promis
   // score keepers only have this page: no links to the event pages
   const { isAdmin: canManageEvents } = await getAdminUser();
   const [{ data: events }, { data: liveRows }, { data: courts }, { data: venues }, { data: freeformLive }, { data: players }] = await Promise.all([
-    supabase.from("events").select("*").neq("status", "finished").order("event_date", { nullsFirst: false }).order("created_at", { ascending: false }),
+    supabase.from("events").select("id, title, status, event_date, start_time, venue_id, court_ids, match_format, game_format, target_points, points_type, type").neq("status", "finished").order("event_date", { nullsFirst: false }).order("created_at", { ascending: false }),
     supabase.from("matches").select("event_id, is_live, status").neq("status", "finished").eq("is_bye", false).not("event_id", "is", null),
-    supabase.from("courts").select("*").eq("active", true).order("name"),
-    supabase.from("venues").select("*").eq("active", true).order("name"),
+    supabase.from("courts").select("id, name, venue_id, active, sort_order").eq("active", true).order("name"),
+    supabase.from("venues").select("id, name, active").eq("active", true).order("name"),
     supabase.from("matches").select("*").is("event_id", null).eq("is_live", true).order("updated_at", { ascending: false }),
     supabase.from("players").select("id, name, gender, level, region").eq("active", true).order("name"),
   ]);

@@ -1,3 +1,5 @@
+import { clearAccountChipCache } from "@/components/account/useAccountChip";
+
 /**
  * Browser-safe client adapter for MongoDB-backed features.
  */
@@ -71,6 +73,7 @@ export function createClient(): any {
           if (!res.ok) {
             return { error: { message: json.error || "Login gagal" } };
           }
+          clearAccountChipCache();
           return { data: json.user, error: null };
         } catch (e: any) {
           return { error: { message: e.message } };
@@ -92,6 +95,7 @@ export function createClient(): any {
               next = options.redirectTo;
             }
           }
+          clearAccountChipCache();
           window.location.href = `/api/auth/google${next ? `?next=${encodeURIComponent(next)}` : ""}`;
           return { error: null };
         }
@@ -99,6 +103,7 @@ export function createClient(): any {
       },
 
       signOut: async () => {
+        clearAccountChipCache();
         try {
           await fetch("/api/auth/signout", { method: "POST" });
         } catch {

@@ -1,5 +1,8 @@
-import * as XLSX from "xlsx";
 import type { CoachingSkill, Player } from "@/lib/database.types";
+
+async function getXlsx() {
+  return await import("xlsx");
+}
 
 export type PlayerLevelName = "Rookie" | "Beginner" | "Low Bronze" | "Bronze" | "Silver";
 
@@ -29,9 +32,9 @@ export interface RekapRowPreview {
 }
 
 /**
- * Generate Rekap Clinic Excel buffer.
+ * Generate Rekap Clinic Excel buffer (lazy-loads xlsx library on demand).
  */
-export function generateRekapClinicExcel(params: {
+export async function generateRekapClinicExcel(params: {
   sessionTitle: string;
   sessionDate: string;
   venueName?: string;
@@ -47,7 +50,7 @@ export function generateRekapClinicExcel(params: {
     overrideLevel?: string;
     overrideReason?: string;
   }>;
-}): Uint8Array {
+}): Promise<Uint8Array> {
   const { sessionTitle, sessionDate, venueName, skills, rows } = params;
 
   // Header row
@@ -88,6 +91,7 @@ export function generateRekapClinicExcel(params: {
     sheetData.push(rowValues);
   }
 
+  const XLSX = await getXlsx();
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
@@ -112,7 +116,7 @@ export function generateRekapClinicExcel(params: {
 /**
  * Generate blank template Excel buffer for Import Rekap.
  */
-export function generateRekapTemplateExcel(skills: CoachingSkill[]): Uint8Array {
+export async function generateRekapTemplateExcel(skills: CoachingSkill[]): Promise<Uint8Array> {
   const headers = [
     "Nama Pemain",
     "Grup",
@@ -152,6 +156,7 @@ export function generateRekapTemplateExcel(skills: CoachingSkill[]): Uint8Array 
     ["", "", "", ...skills.map(() => ""), "", ""],
   ];
 
+  const XLSX = await getXlsx();
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
@@ -172,17 +177,18 @@ export function generateRekapTemplateExcel(skills: CoachingSkill[]): Uint8Array 
 /**
  * Parse uploaded Rekap Clinic Excel file.
  */
-export function parseRekapClinicExcel(
+export async function parseRekapClinicExcel(
   buffer: Buffer | Uint8Array,
   allSkills: CoachingSkill[],
   allPlayers: Pick<Player, "id" | "name" | "level">[]
-): {
+): Promise<{
   success: boolean;
   error?: string;
   previews: RekapRowPreview[];
   unmatchedCount: number;
-} {
+}> {
   try {
+    const XLSX = await getXlsx();
     const wb = XLSX.read(buffer, { type: "buffer" });
     const sheetName = wb.SheetNames[0];
     if (!sheetName) return { success: false, error: "File Excel kosong", previews: [], unmatchedCount: 0 };

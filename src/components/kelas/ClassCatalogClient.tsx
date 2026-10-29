@@ -203,8 +203,10 @@ export function ClassCatalogClient({ initialClasses }: { initialClasses: any[] }
               {/* Media Thumbnail */}
               <Link href={`/kelas/${k.slug}`} className="block relative aspect-video bg-ink/10 overflow-hidden group">
                 <img
-                  src={k.coverImageUrl || "/images/classes/coach-drill.jpg"}
+                  src={k.coverImageUrl || "/images/classes/coach-drill.webp"}
                   alt={k.title}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-transparent opacity-80" />

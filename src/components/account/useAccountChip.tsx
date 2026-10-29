@@ -29,6 +29,12 @@ function setChip(next: AccountChip | null) {
   listeners.forEach((l) => l());
 }
 
+export function clearAccountChipCache() {
+  chipCache = null;
+  inflight = null;
+  listeners.forEach((l) => l());
+}
+
 async function fetchChip(): Promise<AccountChip | null> {
   const res = await fetch("/api/auth/me", { cache: "no-store" });
   const data = res.ok ? await res.json() : null;

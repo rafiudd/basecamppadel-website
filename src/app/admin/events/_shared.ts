@@ -11,7 +11,9 @@ export function revalidateEvent(id: string) {
   revalidatePath("/admin/events");
   revalidatePath("/admin/live");
   revalidatePath("/jadwal");
-  revalidatePath("/jadwal/[slug]", "page");
+  revalidatePath(`/jadwal/${id}`);
+  revalidatePath("/jadwal/[id]", "page");
+  revalidatePath("/");
   revalidatePath("/admin/liga");
   revalidatePath("/admin/liga/[id]", "page");
   revalidatePath("/liga");

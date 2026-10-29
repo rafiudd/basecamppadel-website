@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 const STORAGE_KEY = "bcp_push_notif_status";
@@ -17,10 +18,12 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
 type Status = "idle" | "loading" | "granted" | "denied" | "unsupported";
 
 export function PushNotifPermission() {
+  const pathname = usePathname();
   const [status, setStatus] = useState<Status>("idle");
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    if (pathname?.startsWith("/overlay")) return;
     // Don't show if push is unsupported
     if (!("PushManager" in window) || !("serviceWorker" in navigator)) {
       setStatus("unsupported");
@@ -119,7 +122,7 @@ export function PushNotifPermission() {
     setIsVisible(false);
   };
 
-  if (!isVisible || status === "unsupported" || status === "granted" || status === "denied") {
+  if (pathname?.startsWith("/overlay") || !isVisible || status === "unsupported" || status === "granted" || status === "denied") {
     return null;
   }
 

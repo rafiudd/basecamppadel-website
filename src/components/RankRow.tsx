@@ -60,7 +60,6 @@ export function PlayerHeroCard({
           alt={`Foto ${player.name}`}
           width={224}
           height={276}
-          unoptimized
           className="block w-full h-[220px] sm:h-[276px] object-contain object-bottom drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)]"
         />
       </div>

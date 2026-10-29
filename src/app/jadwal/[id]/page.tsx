@@ -3,13 +3,16 @@ import { notFound } from "next/navigation";
 import { PublicShell } from "@/components/PublicShell";
 import { getEventByIdOrSlug, getEventMatches } from "@/lib/events";
 import { EventDetailClient } from "@/components/jadwal/EventDetailClient";
-import type { TabType } from "@/components/jadwal/EventTabs";
 
-export const revalidate = 0;
+export const revalidate = 30;
+
+// Prerender nothing at build; each event page is generated on first visit, then cached and refreshed every 30s (ISR).
+export async function generateStaticParams() {
+  return [];
+}
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ tab?: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -22,9 +25,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function JadwalDetailPage({ params, searchParams }: PageProps) {
+export default async function JadwalDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const { tab } = (await searchParams) ?? {};
 
   const [event, matches] = await Promise.all([
     getEventByIdOrSlug(id),
@@ -40,7 +42,6 @@ export default async function JadwalDetailPage({ params, searchParams }: PagePro
       <EventDetailClient
         event={event}
         matches={matches}
-        queryTab={tab as TabType | undefined}
       />
     </PublicShell>
   );

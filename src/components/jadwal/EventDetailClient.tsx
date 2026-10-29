@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EventHeader } from "@/components/jadwal/EventHeader";
 import { LiveBanner } from "@/components/jadwal/LiveBanner";
 import { EventTabs, type TabType } from "@/components/jadwal/EventTabs";
@@ -20,12 +20,17 @@ export function EventDetailClient({
   matches: EventMatchesData | null;
   queryTab?: TabType | null;
 }) {
-  const initialTab =
-    queryTab && event.availableTabs.includes(queryTab)
-      ? queryTab
-      : event.defaultTab;
+  const [activeTab, setActiveTab] = useState<TabType>(
+    queryTab && event.availableTabs.includes(queryTab) ? queryTab : event.defaultTab,
+  );
 
-  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+  // ?tab= deep links are read after mount, not with useSearchParams: that would make the whole page
+  // client-render only, so the ISR/server HTML would lose the event content.
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab") as TabType | null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from the URL after hydration
+    if (tab && event.availableTabs.includes(tab)) setActiveTab(tab);
+  }, [event.availableTabs]);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
 
   const handleTabChange = (tab: TabType) => {
