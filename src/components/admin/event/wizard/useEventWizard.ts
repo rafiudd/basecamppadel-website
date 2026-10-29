@@ -7,9 +7,11 @@ import { previewRoundOne } from "@/lib/mabar";
 import { courtLabel } from "@/lib/format";
 import type { Court, EventType, GenFormat, ScoreMode } from "@/lib/database.types";
 import type { PlayerSummary } from "@/components/admin/event/types";
+import type { ReclubImportResult } from "@/components/admin/ReclubImportModal";
+import { placeInPairs } from "@/lib/reclub";
 
 export type Step = 1 | 2 | 3 | 4;
-export type TeamSlot = { p1: string; p2: string; group: string };
+export type TeamSlot = { p1: string; p2: string; group: string; team?: string | null };
 export type PresetSummary = { id: string; name: string };
 export type InitialLeagueContext = {
   leagueId?: string;
@@ -29,14 +31,14 @@ function planErrorFields(message: string) {
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-const emptyTeam = (i: number, groups: number): TeamSlot => ({ p1: "", p2: "", group: groupLabel(i % Math.max(1, groups)) });
+const emptyTeam = (i: number, groups: number): TeamSlot => ({ p1: "", p2: "", group: groupLabel(i % Math.max(1, groups)), team: null });
 
 /**
  * All state of the Buat Event wizard, plus what each step derives from it. Every field starts empty,
  * and steps are passed in order: "Lanjut" only moves on when the current step is complete.
  */
 export function useEventWizard({
-  players,
+  players: serverPlayers,
   courts,
   initialLeague,
 }: {
@@ -44,6 +46,18 @@ export function useEventWizard({
   courts: Court[];
   initialLeague?: InitialLeagueContext;
 }) {
+  /** The page's players plus those a Reclub import just created. */
+  const [extraPlayers, setExtraPlayers] = useState<PlayerSummary[]>([]);
+  const players = useMemo(() => {
+    const seen = new Set<string>();
+    const out: PlayerSummary[] = [];
+    for (const p of [...serverPlayers, ...extraPlayers]) {
+      if (!p?.id || seen.has(p.id)) continue;
+      seen.add(p.id);
+      out.push(p);
+    }
+    return out;
+  }, [serverPlayers, extraPlayers]);
   const [step, setStep] = useState<Step>(1);
   const [showErrors, setShowErrors] = useState(false);
   const [type, setType] = useState<EventType | null>(initialLeague?.leagueId ? "kompetisi" : null);
@@ -157,6 +171,45 @@ export function useEventWizard({
   });
   const nameOf = useMemo(() => new Map(players.map((p) => [p.id, p.name])), [players]);
   const courtName = (i: number) => (courtIds[i] ? courtLabel(courts.find((c) => c.id === courtIds[i])?.name) : `Court ${i + 1}`);
+
+  // ---- Reclub import (step 3)
+  /**
+   * Participants of a Reclub meet into this step, and the meet's name, date, time, duration and price
+   * into step 4's empty fields. Free mabar ticks the players; pair formats keep Reclub's fixed-partner
+   * teams together, then fill the remaining slots in order. Returns a note for the admin.
+   */
+  const importReclub = ({ meet, players: imported, newPlayers }: ReclubImportResult): string => {
+    setExtraPlayers((prev) => {
+      const existing = new Set([...serverPlayers.map((p) => p.id), ...prev.map((p) => p.id)]);
+      const fresh = newPlayers.filter((p) => !existing.has(p.id));
+      return [...prev, ...fresh];
+    });
+    if (!title.trim()) setTitle(meet.name);
+    if (!eventDate) setEventDate(meet.date);
+    if (!startTime) setStartTime(meet.time);
+    setDurationHours(String(meet.durationHours));
+    if (!priceAmount && meet.feeAmount) setPriceAmount(String(meet.feeAmount));
+    if (!quota && meet.quota) setQuota(String(meet.quota));
+
+    if (!usesPairs) {
+      const ids = imported.map((p) => p.playerId);
+      setPicked((prev) => [...new Set([...prev, ...ids])]);
+      return `${ids.length} pemain dari Reclub dicentang.`;
+    }
+
+    // kompetisi stops at the format's team count, fixed-partner mabar at its quota
+    const limit = isMabar ? (maxPairs ?? Infinity) : (numTeams ?? teams.length);
+    const { slots, pairs, soloTeams, singles, left } = placeInPairs(teams, imported, limit, (i) => emptyTeam(i, groupCount));
+    setTeams(slots);
+    return [
+      pairs > 0 && `${pairs} pasangan lengkap dari Reclub dimasukkan.`,
+      soloTeams > 0 && `${soloTeams} tim (1 pemain) disiapkan slotnya, lengkapi partnernya.`,
+      singles > 0 && `${singles} pemain perorangan diisi ke slot kosong.`,
+      left > 0 && `${left} pemain tidak muat, tambah jumlah tim${isMabar ? "/kuota" : ""} di langkah Format.`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  };
 
   // ---- validation + navigation
   // Each issue names the fields to outline. A step can move on once it has no issues.
@@ -288,6 +341,8 @@ export function useEventWizard({
     },
     nameOf,
     courtName,
+    players,
+    importReclub,
   };
 }
 

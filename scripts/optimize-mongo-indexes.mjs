@@ -154,6 +154,15 @@ async function run() {
             partialFilterExpression: { whatsapp: { $type: "string" } },
           },
         },
+        {
+          // one of our players per Reclub user (set when an admin confirms a Reclub import)
+          key: { reclub_user_id: 1 },
+          options: {
+            name: "players_reclub_user_id_key",
+            unique: true,
+            partialFilterExpression: { reclub_user_id: { $type: "number" } },
+          },
+        },
       ],
     },
     {

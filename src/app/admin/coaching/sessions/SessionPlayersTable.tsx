@@ -25,6 +25,7 @@ export function SessionPlayersTable({
   playerSearchQuery,
   onSearchQueryChange,
   onOpenAddModal,
+  onOpenReclub,
   onAddPlayer,
   onRemovePlayers,
   onAssignPlayerGroup,
@@ -42,6 +43,8 @@ export function SessionPlayersTable({
   playerSearchQuery: string;
   onSearchQueryChange: (q: string) => void;
   onOpenAddModal: () => void;
+  /** "Ambil dari Reclub": participants of a Reclub meet go into the target group. */
+  onOpenReclub: () => void;
   onAddPlayer: (id: string) => void;
   onRemovePlayers: (ids: string[]) => void;
   onAssignPlayerGroup: (playerIds: string[], groupId: string) => void;
@@ -154,6 +157,13 @@ export function SessionPlayersTable({
               className="border-0 rounded-lg px-3 py-2 font-bold text-xs bg-[#FBF7F1]/10 text-[#FBF7F1] hover:bg-[#FBF7F1]/15 transition-all cursor-pointer"
             >
               ⇄ Bagi Rata Otomatis
+            </button>
+            <button
+              type="button"
+              onClick={onOpenReclub}
+              className="border-0 rounded-lg px-3 py-2 font-bold text-xs bg-[#FBF7F1]/10 text-[#FBF7F1] hover:bg-[#FBF7F1]/15 transition-all cursor-pointer"
+            >
+              Ambil dari Reclub
             </button>
             <button
               type="button"
