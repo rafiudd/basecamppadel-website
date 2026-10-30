@@ -26,6 +26,8 @@ export type Player = {
   active: boolean;
   whatsapp: string | null; // normalized 628…, filled by admin so a new account can link to this player
   reclub_user_id?: number | null; // Reclub userId, linked on a confirmed Reclub participant import
+  reclub_name?: string | null; // that Reclub user's name and username when linked, to show who it is
+  reclub_username?: string | null;
   created_at: string;
 };
 

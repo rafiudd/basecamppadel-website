@@ -3,10 +3,13 @@ import type { Player } from "@/lib/database.types";
 import { upsertPlayer } from "@/app/admin/actions";
 import { LEVELS } from "@/lib/config";
 import { formatWhatsapp } from "@/lib/accountRules";
+import { formatDayDateWib } from "@/lib/format";
 import { PlayerPhotoInput } from "./PlayerPhotoInput";
 
-/** `accountEmail`: the player account linked to this player, if any. */
-export function PlayerForm({ player, accountEmail }: { player?: Player; accountEmail?: string | null }) {
+/** `accountEmail` / `accountCreatedAt`: the player account linked to this player, if any. */
+export function PlayerForm({ player, accountEmail, accountCreatedAt }: { player?: Player; accountEmail?: string | null; accountCreatedAt?: string | null }) {
+  const joined = formatDayDateWib(player?.created_at);
+  const accountSince = formatDayDateWib(accountCreatedAt);
   return (
     <ActionForm action={upsertPlayer} successText="Pemain tersimpan" className="bg-ink-2 rounded-2xl p-5 md:p-6 grid grid-cols-1 md:grid-photo-form gap-6">
       {player && <input type="hidden" name="id" value={player.id} />}
@@ -72,7 +75,15 @@ export function PlayerForm({ player, accountEmail }: { player?: Player; accountE
         <label className="flex items-center gap-2 text-sm self-end pb-2">
           <input type="checkbox" name="active" defaultChecked={player?.active ?? true} /> Aktif (tampil di leaderboard)
         </label>
-        <div className="md:col-span-2 flex justify-end">
+        <div className="md:col-span-2 flex items-center justify-between gap-3 flex-wrap">
+          {player ? (
+            <div className="text-xs text-snow/55">
+              Bergabung <b className="text-snow/85">{joined || "—"}</b>
+              {accountSince && <> · akun dibuat <b className="text-snow/85">{accountSince}</b></>}
+            </div>
+          ) : (
+            <span />
+          )}
           <button className="btn btn-coral" type="submit">{player ? "Simpan" : "Tambah Pemain"}</button>
         </div>
       </div>

@@ -48,7 +48,7 @@ export async function fetchReclubMeet(input: string): Promise<ReclubMeet> {
 }
 
 /**
- * A new player's photo: their Reclub profile picture, copied to our storage (players/) so it doesn't
+ * A player's photo when they have none: their Reclub profile picture, copied to our storage (players/) so it doesn't
  * depend on Reclub's link. Best effort: no picture, or any failure, just means no photo.
  */
 export async function importReclubAvatar(userId: number): Promise<string | null> {

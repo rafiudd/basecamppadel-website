@@ -12,6 +12,7 @@ import {
   reclubPairs,
   reclubTeam,
   ReclubFormatError,
+  similarPlayers,
 } from "../src/lib/reclub.ts";
 
 /** Minimal devalue encoder (the format of Nuxt's _payload.json): `{ tag, value }` boxes a value in a Vue wrapper. */
@@ -209,4 +210,18 @@ test("cocokkan pemain: tautan Reclub dulu, lalu nama unik; nama ganda tidak dite
     4: { playerId: null, how: "none" },
     5: { playerId: null, how: "none" },
   });
+});
+
+test("nama mirip: sama persis dulu, lalu kata utuh, lalu kata pertama; kata pendek tidak dihitung", () => {
+  const players = [
+    { id: "a", name: "Erick Kurniawan" },
+    { id: "b", name: "Erick" },
+    { id: "c", name: "Erick KS" },
+    { id: "d", name: "Erickson" },
+    { id: "e", name: "Budi" },
+  ];
+  assert.deepEqual(similarPlayers(["Erick KS 🎾"], players).map((p) => p.id), ["c", "b", "a"]);
+  assert.deepEqual(similarPlayers(["erick"], players, 5).map((p) => p.id), ["b", "c", "a"]);
+  assert.deepEqual(similarPlayers(["Al"], [{ id: "x", name: "Al Fatih" }]), []);
+  assert.deepEqual(similarPlayers(["Zaki", "budi"], players).map((p) => p.id), ["e"]);
 });
