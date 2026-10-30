@@ -443,15 +443,20 @@ export class MongoQueryBuilder<T = any, R = T[]> {
           updateData.level_color = levelColorFor(updateData.level);
         }
 
-        // Check matches_one_on_air_per_court before setting is_live = true
+        // Check matches_one_on_air_per_court before setting is_live = true — scoped to the same
+        // event (or, for a freeform match, other freeform matches) like the app-level "take the
+        // court's other match off air" cleanup in live-actions.ts, so two events that reuse the same
+        // physical court on different days don't block each other over a stale is_live left on one.
         if (this.collectionName === "matches" && updateData.is_live === true) {
           const targets = await coll.find(this.filter as any).toArray();
           for (const t of targets) {
             const courtId = updateData.court_id ?? t.court_id;
             if (courtId) {
+              const eventId = updateData.event_id ?? t.event_id ?? null;
               const conflict = await coll.findOne({
                 court_id: courtId,
                 is_live: true,
+                event_id: eventId,
                 _id: { $ne: t._id },
               } as any);
               if (conflict) {
