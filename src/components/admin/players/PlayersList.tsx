@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
-import { GenderBadge } from "@/components/ui/Badge";
+import { Badge, GenderBadge } from "@/components/ui/Badge";
 import { SearchIcon } from "@/components/ui/icons";
 import { inputClass } from "@/components/ui/Field";
-import { deletePlayer } from "@/app/admin/actions";
-import { InlineDelete } from "@/components/admin/InlineDelete";
+import { PlayerDelete } from "@/components/admin/players/PlayerDelete";
+import { MergePlayerModal } from "@/components/admin/players/MergePlayerModal";
 import { PlayerProfileModal } from "@/components/admin/players/PlayerProfileModal";
 import { Pagination } from "@/components/ui/Pagination";
 import { LEVELS } from "@/lib/config";
@@ -17,11 +17,26 @@ type Sort = "poin" | "nama" | "wl" | "match" | "coaching";
 
 const PAGE_SIZE = 25;
 
-function Actions({ p }: { p: Player }) {
+function Actions({ p, onMerge }: { p: Player; onMerge: () => void }) {
   return (
-    <InlineDelete action={deletePlayer} id={p.id} name={p.name} noun="pemain">
+    <div className="flex items-center gap-1 justify-end">
       <Link href={`/admin/players?edit=${p.id}`} className="btn min-h-10 px-4.5 tracking-button no-underline text-snow">Edit</Link>
-    </InlineDelete>
+      <PlayerDelete player={p} onMerge={onMerge} />
+    </div>
+  );
+}
+
+/** "Reclub" pill on players linked to a Reclub account (hover shows which one). */
+function ReclubBadge({ p }: { p: Player }) {
+  if (p.reclub_user_id == null) return null;
+  const who = p.reclub_username ? `@${p.reclub_username}` : p.reclub_name || `#${p.reclub_user_id}`;
+  return (
+    <span title={`Tertaut ke Reclub ${who}`}>
+      <Badge tone="muted">
+        <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-volt" />
+        Reclub
+      </Badge>
+    </span>
   );
 }
 
@@ -31,6 +46,7 @@ export function PlayersList({ players, coachingCounts }: { players: Player[]; co
   const [sort, setSort] = useState<Sort>("poin");
   const [gender, setGender] = useState<"" | "M" | "F">("");
   const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+  const [mergeSource, setMergeSource] = useState<Player | null>(null);
   const [page, setPage] = useState(1);
 
   const matchCount = (p: Player) => p.wins + p.losses;
@@ -123,7 +139,7 @@ export function PlayersList({ players, coachingCounts }: { players: Player[]; co
                   onClick={() => setProfilePlayer(p)}
                   className="border-0 bg-transparent cursor-pointer p-0 flex items-center gap-2 font-display font-bold text-snow hover:text-volt"
                 >
-                  {p.name} <GenderBadge gender={p.gender} />
+                  {p.name} <GenderBadge gender={p.gender} /> <ReclubBadge p={p} />
                 </button>
               </td>
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{p.level}</td>
@@ -132,7 +148,7 @@ export function PlayersList({ players, coachingCounts }: { players: Player[]; co
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{p.wins}–{p.losses}</td>
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{matchCount(p)}×</td>
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{coachingCount(p)}×</td>
-              <td className="py-2"><Actions p={p} /></td>
+              <td className="py-2"><Actions p={p} onMerge={() => setMergeSource(p)} /></td>
             </tr>
           ))}
         </tbody>
@@ -143,12 +159,12 @@ export function PlayersList({ players, coachingCounts }: { players: Player[]; co
           <div key={p.id} className={`bg-ink-3 rounded-card py-3 pl-3.5 pr-2 flex items-center gap-3 ${p.active ? "" : "opacity-50"}`}>
             <Avatar name={p.name} photoUrl={p.photo_url} size={36} />
             <button type="button" onClick={() => setProfilePlayer(p)} className="flex-1 min-w-0 border-0 bg-transparent cursor-pointer text-left p-0">
-              <div className="font-display font-bold text-input flex items-center gap-2 text-snow">{p.name} <GenderBadge gender={p.gender} /></div>
+              <div className="font-display font-bold text-input flex items-center gap-2 text-snow">{p.name} <GenderBadge gender={p.gender} /> <ReclubBadge p={p} /></div>
               <div className="text-caption text-snow/70">{[p.level, p.region].filter(Boolean).join(" · ")}</div>
               <div className="text-caption text-snow/70"><b className="text-snow">{p.points}</b> poin · {p.wins}–{p.losses} W-L</div>
               <div className="text-caption text-snow/70">{matchCount(p)}× match · {coachingCount(p)}× coaching</div>
             </button>
-            <Actions p={p} />
+            <Actions p={p} onMerge={() => setMergeSource(p)} />
           </div>
         ))}
       </div>
@@ -158,6 +174,7 @@ export function PlayersList({ players, coachingCounts }: { players: Player[]; co
       <Pagination page={clampedPage} totalPages={totalPages} onChange={setPage} />
 
       {profilePlayer && <PlayerProfileModal player={profilePlayer} onClose={() => setProfilePlayer(null)} />}
+      {mergeSource && <MergePlayerModal source={mergeSource} players={players} onClose={() => setMergeSource(null)} />}
     </>
   );
 }

@@ -1,6 +1,6 @@
 "use server";
 
-import { guard, intOrNull, str } from "@/lib/server/action";
+import { guard, guardResult, intOrNull, str } from "@/lib/server/action";
 import type { ActionState } from "@/lib/actionState";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -9,6 +9,8 @@ import { requireAdmin } from "@/lib/auth";
 import { uploadImage } from "@/lib/server/storage";
 import type { Gender, Player } from "@/lib/database.types";
 import { normalizeWhatsapp } from "@/lib/accountRules";
+import { getDb } from "@/lib/mongodb";
+import { mergeBlockers, mergePlayers, playerFootprint } from "@/lib/server/playerMerge";
 
 function revalidatePublic() {
   revalidatePath("/");
@@ -217,5 +219,35 @@ export async function deletePlayer(_: ActionState, fd: FormData): Promise<Action
     if (error) throw new Error(error.message);
     revalidatePath("/admin/players");
     revalidatePublic();
+  });
+}
+
+/** What deleting a player also deletes (asked before the delete is confirmed). */
+export async function playerDeleteImpact(id: string) {
+  return guardResult(async () => {
+    await requireAdmin();
+    return { footprint: await playerFootprint(await getDb(), id) };
+  });
+}
+
+/** "Gabungkan pemain": both sides' data, and what has to be sorted out before merging. */
+export async function previewPlayerMerge(sourceId: string, targetId: string) {
+  return guardResult(async () => {
+    await requireAdmin();
+    const db = await getDb();
+    const [source, target, blockers] = await Promise.all([playerFootprint(db, sourceId), playerFootprint(db, targetId), mergeBlockers(db, sourceId, targetId)]);
+    return { source, target, blockers };
+  });
+}
+
+/** Moves everything of the duplicate (`source`) to the player that stays (`target`), then deletes the duplicate. */
+export async function mergePlayersAction(sourceId: string, targetId: string) {
+  return guardResult(async () => {
+    await requireAdmin();
+    const result = await mergePlayers(await getDb(), sourceId, targetId);
+    revalidatePath("/admin/players");
+    revalidatePath("/akun", "layout");
+    revalidatePublic();
+    return result;
   });
 }

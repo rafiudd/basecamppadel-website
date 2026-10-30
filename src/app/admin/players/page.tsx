@@ -5,6 +5,7 @@ import { PlayerForm } from "@/components/admin/players/PlayerForm";
 import { PlayersList } from "@/components/admin/players/PlayersList";
 import { PendingClaims, type PendingClaim } from "@/components/admin/players/PendingClaims";
 import { PlayerLoginManagement } from "@/components/admin/players/PlayerLoginManagement";
+import { PlayerReclubLink } from "@/components/admin/players/PlayerReclubLink";
 
 import { getDb } from "@/lib/mongodb";
 
@@ -43,20 +44,22 @@ export default async function PlayersAdmin({ searchParams }: { searchParams: Pro
   if (showForm) {
     let editing = null;
     let linkedEmail: string | null = null;
+    let accountCreatedAt: string | null = null;
     if (edit) {
       const [{ data: p }, { data: prof }] = await Promise.all([
         supabase.from("players").select("*").eq("id", edit).maybeSingle(),
-        supabase.from("profiles").select("email").eq("player_id", edit).maybeSingle(),
+        supabase.from("profiles").select("email, created_at").eq("player_id", edit).maybeSingle(),
       ]);
       editing = p;
       linkedEmail = prof?.email ?? null;
+      accountCreatedAt = prof?.created_at ?? null;
     }
 
     return (
       <div className="flex flex-col gap-5">
         <PageHeader title={editing ? editing.name : "Tambah Pemain"} back={{ href: "/admin/players", label: "Pemain" }} />
         <div className="flex flex-col gap-6">
-          <PlayerForm key={editing?.id ?? "new"} player={editing || undefined} accountEmail={linkedEmail} />
+          <PlayerForm key={editing?.id ?? "new"} player={editing || undefined} accountEmail={linkedEmail} accountCreatedAt={accountCreatedAt} />
           {editing && (
             <PlayerLoginManagement
               playerId={editing.id}
@@ -64,6 +67,7 @@ export default async function PlayersAdmin({ searchParams }: { searchParams: Pro
               accountEmail={linkedEmail}
             />
           )}
+          {editing && <PlayerReclubLink key={editing.reclub_user_id ?? "none"} player={editing} />}
         </div>
       </div>
     );

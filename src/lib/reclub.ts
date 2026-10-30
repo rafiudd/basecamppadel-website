@@ -348,6 +348,35 @@ export function normalizeName(name: string): string {
     .trim();
 }
 
+/**
+ * Players whose name looks like one of `names`, best first: the same after normalizing (3), one
+ * containing the other as whole words, "erick" vs "erick ks" (2), or the same first word (1). Words
+ * under 3 letters don't count. A hint against creating a duplicate player (Reclub import, merge),
+ * never applied on its own.
+ */
+export function similarPlayers<P extends { id: string; name: string }>(names: string[], players: P[], limit = 3): P[] {
+  const keys = [...new Set(names.map(normalizeName).filter((k) => k.length >= 3))];
+  if (!keys.length) return [];
+  const score = (name: string) => {
+    const n = normalizeName(name);
+    if (n.length < 3) return 0;
+    let best = 0;
+    for (const k of keys) {
+      if (n === k) return 3;
+      const [short, long] = n.length < k.length ? [n, k] : [k, n];
+      if (` ${long} `.includes(` ${short} `)) best = Math.max(best, 2);
+      else if (n.split(" ")[0] === k.split(" ")[0] && n.split(" ")[0].length >= 3) best = Math.max(best, 1);
+    }
+    return best;
+  };
+  return players
+    .map((p) => ({ p, s: score(p.name) }))
+    .filter((x) => x.s > 0)
+    .sort((a, b) => b.s - a.s || a.p.name.localeCompare(b.p.name))
+    .slice(0, limit)
+    .map((x) => x.p);
+}
+
 export type ReclubMatch = { playerId: string | null; how: "linked" | "name" | "none" };
 
 /**

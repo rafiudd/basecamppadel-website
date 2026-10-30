@@ -8,7 +8,7 @@ import { SearchSelect, type SearchOption } from "@/components/ui/SearchSelect";
 import { Spinner } from "@/components/ui/Spinner";
 import { compactInputClass, inputClass, invalidIf } from "@/components/ui/Field";
 import { unwrap } from "@/lib/actionState";
-import { RECLUB_STATUS_LABEL, reclubTeam, type ReclubClubMeet, type ReclubMeet, type ReclubStatus } from "@/lib/reclub";
+import { RECLUB_STATUS_LABEL, reclubTeam, similarPlayers, type ReclubClubMeet, type ReclubMeet, type ReclubStatus } from "@/lib/reclub";
 import { formatRupiah } from "@/lib/format";
 import type { Player } from "@/lib/database.types";
 import {
@@ -69,8 +69,9 @@ function toSections(rows: ReclubImportRow[]): Section[] {
  * "Ambil dari Reclub": pick one of Basecamp's upcoming Reclub meets (or paste any meet link), check
  * who matches which player, then import. The list is grouped like Reclub's: one block per team,
  * then confirmed players without a team, then waitlist and the rest. Confirmed participants are
- * ticked by default. New players are created (with their Reclub photo) and every chosen player is
- * linked to its Reclub account for next time. `teamNote` says what the caller does with the teams.
+ * ticked by default. New players are created and every chosen player is
+ * linked to its Reclub account for next time; a player without a photo gets their Reclub one.
+ * `teamNote` says what the caller does with the teams.
  */
 export function ReclubImportModal({
   players,
@@ -109,17 +110,20 @@ export function ReclubImportModal({
   }, []);
 
   // ---- step 2: review participants
-  const [preview, setPreview] = useState<{ meet: ReclubMeetInfo; rows: ReclubImportRow[] } | null>(null);
+  const [preview, setPreview] = useState<{ meet: ReclubMeetInfo; rows: ReclubImportRow[]; linkedTo: Record<string, number> } | null>(null);
   const [included, setIncluded] = useState<Set<number>>(new Set());
   const [choice, setChoice] = useState<Record<number, string>>({});
   const [gender, setGender] = useState<Record<number, "M" | "F" | "">>({});
   const [showErrors, setShowErrors] = useState(false);
+  /** The look-alike new players the admin already saw the warning for (a second "Masukkan" goes ahead). */
+  const [lookAlikesSeen, setLookAlikesSeen] = useState("");
 
   const load = (input: string) =>
     run(`load:${input}`, async () => {
       const res = unwrap(await previewReclubMeetAction(input));
       const rows = res.rows.filter((r) => SHOWN.includes(r.status));
-      setPreview({ meet: res.meet, rows });
+      setPreview({ meet: res.meet, rows, linkedTo: res.linkedTo });
+      setLookAlikesSeen("");
       setIncluded(new Set(rows.filter((r) => r.status === "confirmed").map((r) => r.reclubUserId)));
       setChoice(Object.fromEntries(rows.map((r) => [r.reclubUserId, r.playerId ?? NEW])));
       setGender(Object.fromEntries(rows.map((r) => [r.reclubUserId, r.gender ?? ""])));
@@ -144,15 +148,35 @@ export function ReclubImportModal({
       return next;
     });
 
+  // A player linked to another Reclub account is that person, not this participant
+  const linkedElsewhere = (playerId: string, r: ReclubImportRow) => {
+    const owner = preview?.linkedTo[playerId];
+    return owner != null && owner !== r.reclubUserId;
+  };
+  /** Existing players a "+ Pemain baru" row may really be: a duplicate is much easier to avoid than to merge. */
+  const lookAlikes = (r: ReclubImportRow) =>
+    similarPlayers(
+      [r.name, r.username.replace(/[-_]\d+$/, "").replace(/[-_.]+/g, " ")],
+      players.filter((p) => !linkedElsewhere(p.id, r) && !pickedIds.includes(p.id)),
+    );
+  const riskyNew = chosenRows.filter((r) => choice[r.reclubUserId] === NEW && lookAlikes(r).length > 0);
+  const riskyKey = riskyNew.map((r) => r.reclubUserId).join(",");
+
   const submit = () => {
     if (!preview) return;
     if (!chosenRows.length || dupes.size || missingGender.length) return setShowErrors(true);
+    // first "Masukkan" with look-alikes only warns; the same set again means "yes, they're new"
+    if (riskyKey && riskyKey !== lookAlikesSeen) {
+      setShowErrors(true);
+      return setLookAlikesSeen(riskyKey);
+    }
     run("import", async () => {
-      const choices: ReclubImportChoice[] = chosenRows.map((r) =>
-        choice[r.reclubUserId] === NEW
-          ? { reclubUserId: r.reclubUserId, create: { name: r.name, gender: gender[r.reclubUserId] as "M" | "F" } }
-          : { reclubUserId: r.reclubUserId, playerId: choice[r.reclubUserId] },
-      );
+      const choices: ReclubImportChoice[] = chosenRows.map((r) => {
+        const reclub = { reclubUserId: r.reclubUserId, reclubName: r.name, reclubUsername: r.username };
+        return choice[r.reclubUserId] === NEW
+          ? { ...reclub, create: { name: r.name, gender: gender[r.reclubUserId] as "M" | "F" } }
+          : { ...reclub, playerId: choice[r.reclubUserId] };
+      });
       const res = unwrap(await confirmReclubImportAction(choices));
       onImport({
         meet: preview.meet,
@@ -168,8 +192,8 @@ export function ReclubImportModal({
     ...players.map((p) => ({
       value: p.id,
       label: p.name,
-      hint: [p.level, p.region].filter(Boolean).join(" · "),
-      disabled: p.id !== choice[r.reclubUserId] && pickedIds.includes(p.id),
+      hint: [p.level, p.region, linkedElsewhere(p.id, r) && "tertaut akun Reclub lain"].filter(Boolean).join(" · "),
+      disabled: p.id !== choice[r.reclubUserId] && (pickedIds.includes(p.id) || linkedElsewhere(p.id, r)),
     })),
   ];
 
@@ -235,7 +259,7 @@ export function ReclubImportModal({
           </div>
 
           <div className="text-xs text-snow/65">
-            Centang siapa yang diambil, lalu cocokkan ke pemain yang sudah ada. Yang tidak ketemu dibuat sebagai pemain baru (dengan foto Reclub-nya) dan tertaut ke akun Reclub.
+            Centang siapa yang diambil, lalu cocokkan ke pemain yang sudah ada. Yang tidak ketemu dibuat sebagai pemain baru, dan semuanya tertaut ke akun Reclub. Pemain yang belum punya foto memakai foto Reclub-nya.
           </div>
           {sections.some((s) => s.team) ? (
             <div className="text-xs text-volt font-semibold">
@@ -273,6 +297,7 @@ export function ReclubImportModal({
                       onGender={(g) => setGender((prev) => ({ ...prev, [r.reclubUserId]: g }))}
                       dupe={showErrors && dupes.has(choice[r.reclubUserId])}
                       genderMissing={showErrors && !gender[r.reclubUserId]}
+                      lookAlikes={choice[r.reclubUserId] === NEW ? lookAlikes(r) : []}
                     />
                   ))}
                 </section>
@@ -285,6 +310,11 @@ export function ReclubImportModal({
               {!chosenRows.length && <span>Centang minimal 1 peserta.</span>}
               {dupes.size > 0 && <span>Satu pemain dipilih untuk dua peserta Reclub.</span>}
               {missingGender.length > 0 && <span>Pilih gender untuk pemain baru: {missingGender.map((r) => r.name).join(", ")}.</span>}
+            </div>
+          )}
+          {riskyKey && riskyKey === lookAlikesSeen && (
+            <div role="alert" className="bg-volt/10 rounded-xl px-4 py-3 text-sm text-volt">
+              {riskyNew.length} pemain baru namanya mirip pemain yang sudah ada: {riskyNew.map((r) => r.name).join(", ")}. Kalau orangnya sama, pilih pemainnya (lihat &quot;Mirip&quot; di barisnya). Kalau memang orang baru, klik Masukkan sekali lagi.
             </div>
           )}
           {error && <div role="alert" className="text-sm text-coral-soft">{error}</div>}
@@ -314,6 +344,7 @@ function ParticipantRow({
   onGender,
   dupe,
   genderMissing,
+  lookAlikes,
 }: {
   r: ReclubImportRow;
   on: boolean;
@@ -325,6 +356,8 @@ function ParticipantRow({
   onGender: (g: "M" | "F" | "") => void;
   dupe: boolean;
   genderMissing: boolean;
+  /** Existing players with a similar name, offered while this row would create a new player. */
+  lookAlikes: Pick<Player, "id" | "name">[];
 }) {
   const isNew = value === NEW;
   return (
@@ -364,6 +397,16 @@ function ParticipantRow({
           </select>
         )}
       </div>
+      {on && isNew && lookAlikes.length > 0 && (
+        <div className="col-span-3 sm:col-start-3 sm:col-span-2 flex items-center gap-1.5 flex-wrap text-xs">
+          <span className="text-volt font-semibold">Mirip pemain yang ada:</span>
+          {lookAlikes.map((p) => (
+            <button key={p.id} type="button" onClick={() => onChoose(p.id)} className="border-none rounded-full px-2.5 py-1 font-semibold bg-volt/15 text-volt hover:bg-volt/25">
+              {p.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -22,6 +22,14 @@ export function formatDateShortIndo(isoDate: string | Date | null | undefined): 
   return `${daysShort[date.getUTCDay()]}, ${d} ${MONTHS[m - 1]}`;
 }
 
+/** A timestamp → "Kamis, 10 Sep 2026" on the WIB calendar (a UTC slice would be a day early before 07:00 WIB); "" when missing. */
+export function formatDayDateWib(timestamp: string | Date | null | undefined): string {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "";
+  return parseDateParts(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(date)).dateFormatted;
+}
+
 export function parseDateParts(isoDate: string) {
   const [y, m, d] = isoDate.split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
