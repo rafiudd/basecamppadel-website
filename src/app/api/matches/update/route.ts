@@ -73,9 +73,14 @@ export async function POST(req: NextRequest) {
       } as any);
       const courtId = sanitizedPatch.court_id ?? existing?.court_id;
       if (courtId) {
+        // Scoped to the match's own event (or, for a freeform match, other freeform matches) —
+        // same fix as queryBuilder.ts's matches_one_on_air_per_court check, so a stale is_live left
+        // on one event doesn't block a different event reusing the same physical court.
+        const eventId = existing?.event_id ?? null;
         const conflict = await db.collection("matches").findOne({
           court_id: courtId,
           is_live: true,
+          event_id: eventId,
           _id: { $ne: existing?._id ?? id },
           id: { $ne: id },
         } as any);
