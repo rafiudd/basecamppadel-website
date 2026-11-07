@@ -52,6 +52,7 @@ export function ClassCatalogClient({ initialClasses }: { initialClasses: any[] }
   const [category, setCategory] = useState("all");
   const [pin, setPin] = useState("all");
   const [sort, setSort] = useState("pop");
+  const [expanded, setExpanded] = useState(false);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -84,6 +85,7 @@ export function ClassCatalogClient({ initialClasses }: { initialClasses: any[] }
   }, [initialClasses, q, category, pin, sort]);
 
   const hasFilter = q.trim() !== "" || category !== "all" || pin !== "all";
+  const activeFilterCount = (category !== "all" ? 1 : 0) + (pin !== "all" ? 1 : 0) + (sort !== "pop" ? 1 : 0);
 
   const resetFilter = () => {
     setQ("");
@@ -96,32 +98,47 @@ export function ClassCatalogClient({ initialClasses }: { initialClasses: any[] }
     <div className="flex flex-col gap-6">
       {/* Filter Controls Card */}
       <div className="bg-white border border-ink/10 rounded-2xl p-4 md:p-5 flex flex-col gap-4 shadow-sm">
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="flex-1 flex flex-col gap-1.5">
-            <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
-              Cari kelas
-            </span>
-            <div className="relative">
-              <svg
-                className="w-4.5 h-4.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/40 pointer-events-none"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <line x1="16.5" y1="16.5" x2="21" y2="21" />
-              </svg>
-              <input
-                type="search"
-                placeholder="Mis. backglass, volley, private"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                className="w-full bg-white border border-ink/20 rounded-xl px-3.5 py-3 pl-10 text-sm text-ink outline-none focus:border-ink transition-colors"
-              />
-            </div>
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <svg
+              className="w-4.5 h-4.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/40 pointer-events-none"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <line x1="16.5" y1="16.5" x2="21" y2="21" />
+            </svg>
+            <input
+              type="search"
+              placeholder="Mis. backglass, volley, private"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              className="w-full bg-white border border-ink/20 rounded-xl px-3.5 py-3 pl-10 text-sm text-ink outline-none focus:border-ink transition-colors"
+            />
           </div>
 
+          {/* Mobile-only toggle; the rest of the controls stay open on md+ */}
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            className="md:hidden flex-none inline-flex items-center gap-1.5 rounded-xl border border-ink/20 px-3.5 text-sm font-bold text-ink"
+          >
+            Filter
+            {activeFilterCount > 0 && (
+              <span className="w-4.5 h-4.5 rounded-full bg-coral text-ink text-[10px] font-black flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+            <svg className={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
+
+        <div className={`${expanded ? "flex" : "hidden"} md:flex flex-col gap-4`}>
           <div className="md:w-56 flex flex-col gap-1.5">
             <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
               Urutkan
@@ -138,33 +155,33 @@ export function ClassCatalogClient({ initialClasses }: { initialClasses: any[] }
               <option value="new">Terbaru</option>
             </select>
           </div>
-        </div>
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
-            Kategori
-          </span>
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden">
-            <FilterPill active={category === "all"} onClick={() => setCategory("all")}>Semua kategori</FilterPill>
-            {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-              <FilterPill key={key} active={category === key} onClick={() => setCategory(key)}>
-                {label}
-              </FilterPill>
-            ))}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
+              Kategori
+            </span>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden">
+              <FilterPill active={category === "all"} onClick={() => setCategory("all")}>Semua kategori</FilterPill>
+              {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                <FilterPill key={key} active={category === key} onClick={() => setCategory(key)}>
+                  {label}
+                </FilterPill>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
-            Warna pin
-          </span>
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden">
-            <FilterPill active={pin === "all"} onClick={() => setPin("all")}>Semua pin</FilterPill>
-            {ALL_PINS.map((p) => (
-              <FilterPill key={p} active={pin === p} onClick={() => setPin(p)} swatch={PIN_COLORS[p]}>
-                {p}
-              </FilterPill>
-            ))}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
+              Warna pin
+            </span>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden">
+              <FilterPill active={pin === "all"} onClick={() => setPin("all")}>Semua pin</FilterPill>
+              {ALL_PINS.map((p) => (
+                <FilterPill key={p} active={pin === p} onClick={() => setPin(p)} swatch={PIN_COLORS[p]}>
+                  {p}
+                </FilterPill>
+              ))}
+            </div>
           </div>
         </div>
       </div>
