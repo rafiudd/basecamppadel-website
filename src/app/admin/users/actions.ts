@@ -350,7 +350,8 @@ export async function upsertCoachUser(_: ActionState, fd: FormData): Promise<Act
     const active = fd.get("active") === "on";
     const email = str(fd, "email").toLowerCase().trim();
     const password = str(fd, "password");
-    const level = str(fd, "level");
+    const venueId = str(fd, "venue_id") || null;
+    const position = str(fd, "position") || null;
     const instagram = str(fd, "instagram").replace(/^@/, "");
     const bio = str(fd, "bio");
 
@@ -421,7 +422,7 @@ export async function upsertCoachUser(_: ActionState, fd: FormData): Promise<Act
     }
 
     if (coachId) {
-      const updateData: Record<string, any> = { name, active, slug, level, instagram, bio };
+      const updateData: Record<string, any> = { name, active, slug, venue_id: venueId, position, instagram, bio };
       if (authUserId) updateData.user_id = authUserId;
       if (photo) updateData.photo_url = photo;
       else if (fd.get("remove_photo") === "on") updateData.photo_url = null;
@@ -436,7 +437,8 @@ export async function upsertCoachUser(_: ActionState, fd: FormData): Promise<Act
         name,
         slug,
         active,
-        level,
+        venue_id: venueId,
+        position,
         instagram,
         bio,
         photo_url: photo,

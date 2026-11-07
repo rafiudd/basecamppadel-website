@@ -107,7 +107,8 @@ export function applyCollectionDefaults(
     }
     case "coaches": {
       if (doc.active === undefined) doc.active = true;
-      if (doc.level === undefined) doc.level = "";
+      if (doc.venue_id === undefined) doc.venue_id = null;
+      if (doc.position === undefined) doc.position = null;
       if (doc.whatsapp === undefined) doc.whatsapp = "";
       if (doc.instagram === undefined) doc.instagram = "";
       if (doc.bio === undefined) doc.bio = "";

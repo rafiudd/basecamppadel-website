@@ -44,7 +44,13 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ s
             <span className="font-bold text-xs md:text-sm tracking-widest text-volt uppercase">Coach</span>
             <h1 className="font-display font-bold text-4xl md:text-6xl text-snow m-0 leading-tight">{coach.name}</h1>
             <div className="flex items-center gap-2.5 flex-wrap justify-center md:justify-start">
-              {coach.level && <span className="rounded-full bg-snow/12 px-3.5 py-1.5 text-sm font-bold">{coach.level}</span>}
+              {coach.venueName && (
+                <span className="rounded-full bg-snow/12 px-3.5 py-1.5 text-sm font-bold inline-flex items-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 1 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                  {coach.venueName}
+                </span>
+              )}
+              {coach.position && <span className="rounded-full bg-snow/12 px-3.5 py-1.5 text-sm font-bold">{coach.position}</span>}
               {coach.totalReviews > 0 && (
                 <span className="rounded-full bg-snow/12 px-3.5 py-1.5 text-sm font-bold inline-flex items-center gap-1.5">
                   <Stars rating={coach.averageRating} />

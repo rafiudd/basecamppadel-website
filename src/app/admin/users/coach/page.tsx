@@ -15,6 +15,13 @@ export default async function CoachManagementPage() {
     .sort({ name: 1 })
     .toArray();
 
+  const venueDocs = await db
+    .collection("venues")
+    .find({ active: true })
+    .sort({ name: 1 })
+    .toArray();
+  const venues = venueDocs.map((v) => ({ id: String(v.id || v._id), name: v.name as string }));
+
   const coachIds = coachDocs.map((c) => String(c.id || c._id));
   const adminCoachDocs = await db
     .collection("admin_users")
@@ -151,7 +158,8 @@ export default async function CoachManagementPage() {
       email,
       created_at: doc.created_at || new Date().toISOString(),
       slug: doc.slug || "",
-      level: doc.level || "",
+      venue_id: doc.venue_id || null,
+      position: doc.position || null,
       instagram: doc.instagram || "",
       bio: doc.bio || "",
       photo_url: doc.photo_url ?? null,
@@ -167,5 +175,5 @@ export default async function CoachManagementPage() {
     };
   });
 
-  return <CoachUsersClient coaches={coaches} />;
+  return <CoachUsersClient coaches={coaches} venues={venues} />;
 }

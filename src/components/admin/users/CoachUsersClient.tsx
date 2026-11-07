@@ -13,8 +13,10 @@ import { formatDateShortIndo } from "@/lib/format";
 
 export function CoachUsersClient({
   coaches,
+  venues,
 }: {
   coaches: CoachUserItem[];
+  venues: { id: string; name: string }[];
 }) {
   const [isCreating, setIsCreating] = useState(false);
   const [editingCoach, setEditingCoach] = useState<CoachUserItem | null>(null);
@@ -349,6 +351,7 @@ export function CoachUsersClient({
           <CoachUserForm
             key={editingCoach?.id ?? "new"}
             coach={editingCoach ?? undefined}
+            venues={venues}
             onClose={closeModal}
           />
         </Modal>

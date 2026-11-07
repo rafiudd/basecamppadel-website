@@ -356,7 +356,8 @@ export type Coach = {
   slug: string;
   user_id: string | null;
   active: boolean;
-  level: string;
+  venue_id: string | null;
+  position: CourtPosition | null;
   whatsapp: string;
   instagram: string;
   bio: string;

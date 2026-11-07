@@ -36,18 +36,27 @@ export type CoachUserItem = {
   email: string | null;
   created_at: string;
   slug?: string;
-  level?: string;
+  venue_id?: string | null;
+  position?: string | null;
   instagram?: string;
   bio?: string;
   photo_url?: string | null;
   resume?: CoachResume;
 };
 
+const POSITIONS = [
+  { value: "right", label: "Posisi kanan" },
+  { value: "left", label: "Posisi kiri" },
+  { value: "both", label: "Posisi bebas" },
+];
+
 export function CoachUserForm({
   coach,
+  venues,
   onClose,
 }: {
   coach?: CoachUserItem;
+  venues: { id: string; name: string }[];
   onClose?: () => void;
 }) {
   const isEdit = Boolean(coach);
@@ -92,8 +101,23 @@ export function CoachUserForm({
         </div>
 
         <div>
-          <div className="label">Title / Level</div>
-          <input className="field" name="level" defaultValue={coach?.level ?? ""} placeholder="mis. Head Coach" />
+          <div className="label">Venue</div>
+          <select className="field" name="venue_id" defaultValue={coach?.venue_id ?? ""}>
+            <option value="">— Belum ditentukan —</option>
+            {venues.map((v) => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <div className="label">Posisi main</div>
+          <select className="field" name="position" defaultValue={coach?.position ?? ""}>
+            <option value="">— Belum ditentukan —</option>
+            {POSITIONS.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
         </div>
 
         <div>
