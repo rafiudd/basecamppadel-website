@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { upsertCoachUser, unlinkCoachLogin } from "@/app/admin/users/actions";
 import { PasswordInput } from "@/components/ui/PasswordInput";
+import { CoachPhotoInput } from "./CoachPhotoInput";
 
 export type CoachResume = {
   coachingSessionsCount: number;
@@ -34,6 +35,11 @@ export type CoachUserItem = {
   user_id: string | null;
   email: string | null;
   created_at: string;
+  slug?: string;
+  level?: string;
+  instagram?: string;
+  bio?: string;
+  photo_url?: string | null;
   resume?: CoachResume;
 };
 
@@ -63,6 +69,13 @@ export function CoachUserForm({
       >
         {coach && <input type="hidden" name="id" value={coach.id} />}
 
+        <CoachPhotoInput name={coach?.name ?? ""} current={coach?.photo_url ?? null} />
+        {coach?.photo_url && (
+          <label className="flex items-center gap-2 text-xs text-snow/70 -mt-2">
+            <input type="checkbox" name="remove_photo" /> Hapus foto
+          </label>
+        )}
+
         <div>
           <div className="label">Nama Coach</div>
           <input
@@ -73,6 +86,24 @@ export function CoachUserForm({
             placeholder="mis. Coach Ardi"
             autoFocus
           />
+          <div className="text-2xs text-snow/40 mt-1">
+            Halaman publik: basecamppadel.id/coach/{coach?.slug || "<otomatis-dari-nama>"}
+          </div>
+        </div>
+
+        <div>
+          <div className="label">Title / Level</div>
+          <input className="field" name="level" defaultValue={coach?.level ?? ""} placeholder="mis. Head Coach" />
+        </div>
+
+        <div>
+          <div className="label">Instagram</div>
+          <input className="field" name="instagram" defaultValue={coach?.instagram ?? ""} placeholder="username (tanpa @)" />
+        </div>
+
+        <div>
+          <div className="label">Bio (tampil di halaman profil publik)</div>
+          <textarea className="field min-h-24" name="bio" defaultValue={coach?.bio ?? ""} placeholder="Ceritain pengalaman & spesialisasi coach ini." />
         </div>
 
         <label className="flex items-center gap-2.5 text-sm cursor-pointer select-none">

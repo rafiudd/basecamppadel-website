@@ -5,8 +5,24 @@ import type { ActionState } from "@/lib/actionState";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
+import { uploadImage } from "@/lib/server/storage";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+
+const slugify = (text: string) =>
+  text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+/** A free slug for this coach's public /coach/[slug] page — the name's slug, or that plus a short suffix if taken. */
+async function uniqueCoachSlug(db: Awaited<ReturnType<typeof getDb>>, name: string, coachId: string): Promise<string> {
+  const base = slugify(name) || "coach";
+  const taken = await db.collection("coaches").findOne({ slug: base, _id: { $ne: coachId } } as any);
+  return taken ? `${base}-${coachId.slice(0, 4)}` : base;
+}
 
 // ==========================================
 // 1. SUPER ADMIN MANAGEMENT
@@ -334,11 +350,18 @@ export async function upsertCoachUser(_: ActionState, fd: FormData): Promise<Act
     const active = fd.get("active") === "on";
     const email = str(fd, "email").toLowerCase().trim();
     const password = str(fd, "password");
+    const level = str(fd, "level");
+    const instagram = str(fd, "instagram").replace(/^@/, "");
+    const bio = str(fd, "bio");
 
     if (!name) throw new Error("Nama coach wajib diisi.");
 
     const db = await getDb();
     const targetCoachId = coachId || crypto.randomUUID();
+    const slug = await uniqueCoachSlug(db, name, targetCoachId);
+
+    const photoFile = fd.get("photo") as File | null;
+    const photo = photoFile && photoFile.size > 0 ? await uploadImage("coaches", photoFile, 5 * 1024 * 1024) : null;
 
     let authUserId: string | null = null;
 
@@ -398,8 +421,10 @@ export async function upsertCoachUser(_: ActionState, fd: FormData): Promise<Act
     }
 
     if (coachId) {
-      const updateData: Record<string, any> = { name, active };
+      const updateData: Record<string, any> = { name, active, slug, level, instagram, bio };
       if (authUserId) updateData.user_id = authUserId;
+      if (photo) updateData.photo_url = photo;
+      else if (fd.get("remove_photo") === "on") updateData.photo_url = null;
       await db.collection("coaches").updateOne(
         { $or: [{ _id: coachId }, { id: coachId }] } as any,
         { $set: updateData }
@@ -409,7 +434,12 @@ export async function upsertCoachUser(_: ActionState, fd: FormData): Promise<Act
         _id: targetCoachId,
         id: targetCoachId,
         name,
+        slug,
         active,
+        level,
+        instagram,
+        bio,
+        photo_url: photo,
         user_id: authUserId,
         created_at: new Date().toISOString(),
       } as any);
@@ -417,6 +447,8 @@ export async function upsertCoachUser(_: ActionState, fd: FormData): Promise<Act
 
     revalidatePath("/admin/users/coach");
     revalidatePath("/admin/coaching");
+    revalidatePath("/coach");
+    revalidatePath(`/coach/${slug}`);
   });
 }
 

@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Avatar } from "@/components/ui/Avatar";
 import { getCoachProfile } from "@/lib/server/coaches";
-import { formatRupiah } from "@/lib/format";
+import { formatRupiah, initials } from "@/lib/format";
 import { CATEGORY_LABELS, formatReviewDate, formatScheduleFriendly } from "@/lib/kelasRules";
 
 export const revalidate = 60;
@@ -33,18 +32,23 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ s
 
   return (
     <div className="text-ink flex flex-col">
-      <section className="bg-indigo text-snow px-6 md:px-12 py-12 md:py-16">
-        <div className="w-full max-w-[1440px] mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-5">
-          <Avatar name={coach.name} photoUrl={coach.photoUrl} size={88} />
-          <div className="flex flex-col gap-2 min-w-0">
+      <section className="relative bg-indigo text-snow px-6 md:px-12 pt-10 md:pt-14 pb-14 md:pb-20 overflow-hidden">
+        {/* Big coral circle, same device as the leaderboard player hero */}
+        <div className="absolute -bottom-[220px] md:bottom-auto md:top-1/2 md:-translate-y-1/2 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:-right-[560px] w-[620px] h-[620px] md:w-[820px] md:h-[820px] rounded-full bg-[linear-gradient(165deg,#FF5A3C_0%,#F26A45_55%,#E4573D_100%)]" />
+
+        <div className="relative z-10 w-full max-w-[1440px] mx-auto flex flex-col md:flex-row items-center md:items-end justify-between gap-8">
+          <div className="flex-1 flex flex-col gap-4 min-w-0 text-center md:text-left items-center md:items-start">
+            <Link href="/coach" className="no-underline text-snow/75 font-sans font-semibold text-sm hover:text-volt transition-colors inline-flex items-center gap-1">
+              ← Coach
+            </Link>
             <span className="font-bold text-xs md:text-sm tracking-widest text-volt uppercase">Coach</span>
-            <h1 className="font-display font-bold text-3xl md:text-5xl text-snow m-0 leading-tight">{coach.name}</h1>
-            <div className="flex items-center gap-3 flex-wrap text-sm text-snow/80">
-              {coach.level && <span className="rounded-full bg-snow/12 px-3 py-1 font-semibold">{coach.level}</span>}
+            <h1 className="font-display font-bold text-4xl md:text-6xl text-snow m-0 leading-tight">{coach.name}</h1>
+            <div className="flex items-center gap-2.5 flex-wrap justify-center md:justify-start">
+              {coach.level && <span className="rounded-full bg-snow/12 px-3.5 py-1.5 text-sm font-bold">{coach.level}</span>}
               {coach.totalReviews > 0 && (
-                <span className="inline-flex items-center gap-1.5">
+                <span className="rounded-full bg-snow/12 px-3.5 py-1.5 text-sm font-bold inline-flex items-center gap-1.5">
                   <Stars rating={coach.averageRating} />
-                  <span>{coach.averageRating.toFixed(1)} ({coach.totalReviews} ulasan)</span>
+                  <span>{coach.averageRating.toFixed(1)} ({coach.totalReviews})</span>
                 </span>
               )}
               {coach.instagram && (
@@ -52,10 +56,25 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ s
                   href={`https://instagram.com/${coach.instagram.replace(/^@/, "")}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-volt font-semibold no-underline hover:underline"
+                  className="rounded-full bg-snow/12 px-3.5 py-1.5 text-sm font-bold text-volt no-underline hover:bg-snow/20"
                 >
                   @{coach.instagram.replace(/^@/, "")}
                 </a>
+              )}
+            </div>
+          </div>
+
+          {/* Photo, with a soft glow behind it like the coaching rapor header */}
+          <div className="relative flex-none w-[180px] h-[180px] md:w-[240px] md:h-[240px]">
+            <div className="absolute left-1/2 -translate-x-1/2 -bottom-[30px] w-[280px] h-[280px] md:w-[360px] md:h-[360px] rounded-full bg-[radial-gradient(circle,rgba(190,130,150,.55)_0%,rgba(120,80,140,.25)_40%,rgba(27,22,80,0)_70%)]" />
+            <div className="relative w-full h-full rounded-full ring-4 ring-snow/20 overflow-hidden shadow-xl bg-indigo/60">
+              {coach.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- storage URL, variable aspect
+                <img src={coach.photoUrl} alt={coach.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="w-full h-full flex items-center justify-center font-display font-bold text-5xl md:text-6xl text-snow/85">
+                  {initials(coach.name)}
+                </span>
               )}
             </div>
           </div>
@@ -79,7 +98,7 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ s
                   <Link
                     key={c.slug}
                     href={`/kelas/${c.slug}`}
-                    className="flex flex-col gap-1.5 no-underline text-ink border border-ink/8 rounded-2xl p-4 hover:border-indigo bg-white"
+                    className="flex flex-col gap-1.5 no-underline text-ink border border-ink/8 rounded-2xl p-4 bg-white shadow-sm hover:shadow-md hover:border-indigo hover:-translate-y-0.5 transition-all"
                   >
                     <span className="text-caption text-ink/55 font-semibold">{CATEGORY_LABELS[c.category] ?? c.category}</span>
                     <span className="font-display font-bold text-base">{c.title}</span>
@@ -98,7 +117,7 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ s
                   <Link
                     key={i}
                     href={`/kelas/${s.classSlug}`}
-                    className="flex items-center justify-between gap-3 no-underline text-ink border border-ink/8 rounded-xl px-4 py-3 hover:border-indigo bg-white"
+                    className="flex items-center justify-between gap-3 no-underline text-ink border border-ink/8 rounded-xl px-4 py-3 bg-white shadow-sm hover:shadow-md hover:border-indigo transition-all"
                   >
                     <span className="min-w-0">
                       <span className="block font-semibold text-sm truncate">{s.classTitle}</span>
@@ -118,7 +137,7 @@ export default async function CoachProfilePage({ params }: { params: Promise<{ s
               <h2 className="font-display font-bold text-xl m-0 mb-3">Ulasan murid</h2>
               <div className="flex flex-col gap-3 max-w-2xl">
                 {coach.reviews.map((r, i) => (
-                  <div key={i} className="border border-ink/8 rounded-2xl p-4 bg-white">
+                  <div key={i} className="border border-ink/8 rounded-2xl p-4 bg-white shadow-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-semibold text-sm">{r.authorName}</span>
                       <Stars rating={r.rating} />

@@ -150,6 +150,11 @@ export default async function CoachManagementPage() {
       user_id: uId,
       email,
       created_at: doc.created_at || new Date().toISOString(),
+      slug: doc.slug || "",
+      level: doc.level || "",
+      instagram: doc.instagram || "",
+      bio: doc.bio || "",
+      photo_url: doc.photo_url ?? null,
       resume: {
         coachingSessionsCount: coachSessionsList.length,
         coachingGroupsCount: groups.length,
