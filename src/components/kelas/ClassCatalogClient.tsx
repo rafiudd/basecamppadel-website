@@ -119,12 +119,12 @@ export function ClassCatalogClient({ initialClasses }: { initialClasses: any[] }
             />
           </div>
 
-          {/* Mobile-only toggle; the rest of the controls stay open on md+ */}
+          {/* Toggle for the rest of the controls, collapsed by default on every screen size */}
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
-            className="md:hidden flex-none inline-flex items-center gap-1.5 rounded-xl border border-ink/20 px-3.5 text-sm font-bold text-ink"
+            className="flex-none inline-flex items-center gap-1.5 rounded-xl border border-ink/20 px-3.5 text-sm font-bold text-ink hover:border-ink/40"
           >
             Filter
             {activeFilterCount > 0 && (
@@ -138,7 +138,7 @@ export function ClassCatalogClient({ initialClasses }: { initialClasses: any[] }
           </button>
         </div>
 
-        <div className={`${expanded ? "flex" : "hidden"} md:flex flex-col gap-4`}>
+        <div className={`${expanded ? "flex" : "hidden"} flex-col gap-4`}>
           <div className="md:w-56 flex flex-col gap-1.5">
             <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
               Urutkan
