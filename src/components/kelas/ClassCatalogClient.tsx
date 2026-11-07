@@ -2,7 +2,50 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { formatRupiah, PIN_COLORS, CATEGORY_LABELS } from "@/lib/kelasRules";
+import { formatRupiah, PIN_COLORS, CATEGORY_LABELS, ALL_PINS } from "@/lib/kelasRules";
+
+/** A filter choice: a swatch dot for pins, plain text for categories. */
+function FilterPill({
+  active,
+  onClick,
+  swatch,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  swatch?: { bg: string; border: string };
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex-none inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold whitespace-nowrap border transition-colors ${
+        active ? "bg-ink text-snow border-ink" : "bg-white text-ink/70 border-ink/15 hover:border-ink/40 hover:text-ink"
+      }`}
+    >
+      {swatch && (
+        <span className="w-2.5 h-2.5 rounded-full inline-block flex-none" style={{ background: swatch.bg, border: swatch.border }} />
+      )}
+      {children}
+    </button>
+  );
+}
+
+/** An active filter, removable with the × — lets a visitor see and undo one filter without resetting all. */
+function ActiveFilterChip({ onRemove, children }: { onRemove: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      className="inline-flex items-center gap-1.5 rounded-full bg-coral/12 text-[#B8321A] text-xs font-bold pl-3 pr-2 py-1.5 whitespace-nowrap"
+    >
+      {children}
+      <span aria-hidden className="text-[13px] leading-none">×</span>
+    </button>
+  );
+}
 
 export function ClassCatalogClient({ initialClasses }: { initialClasses: any[] }) {
   const [q, setQ] = useState("");
@@ -52,85 +95,90 @@ export function ClassCatalogClient({ initialClasses }: { initialClasses: any[] }
   return (
     <div className="flex flex-col gap-6">
       {/* Filter Controls Card */}
-      <div className="bg-white border border-ink/10 rounded-2xl p-4 md:p-5 grid grid-cols-1 md:grid-cols-12 gap-3 items-end shadow-sm">
-        <div className="md:col-span-5 flex flex-col gap-1.5">
-          <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
-            Cari kelas
-          </span>
-          <div className="relative">
-            <svg
-              className="w-4.5 h-4.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/40 pointer-events-none"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+      <div className="bg-white border border-ink/10 rounded-2xl p-4 md:p-5 flex flex-col gap-4 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="flex-1 flex flex-col gap-1.5">
+            <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
+              Cari kelas
+            </span>
+            <div className="relative">
+              <svg
+                className="w-4.5 h-4.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/40 pointer-events-none"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <line x1="16.5" y1="16.5" x2="21" y2="21" />
+              </svg>
+              <input
+                type="search"
+                placeholder="Mis. backglass, volley, private"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="w-full bg-white border border-ink/20 rounded-xl px-3.5 py-3 pl-10 text-sm text-ink outline-none focus:border-ink transition-colors"
+              />
+            </div>
+          </div>
+
+          <div className="md:w-56 flex flex-col gap-1.5">
+            <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
+              Urutkan
+            </span>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="w-full bg-white border border-ink/20 rounded-xl px-3.5 py-3 text-sm font-semibold text-ink outline-none cursor-pointer"
             >
-              <circle cx="11" cy="11" r="7" />
-              <line x1="16.5" y1="16.5" x2="21" y2="21" />
-            </svg>
-            <input
-              type="search"
-              placeholder="Mis. backglass, volley, private"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="w-full bg-white border border-ink/20 rounded-xl px-3.5 py-3 pl-10 text-sm text-ink outline-none focus:border-ink transition-colors"
-            />
+              <option value="pop">Paling populer</option>
+              <option value="rate">Rating tertinggi</option>
+              <option value="cheap">Harga terendah</option>
+              <option value="exp">Harga tertinggi</option>
+              <option value="new">Terbaru</option>
+            </select>
           </div>
         </div>
 
-        <div className="md:col-span-2 flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
             Kategori
           </span>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full bg-white border border-ink/20 rounded-xl px-3.5 py-3 text-sm font-semibold text-ink outline-none cursor-pointer"
-          >
-            <option value="all">Semua kategori</option>
-            <option value="dasar">Dasar</option>
-            <option value="teknik">Teknik</option>
-            <option value="taktik">Posisi & taktik</option>
-            <option value="mf">Mental & fisik</option>
-            <option value="khusus">Program khusus</option>
-          </select>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden">
+            <FilterPill active={category === "all"} onClick={() => setCategory("all")}>Semua kategori</FilterPill>
+            {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+              <FilterPill key={key} active={category === key} onClick={() => setCategory(key)}>
+                {label}
+              </FilterPill>
+            ))}
+          </div>
         </div>
 
-        <div className="md:col-span-2 flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
             Warna pin
           </span>
-          <select
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            className="w-full bg-white border border-ink/20 rounded-xl px-3.5 py-3 text-sm font-semibold text-ink outline-none cursor-pointer"
-          >
-            <option value="all">Semua pin</option>
-            <option value="Putih">Pin Putih</option>
-            <option value="Kuning">Pin Kuning</option>
-            <option value="Biru">Pin Biru</option>
-            <option value="Merah">Pin Merah</option>
-            <option value="Hitam">Pin Hitam</option>
-          </select>
-        </div>
-
-        <div className="md:col-span-3 flex flex-col gap-1.5">
-          <span className="text-[11px] font-bold tracking-wider uppercase text-ink/55">
-            Urutkan
-          </span>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="w-full bg-white border border-ink/20 rounded-xl px-3.5 py-3 text-sm font-semibold text-ink outline-none cursor-pointer"
-          >
-            <option value="pop">Paling populer</option>
-            <option value="rate">Rating tertinggi</option>
-            <option value="cheap">Harga terendah</option>
-            <option value="exp">Harga tertinggi</option>
-            <option value="new">Terbaru</option>
-          </select>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [&::-webkit-scrollbar]:hidden">
+            <FilterPill active={pin === "all"} onClick={() => setPin("all")}>Semua pin</FilterPill>
+            {ALL_PINS.map((p) => (
+              <FilterPill key={p} active={pin === p} onClick={() => setPin(p)} swatch={PIN_COLORS[p]}>
+                {p}
+              </FilterPill>
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Active filters, each removable on its own */}
+      {hasFilter && (
+        <div className="flex items-center gap-2 flex-wrap -mt-1">
+          {q.trim() && <ActiveFilterChip onRemove={() => setQ("")}>"{q.trim()}"</ActiveFilterChip>}
+          {category !== "all" && (
+            <ActiveFilterChip onRemove={() => setCategory("all")}>{CATEGORY_LABELS[category] ?? category}</ActiveFilterChip>
+          )}
+          {pin !== "all" && <ActiveFilterChip onRemove={() => setPin("all")}>Pin {pin}</ActiveFilterChip>}
+        </div>
+      )}
 
       {/* Banner Journey Pin */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#FFF6CC] border border-amber-200/60 rounded-2xl p-4 sm:px-5">
