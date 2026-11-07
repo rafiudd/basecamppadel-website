@@ -138,6 +138,18 @@ export type Venue = {
   created_at: string;
 };
 
+/**
+ * Admin override of a "Journey pin" transition's missions (src/lib/pinJourney.ts's PIN_MISSIONS is
+ * the fallback default when no row exists for a level). `id` is the level's slug (see
+ * src/lib/server/pinJourney.ts's LEVEL_SLUG), not a random uuid.
+ */
+export type PinJourneyConfig = {
+  id: string;
+  level: string;
+  missions: unknown[];
+  updated_at: string;
+};
+
 export type Court = {
   id: string;
   name: string;

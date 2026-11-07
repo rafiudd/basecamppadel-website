@@ -98,7 +98,9 @@ export type MissionStatus = {
 /**
  * Each mission's live status for a player: `skillScores` is every skill's latest score by its exact
  * `coaching_skills.name` (null/missing = not yet rated), `sessionsCount` the player's submitted
- * coaching sessions so far.
+ * coaching sessions so far (lifetime, same as this file's author's reading of the design's "3/3 sesi" —
+ * a data-sufficiency check, same role as computePlayerLevel's hasMabarData gate in src/lib/coaching.ts,
+ * not an attendance quota scoped to the current pin; nothing here tracks when a player reached a pin).
  */
 export function evaluateMissions(
   missions: PinMission[],

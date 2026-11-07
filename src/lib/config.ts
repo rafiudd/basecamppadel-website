@@ -24,6 +24,15 @@ export const SPONSOR_LOGOS = [
  */
 export const ACCOUNT_DEMO = process.env.NEXT_PUBLIC_ACCOUNT_DEMO === "1";
 
+/**
+ * "Journey pin" tab on the player profile (src/lib/pinJourney.ts): per-skill missions toward the next
+ * pin. Off by default — the Kuning→Biru thresholds came from the design handoff, but Putih→Kuning,
+ * Biru→Merah and Merah→Hitam are a draft extension of that pattern and haven't been reviewed by a
+ * coach yet. Flip NEXT_PUBLIC_PIN_JOURNEY=1 once that review is done. /akun-demo always shows it
+ * regardless, since that page is already gated behind ACCOUNT_DEMO.
+ */
+export const PIN_JOURNEY_LIVE = process.env.NEXT_PUBLIC_PIN_JOURNEY === "1";
+
 /** Media partner logos — shown smaller, separate from the main sponsors. */
 export const MEDIA_PARTNER_LOGOS = [
   "/images/sponsors/padellens.png",

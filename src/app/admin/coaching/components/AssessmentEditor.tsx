@@ -11,6 +11,7 @@ import { splitNotes } from "@/lib/coachingRules";
 import { formatRupiah } from "@/lib/format";
 import type { SessionPlayerItem } from "@/lib/coaching-db";
 import type { RecommendedClass } from "@/lib/server/kelas";
+import { PIN_JOURNEY_PIN, nextPinLevel, evaluateMissions } from "@/lib/pinJourney";
 import { generateCoachNote } from "../ai-actions";
 import { ScoringRow } from "./ScoringRow";
 import { PlayerProfileModal } from "./PlayerProfileModal";
@@ -19,6 +20,8 @@ export function AssessmentEditor({
   currentPlayerItem,
   currentComputedLevel,
   recommendedClasses,
+  pinMissions,
+  missionSkillScores,
   scores,
   activeSkillIds,
   allSkills,
@@ -54,6 +57,10 @@ export function AssessmentEditor({
   currentComputedLevel: ReturnType<typeof computePlayerLevel>;
   /** Classes suitable for this player's current pin, cheapest first (see getRecommendedClasses). */
   recommendedClasses: RecommendedClass[];
+  /** This level's skill missions toward the next pin (Journey pin, preview-only — see src/lib/pinJourney.ts). */
+  pinMissions: { skill: string; minScore: number }[];
+  /** Each mission skill's score by name: this session's rating where given, else the previous one. */
+  missionSkillScores: Record<string, number | null>;
   scores: Record<string, number>;
   activeSkillIds: string[] | string[];
   allSkills: CoachingSkill[];
@@ -91,6 +98,10 @@ export function AssessmentEditor({
   const [showProfile, setShowProfile] = useState(false);
 
   if (!currentPlayerItem) return null;
+
+  const nextPin = nextPinLevel(currentComputedLevel.level);
+  const missionStatuses = nextPin ? evaluateMissions(pinMissions, missionSkillScores, 0) : [];
+  const missionsDone = missionStatuses.filter((s) => s.done).length;
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -290,6 +301,29 @@ export function AssessmentEditor({
                   </ul>
                 </div>
               )}
+            </div>
+          )}
+          {nextPin && missionStatuses.length > 0 && (
+            <div className="bg-[#1F1C2B] rounded-xl p-4 lg:p-4.5 border border-[#FBF7F1]/5 flex flex-col gap-2.5">
+              <div className="flex justify-between items-baseline gap-2 flex-wrap">
+                <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-[#FFD43B]">
+                  Journey pin · Menuju {PIN_JOURNEY_PIN[nextPin]}
+                </span>
+                <span className="text-xs text-[#FBF7F1]/60">{missionsDone}/{missionStatuses.length} skill misi</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {missionStatuses.map((s) => (
+                  <span
+                    key={s.label}
+                    title={s.detail}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      s.done ? "bg-[#2F9E5C]/18 text-[#6FD39A]" : "bg-[#FBF7F1]/8 text-[#FBF7F1]/70"
+                    }`}
+                  >
+                    {s.done ? "✓" : "○"} {s.label}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
           <div>

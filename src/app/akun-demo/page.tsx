@@ -8,6 +8,8 @@ import { ACCOUNT_DEMO } from "@/lib/config";
 import { COACHING_SKILLS } from "@/lib/coachingSkills";
 import { LEVEL_DEFINITIONS } from "@/lib/coaching";
 import { demoCandidates, demoHistory, demoNextSession, demoProfile, demoRecord, demoReports } from "@/lib/demoAccount";
+import { createClient } from "@/lib/supabase/server";
+import { getPinMissions } from "@/lib/server/pinJourney";
 
 export const metadata: Metadata = { title: "Demo profil — Basecamp Padel", robots: { index: false } };
 
@@ -21,11 +23,14 @@ export default async function AkunDemoPage({
   const params = await searchParams;
   const pending = !!params.klaim; // after "Ini saya" in the demo: waiting for the admin, no data yet
   const empty = pending || !!params.kosong;
+  const missionsByLevel = await getPinMissions(await createClient());
 
   return (
     <ProfileView
       profile={{ ...demoProfile, player_id: pending ? null : demoProfile.player_id, claim_player_id: pending ? demoCandidates[0].id : null }}
-      tab={parseTab(params.tab)}
+      tab={parseTab(params.tab, true)}
+      showJourney
+      missionsByLevel={missionsByLevel}
       coach={params.coach}
       year={params.year}
       claimedName={demoCandidates[0].name}

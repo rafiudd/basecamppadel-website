@@ -4,11 +4,11 @@ import type { NextSession, SkillBoard } from "@/lib/coachingRules";
 import {
   PIN_JOURNEY_LEVELS,
   PIN_JOURNEY_PIN,
-  PIN_MISSIONS,
   PIN_LEARNING_POINTS,
   evaluateMissions,
   closestMission,
   nextPinLevel,
+  type PinMission,
   type PlayerLevelName,
 } from "@/lib/pinJourney";
 import { primaryButton } from "@/components/account/styles";
@@ -49,16 +49,19 @@ export function JourneyTab({
   boards,
   sessionsCount,
   nextSession,
+  missionsByLevel,
 }: {
   level: { name: string; color: string } | null | undefined;
   boards: SkillBoard[];
   sessionsCount: number;
   nextSession?: NextSession | null;
+  /** This level's missions toward the next pin — admin-editable, see /admin/coaching/pin-journey. */
+  missionsByLevel: Record<PlayerLevelName, PinMission[]>;
 }) {
   const current: PlayerLevelName = level && isJourneyLevel(level.name) ? level.name : "Rookie";
   const currentIndex = PIN_JOURNEY_LEVELS.indexOf(current);
   const next = nextPinLevel(current);
-  const missions = PIN_MISSIONS[current];
+  const missions = missionsByLevel[current];
   const scores = flattenScores(boards);
   const statuses = evaluateMissions(missions, scores, sessionsCount);
   const doneCount = statuses.filter((s) => s.done).length;

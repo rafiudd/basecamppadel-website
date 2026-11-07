@@ -22,6 +22,7 @@ import {
   type SkillDef,
 } from "@/lib/coachingRules";
 import { LEVEL_PIN, type PlayerLevelName } from "@/lib/coaching";
+import { PIN_MISSIONS, type PinMission } from "@/lib/pinJourney";
 import { StatsTab } from "./StatsTab";
 import { NotesTab } from "./NotesTab";
 import { HistoryTab } from "./HistoryTab";
@@ -39,8 +40,10 @@ const TABS = [
 ] as const;
 export type ProfileTab = (typeof TABS)[number]["id"];
 
-export function parseTab(tab: string | undefined): ProfileTab {
+/** `showJourney` gates the "journey" tab (see PIN_JOURNEY_LIVE) — a direct `?tab=journey` falls back too. */
+export function parseTab(tab: string | undefined, showJourney = true): ProfileTab {
   if (tab === "notes") return "catatan";
+  if (tab === "journey" && !showJourney) return "statistik";
   return TABS.some((t) => t.id === tab) ? (tab as ProfileTab) : "statistik";
 }
 
@@ -105,6 +108,8 @@ export function ProfileView({
   playerName,
   basePath,
   banner,
+  showJourney = true,
+  missionsByLevel = PIN_MISSIONS,
   signOutAction,
 }: {
   profile: Pick<Profile, "nickname" | "full_name" | "gender" | "region" | "dominant_hand" | "position" | "photo_url" | "photo_source" | "player_id" | "claim_player_id">;
@@ -131,6 +136,10 @@ export function ProfileView({
   playerName?: string | null;
   basePath: string;
   banner?: React.ReactNode;
+  /** Shows the "Journey pin" tab (see PIN_JOURNEY_LIVE) — defaults on so the demo page can skip it. */
+  showJourney?: boolean;
+  /** Missions per level — admin-editable (/admin/coaching/pin-journey), defaults to the hardcoded table. */
+  missionsByLevel?: Record<PlayerLevelName, PinMission[]>;
   /** "Keluar", next to "Edit profil" (a server-action form, or a plain link in the demo). */
   /** Signs the player out ("Keluar" asks to confirm first); the demo passes a stand-in. */
   signOutAction: (state: ActionState, fd: FormData) => Promise<ActionState>;
@@ -216,7 +225,7 @@ export function ProfileView({
 
       <nav aria-label="Profil" className="bg-white border-b border-ink/8 px-4 md:px-12 sticky top-[calc(3.5rem+env(safe-area-inset-top))] md:top-[88px] z-20">
         <div className="max-w-276 mx-auto flex overflow-x-auto">
-          {TABS.map((t) => (
+          {TABS.filter((t) => t.id !== "journey" || showJourney).map((t) => (
             <Link
               key={t.id}
               href={t.id === "statistik" ? basePath : `${basePath}?tab=${t.id}`}
@@ -276,8 +285,14 @@ export function ProfileView({
           {tab === "riwayat" && (
             <HistoryTab entries={events} points={points} wins={wins} losses={losses} coachingSessions={reports.length} nextSession={nextSession} basePath={basePath} />
           )}
-          {tab === "journey" && (
-            <JourneyTab level={level ?? null} boards={boards} sessionsCount={reports.length} nextSession={nextSession} />
+          {tab === "journey" && showJourney && (
+            <JourneyTab
+              level={level ?? null}
+              boards={boards}
+              sessionsCount={reports.length}
+              nextSession={nextSession}
+              missionsByLevel={missionsByLevel}
+            />
           )}
 
         </div>

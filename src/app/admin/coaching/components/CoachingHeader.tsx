@@ -11,6 +11,7 @@ import {
   UploadIcon,
   ImageIcon,
   EditIcon,
+  PinIcon,
 } from "@/components/ui/icons";
 
 const TAB_LABELS: Record<SessionTab, string> = { draft: "Draft", berjalan: "Berjalan", selesai: "Selesai" };
@@ -158,6 +159,9 @@ export function CoachingHeader({
           <div className="flex items-center gap-2">
             <Link href="/admin/coaching/skills" title="Master Teknik" aria-label="Master Teknik" className={`${iconBtn} w-10 h-10 lg:w-11 lg:h-11`}>
               <ListIcon size={18} />
+            </Link>
+            <Link href="/admin/coaching/pin-journey" title="Journey pin" aria-label="Journey pin" className={`${iconBtn} w-10 h-10 lg:w-11 lg:h-11`}>
+              <PinIcon size={18} />
             </Link>
             <Link
               href="/admin/coaching/sessions/new"

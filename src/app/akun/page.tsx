@@ -6,6 +6,8 @@ import { googleIdentity } from "@/lib/accountRules";
 import { LEVEL_DEFINITIONS, LEVEL_PIN, type PlayerLevelName } from "@/lib/coaching";
 import { loadCoaching, loadEventHistory, loadNextCoachingSession } from "@/lib/profileData";
 import { getRecommendedClasses } from "@/lib/server/kelas";
+import { getPinMissions } from "@/lib/server/pinJourney";
+import { PIN_JOURNEY_LIVE } from "@/lib/config";
 
 export const metadata: Metadata = { title: "Profil saya — Basecamp Padel", robots: { index: false } };
 
@@ -44,13 +46,18 @@ export default async function AkunPage({
   ]);
 
   const level = profileLevel(player, reports.length > 0);
-  const recommendedClasses = await getRecommendedClasses(supabase, level ? LEVEL_PIN[level.name as PlayerLevelName] : null);
+  const [recommendedClasses, missionsByLevel] = await Promise.all([
+    getRecommendedClasses(supabase, level ? LEVEL_PIN[level.name as PlayerLevelName] : null),
+    PIN_JOURNEY_LIVE ? getPinMissions(supabase) : Promise.resolve(undefined),
+  ]);
 
   return (
     <ProfileView
       profile={profile}
       googleAvatar={googleAvatar}
-      tab={parseTab(params.tab)}
+      tab={parseTab(params.tab, PIN_JOURNEY_LIVE)}
+      showJourney={PIN_JOURNEY_LIVE}
+      missionsByLevel={missionsByLevel}
       coach={params.coach}
       year={params.year}
       tersambung={!!params.tersambung}

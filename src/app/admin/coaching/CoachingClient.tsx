@@ -22,6 +22,7 @@ import {
   type SessionStatus,
 } from "@/lib/coaching";
 import type { RecommendedClass } from "@/lib/server/kelas";
+import type { PinMission, PlayerLevelName } from "@/lib/pinJourney";
 import { generateRekapClinicExcel } from "@/lib/coaching-excel";
 import {
   saveAssessmentDraftAction,
@@ -52,6 +53,7 @@ export function CoachingClient({
   venues,
   events,
   recommendedClassesByPin,
+  missionsByLevel,
   isAdmin,
 }: {
   sessions: CoachingSessionSummary[];
@@ -65,6 +67,7 @@ export function CoachingClient({
   venues: Venue[];
   events: Array<{ id: string; title: string; event_date?: string | null; venue_id?: string | null }>;
   recommendedClassesByPin: Record<string, RecommendedClass[]>;
+  missionsByLevel: Record<PlayerLevelName, PinMission[]>;
   isAdmin: boolean;
 }) {
   const router = useRouter();
@@ -190,6 +193,18 @@ export function CoachingClient({
   // modal, or it was just submitted and handleSubmitAndNext had nowhere to go), the render
   // below is gated on currentPlayerItem so the modal simply won't show — nothing left to do here.
   const currentPlayerItem = activePlayerIndex >= 0 ? filteredPlayers[activePlayerIndex] : null;
+
+  // This session's in-progress score where rated, else the player's previous score — by skill NAME
+  // (pinJourney's missions reference "Forehand" etc, not the skill's uuid) — what the Journey pin
+  // mini panel in AssessmentEditor reads.
+  const missionSkillScores = useMemo(() => {
+    const out: Record<string, number | null> = {};
+    for (const s of allSkills) {
+      const current = scores[s.id];
+      out[s.name] = current > 0 ? current : currentPlayerItem?.previousScores[s.id] ?? null;
+    }
+    return out;
+  }, [allSkills, scores, currentPlayerItem]);
 
   // Initialize/sync editor form state when active player changes
   useEffect(() => {
@@ -559,6 +574,8 @@ export function CoachingClient({
               currentPlayerItem={currentPlayerItem}
               currentComputedLevel={currentComputedLevel}
               recommendedClasses={recommendedClassesByPin[LEVEL_PIN[currentComputedLevel.level]] ?? []}
+              pinMissions={(missionsByLevel[currentComputedLevel.level] ?? []).filter((m): m is { skill: string; minScore: number } => "skill" in m)}
+              missionSkillScores={missionSkillScores}
               scores={scores}
               activeSkillIds={activeSkillIds}
               allSkills={allSkills}
