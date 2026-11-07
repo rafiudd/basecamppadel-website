@@ -389,7 +389,15 @@ export function ClassDetailClient({ classData }: { classData: any }) {
                 </span>
                 <div>
                   <h3 className="font-display font-bold text-lg text-ink m-0">
-                    {classData.coachName ? `Coach ${classData.coachName}` : "Head Coach"}
+                    {classData.coachName && classData.coachSlug ? (
+                      <Link href={`/coach/${classData.coachSlug}`} className="text-ink no-underline hover:text-indigo">
+                        Coach {classData.coachName}
+                      </Link>
+                    ) : classData.coachName ? (
+                      `Coach ${classData.coachName}`
+                    ) : (
+                      "Head Coach"
+                    )}
                   </h3>
                   <p className="text-xs md:text-sm text-ink/70 m-0 mt-1">
                     Pelatih tersertifikasi dengan pengalaman membina pemain dari level dasar hingga kompetisi turnamen.

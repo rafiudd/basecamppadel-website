@@ -353,8 +353,14 @@ export type PointPreset = {
 export type Coach = {
   id: string;
   name: string;
+  slug: string;
   user_id: string | null;
   active: boolean;
+  level: string;
+  whatsapp: string;
+  instagram: string;
+  bio: string;
+  photo_url: string | null;
   created_at: string;
 };
 

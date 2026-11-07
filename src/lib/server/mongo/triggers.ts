@@ -111,6 +111,7 @@ export function applyCollectionDefaults(
       if (doc.whatsapp === undefined) doc.whatsapp = "";
       if (doc.instagram === undefined) doc.instagram = "";
       if (doc.bio === undefined) doc.bio = "";
+      if (doc.photo_url === undefined) doc.photo_url = null;
       break;
     }
     case "leagues": {

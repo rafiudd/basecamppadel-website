@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/jadwal", label: "Jadwal" },
   { href: "/liga", label: "Liga" },
   { href: "/kelas", label: "Kelas" },
+  { href: "/coach", label: "Coach" },
   { href: "/leaderboard", label: "Leaderboard" },
 ];
 

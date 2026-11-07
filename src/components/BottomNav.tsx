@@ -42,10 +42,19 @@ const AcademicCapIcon = () => (
   </Icon>
 );
 
+const CoachIcon = () => (
+  <Icon>
+    <ellipse cx="11" cy="9" rx="5" ry="6" />
+    <line x1="11" y1="15" x2="11" y2="21" />
+    <circle cx="18" cy="17" r="1.6" fill="currentColor" stroke="none" />
+  </Icon>
+);
+
 const LINKS = [
   { href: "/jadwal", label: "Jadwal", icon: CalendarIcon },
   { href: "/liga", label: "Liga", icon: ShieldIcon },
   { href: "/kelas", label: "Kelas", icon: AcademicCapIcon },
+  { href: "/coach", label: "Coach", icon: CoachIcon },
   { href: "/leaderboard", label: "Leaderboard", icon: TrophyIcon },
 ];
 

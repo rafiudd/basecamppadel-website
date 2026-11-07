@@ -41,6 +41,7 @@ export interface ClassDetailData {
   price: number;
   defaultCoachId: string | null;
   coachName: string | null;
+  coachSlug: string | null;
   minParticipants: number;
   learningPoints: string[];
   sessionsBreakdown: Array<{ session: number; title: string; desc: string }>;
@@ -171,7 +172,7 @@ export const getClassBySlug = cache(async (slug: string): Promise<ClassDetailDat
       id, slug, title, category, description, suitable_pins, video_url, cover_image_url, gallery_urls,
       total_sessions, duration_per_session, capacity, price, default_coach_id,
       min_participants, learning_points, sessions_breakdown, requirements,
-      published, is_new, sort_order, coaches (name)
+      published, is_new, sort_order, coaches (name, slug)
     `)
     .eq("slug", slug)
     .single();
@@ -293,6 +294,7 @@ export const getClassBySlug = cache(async (slug: string): Promise<ClassDetailDat
     price: c.price,
     defaultCoachId: c.default_coach_id,
     coachName: Array.isArray(c.coaches) ? c.coaches[0]?.name : (c.coaches as any)?.name ?? null,
+    coachSlug: Array.isArray(c.coaches) ? c.coaches[0]?.slug : (c.coaches as any)?.slug ?? null,
     minParticipants: c.min_participants,
     learningPoints: c.learning_points ?? [],
     sessionsBreakdown: sessionsParsed,
