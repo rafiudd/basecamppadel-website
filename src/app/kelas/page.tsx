@@ -1,6 +1,8 @@
 import { getPublicClasses } from "@/lib/server/kelas";
 import { ClassCatalogClient } from "@/components/kelas/ClassCatalogClient";
 
+export const revalidate = 60;
+
 export const metadata = {
   title: "Kelas Padel — Basecamp Padel",
   description:

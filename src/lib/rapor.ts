@@ -18,7 +18,14 @@ import { raporHtml } from "@/lib/raporTemplate";
  * are all the player's sent ones: from the second rapor on it compares with the previous session.
  * `photoUrl` is the player's photo for the header (none: the header without a photo).
  */
-export function raporResponse(name: string, report: CoachReport, skills: SkillDef[], reports: CoachReport[] = [report], photoUrl: string | null = null): Response {
+export function raporResponse(
+  name: string,
+  report: CoachReport,
+  skills: SkillDef[],
+  reports: CoachReport[] = [report],
+  photoUrl: string | null = null,
+  recommendedClasses: { title: string; price: number }[] = [],
+): Response {
   const SKILL_BY_KEY = new Map(skills.map((s) => [s.key, s]));
   const position = previousReport(reports, report.id);
   const prevScore = new Map((position.previous?.ratings ?? []).map((r) => [r.skill_key, Number(r.score)]));
@@ -48,6 +55,7 @@ export function raporResponse(name: string, report: CoachReport, skills: SkillDe
     evaluation: report.evaluation,
     nextPractice: report.next_practice,
     compare: raporCompare(rated, position),
+    recommendedClasses,
   });
 
   return new Response(html, {

@@ -4,6 +4,7 @@
  */
 
 import type { RaporCompare } from "./coachingRules";
+import { formatRupiah } from "./format.ts";
 
 export type RaporData = {
   fileName: string; // also the <title>, which Chrome uses as the "Save as PDF" file name
@@ -20,6 +21,7 @@ export type RaporData = {
   evaluation: string[];
   nextPractice: string[];
   compare?: RaporCompare | null; // second rapor on; the first stays without
+  recommendedClasses?: { title: string; price: number }[]; // "Kelas rekomendasi", by the player's current pin
 };
 
 /** Second rapor on: the progress chart, the last-session marks in the score list, and two extra notes. */
@@ -153,6 +155,9 @@ ${notesCols.length ? `<div class="card"><div class="h">Catatan &amp; evaluasi<sm
 <div style="display:grid;grid-template-columns:${notesCols.length === 2 ? "1.55fr 1fr" : "1fr"};gap:7mm">
 ${notesCols.join("\n")}
 </div></div>` : ""}
+${d.recommendedClasses?.length ? `<div class="card"><div class="h">Kelas rekomendasi</div><div>${d.recommendedClasses
+    .map((rc) => `<span class="tag" style="background:#E8EAFE;color:#1B1650">${e(rc.title)} · ${e(formatRupiah(rc.price))}</span>`)
+    .join("")}</div></div>` : ""}
 </div></div>
 <div class="ft"><span>Makasih udah ikut! Sampai ketemu lagi 🎾</span><span class="ig"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FBF7F1" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="#FBF7F1" stroke="none"/></svg><b>@basecamppadel.id</b></span></div>
 </div>

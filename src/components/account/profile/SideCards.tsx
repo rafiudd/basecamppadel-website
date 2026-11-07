@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { NextSession, SkillScore } from "@/lib/coachingRules";
-import { formatSessionDay } from "@/lib/format";
+import { formatRupiah, formatSessionDay } from "@/lib/format";
 import { primaryButton } from "@/components/account/styles";
 
 export const card = "bg-white border border-ink/8 rounded-2xl p-5 md:p-6 flex flex-col gap-3 text-ink";
@@ -8,6 +8,8 @@ export const cardTitle = "font-display font-bold text-xl m-0";
 
 /** The player's pin, as shown on the header and the "Pin kamu" card. */
 export type ProfilePin = { name: string; color: string };
+
+export type RecommendedClass = { slug: string; title: string; category: string; price: number };
 
 /** "Sesi berikutnya": the nearest open coaching session, with a way to sign up. */
 export function NextSessionCard({ session }: { session: NextSession | null | undefined }) {
@@ -46,6 +48,32 @@ function Tag({ tone, children }: { tone: "good" | "bad"; children: React.ReactNo
     <span className={`inline-block rounded-lg px-2.5 py-1 font-bold text-caption ${tone === "good" ? "bg-[#E8F5EC] text-[#166534]" : "bg-[#FFE9E4] text-[#B83A22]"}`}>
       {children}
     </span>
+  );
+}
+
+/** "Kelas buat kamu": published classes whose suitable_pins match the player's current pin. */
+export function RecommendedClassCard({ classes }: { classes: RecommendedClass[] }) {
+  if (!classes.length) return null;
+  return (
+    <section className={card}>
+      <h2 className={cardTitle}>Kelas buat kamu</h2>
+      <p className="m-0 text-caption text-ink/65 -mt-1">Dipilih berdasarkan pin level kamu saat ini.</p>
+      <div className="flex flex-col gap-2.5">
+        {classes.map((c) => (
+          <Link
+            key={c.slug}
+            href={`/kelas/${c.slug}`}
+            className="flex items-center justify-between gap-3 no-underline text-ink border border-ink/8 rounded-xl px-3.5 py-2.5 hover:border-indigo"
+          >
+            <span className="min-w-0">
+              <span className="block font-semibold text-sm truncate">{c.title}</span>
+              <span className="block text-caption text-ink/60">{c.category}</span>
+            </span>
+            <span className="flex-none font-display font-bold text-sm text-indigo whitespace-nowrap">{formatRupiah(c.price)}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 

@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { getClassBySlug } from "@/lib/server/kelas";
 import { ClassDetailClient } from "@/components/kelas/ClassDetailClient";
 
+export const revalidate = 60;
+
 export async function generateMetadata({
   params,
 }: {

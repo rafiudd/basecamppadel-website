@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { CoachReport, NextSession, SkillScore } from "@/lib/coachingRules";
 import { CoachingInvite } from "./StatsTab";
 import { ReportCard } from "./ReportCard";
-import { NextSessionCard, PinCard, RecurringCard, type ProfilePin } from "./SideCards";
+import { NextSessionCard, PinCard, RecommendedClassCard, RecurringCard, type ProfilePin, type RecommendedClass } from "./SideCards";
 
 type Summary = { average: number | null; rising: { label: string; delta: number }[] };
 
@@ -45,6 +45,7 @@ export function NotesTab({
   best,
   weakest,
   nextSession,
+  recommendedClasses = [],
   basePath = "/akun",
 }: {
   shown: CoachReport[];
@@ -59,6 +60,7 @@ export function NotesTab({
   best: SkillScore | null;
   weakest: SkillScore | null;
   nextSession?: NextSession | null;
+  recommendedClasses?: RecommendedClass[];
   basePath?: string;
 }) {
   if (!newestId) {
@@ -104,6 +106,7 @@ export function NotesTab({
       <aside className="flex flex-col gap-5">
         <RecurringCard items={recurring} />
         <PinCard pin={pin} best={best} weakest={weakest} />
+        <RecommendedClassCard classes={recommendedClasses} />
         <NextSessionCard session={nextSession} />
       </aside>
     </div>

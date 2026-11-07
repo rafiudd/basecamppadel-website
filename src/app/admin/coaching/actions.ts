@@ -4,13 +4,15 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { guardResult } from "@/lib/server/action";
 import { requireAdminOrCoach, requireAdmin } from "@/lib/auth";
-import { computePlayerLevel, LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
+import { computePlayerLevel, LEVEL_DEFINITIONS, LEVEL_PIN, type PlayerLevelName } from "@/lib/coaching";
 import { syncSessionStatus } from "@/lib/coaching-db";
 import { sendKirimdevWhatsAppMessage, checkKirimdevStatus } from "@/lib/server/kirimdev";
 import { sendBrevoEmail, generateCoachingReportEmailHtml, checkBrevoStatus, isValidEmail } from "@/lib/server/brevo";
 import { generateCoachingReportNotificationMessage } from "@/lib/coachingRules";
 import { loadNextCoachingSession } from "@/lib/profileData";
 import { sendPushToUser } from "@/lib/webpush";
+import { getRecommendedClasses } from "@/lib/server/kelas";
+import { formatRupiah } from "@/lib/format";
 
 /**
  * Sets a player's level through coaching_apply_level (0020): players is admin-write only under RLS,
@@ -706,6 +708,10 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
       }
     }
 
+    const { data: levelRow } = await supabase.from("players").select("level").eq("id", data.playerId).maybeSingle();
+    const pin = levelRow?.level ? LEVEL_PIN[levelRow.level as PlayerLevelName] : null;
+    const recommendedClasses = await getRecommendedClasses(supabase, pin);
+
     const results = {
       waSent: false,
       emailSent: false,
@@ -726,6 +732,7 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
       evaluation: data.evaluation,
       nextPractice: data.nextPractice,
       linkRapor,
+      recommendedClasses: recommendedClasses.map((c) => ({ title: c.title, priceLabel: formatRupiah(c.price) })),
     });
 
     // 1. WhatsApp notification via Kirimdev
@@ -774,6 +781,7 @@ export async function sendAutoCoachingReportNotificationsAction(data: {
           nextPractice: data.nextPractice,
           linkRapor,
           nextSession,
+          recommendedClasses,
         });
 
         const emailRes = await sendBrevoEmail({

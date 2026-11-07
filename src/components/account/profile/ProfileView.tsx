@@ -26,7 +26,7 @@ import { StatsTab } from "./StatsTab";
 import { NotesTab } from "./NotesTab";
 import { HistoryTab } from "./HistoryTab";
 import { ProfileAvatar } from "../ProfileAvatar";
-import type { ProfilePin } from "./SideCards";
+import type { ProfilePin, RecommendedClass } from "./SideCards";
 
 const HAND = { R: "Tangan kanan", L: "Tangan kiri" } as const;
 const POSITION = { right: "Posisi kanan", left: "Posisi kiri", both: "Posisi bebas" } as const;
@@ -96,6 +96,7 @@ export function ProfileView({
   level,
   history,
   nextSession,
+  recommendedClasses = [],
   points,
   wins,
   losses,
@@ -118,6 +119,8 @@ export function ProfileView({
   history: { history: HistoryRow[]; awards: AwardRow[]; events: EventRow[] };
   /** The nearest open coaching session ("Sesi berikutnya"). */
   nextSession?: NextSession | null;
+  /** Published classes matching the player's current pin ("Kelas buat kamu"). */
+  recommendedClasses?: RecommendedClass[];
   /** The leaderboard's numbers (players.points / wins / losses). */
   points: number;
   wins: number;
@@ -264,6 +267,7 @@ export function ProfileView({
               best={best}
               weakest={weakest}
               nextSession={nextSession}
+              recommendedClasses={recommendedClasses}
               basePath={basePath}
             />
           )}

@@ -46,7 +46,7 @@ export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
-import { formatDateShortIndo } from "../format.ts";
+import { formatDateShortIndo, formatRupiah } from "../format.ts";
 
 function escapeHtml(str: string): string {
   return str
@@ -73,6 +73,7 @@ export interface CoachingReportEmailParams {
   } | null;
   linkNotifikasi?: string | null;
   linkUnsubscribe?: string | null;
+  recommendedClasses?: { slug: string; title: string; price: number }[] | null;
 }
 
 /**
@@ -91,6 +92,7 @@ export function generateCoachingReportEmailHtml(params: CoachingReportEmailParam
     nextSession,
     linkNotifikasi = "https://www.basecamppadel.id/akun",
     linkUnsubscribe = "https://www.basecamppadel.id/akun",
+    recommendedClasses,
   } = params;
 
   const nama = escapeHtml((playerName || "").trim() || "Pemain");
@@ -125,6 +127,24 @@ export function generateCoachingReportEmailHtml(params: CoachingReportEmailParam
     ? (nextSession.href.startsWith("http") ? nextSession.href : `https://www.basecamppadel.id${nextSession.href}`)
     : "https://www.basecamppadel.id/jadwal";
   const linkDaftar = escapeHtml(rawLinkDaftar);
+
+  // Kelas rekomendasi section (by the player's current pin)
+  const kelasRows = (recommendedClasses ?? [])
+    .map(
+      (c) =>
+        `<tr><td style="padding:10px 0; border-top:1px solid #ECE7EF; font-family:Inter,Arial,sans-serif;"><a href="https://www.basecamppadel.id/kelas/${escapeHtml(c.slug)}" style="color:#17151F; text-decoration:none; font-weight:600; font-size:14px;">${escapeHtml(c.title)}</a><div style="color:#6B6870; font-size:13px; margin-top:2px;">${escapeHtml(formatRupiah(c.price))}</div></td></tr>`
+    )
+    .join("");
+  const kelasSection = kelasRows
+    ? `<tr><td class="px" style="padding:28px 32px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FFFFFF; border:1px solid #ECE7EF; border-radius:16px;">
+      <tr><td style="padding:20px 22px; font-family:Inter,Arial,sans-serif;">
+        <span style="display:inline-block; background:#E8EAFE; color:#1B1650; font-size:12px; font-weight:700; border-radius:999px; padding:4px 12px;">Kelas rekomendasi buat kamu</span>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:4px;">${kelasRows}</table>
+      </td></tr>
+    </table>
+  </td></tr>`
+    : "";
 
   return `<!doctype html>
 <html lang="id" xmlns="http://www.w3.org/1999/xhtml">
@@ -229,7 +249,7 @@ export function generateCoachingReportEmailHtml(params: CoachingReportEmailParam
       </tr>
     </table>
   </td></tr>
-
+${kelasSection}
   <!-- Penutup -->
   <tr><td class="px" style="padding:28px 32px 36px; font-family:Inter,Arial,sans-serif; font-size:16px; line-height:1.6; color:#17151F;">
     <p style="margin:0 0 14px;">Ada yang mau ditanyain soal catatannya? Balas aja email ini, nanti dibantu jawab.</p>

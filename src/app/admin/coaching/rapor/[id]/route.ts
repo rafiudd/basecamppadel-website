@@ -3,6 +3,8 @@ import { getAdminUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { loadCoaching } from "@/lib/profileData";
 import { raporResponse } from "@/lib/rapor";
+import { LEVEL_PIN, type PlayerLevelName } from "@/lib/coaching";
+import { getRecommendedClasses } from "@/lib/server/kelas";
 
 /**
  * D.6 for admin and coach: the rapor of any submitted assessment, also before it is sent to the
@@ -20,9 +22,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const [{ skills, reports }, { data: player }] = await Promise.all([
     loadCoaching(supabase, row.player_id, { publishedOnly: false }),
-    supabase.from("players").select("name, photo_url").eq("id", row.player_id).maybeSingle(),
+    supabase.from("players").select("name, photo_url, level").eq("id", row.player_id).maybeSingle(),
   ]);
   const report = reports.find((r) => r.id === id);
   if (!player || !report) return new NextResponse("Rapor belum dikirim (masih draft).", { status: 404 });
-  return raporResponse(player.name, report, skills, reports, player.photo_url ?? null);
+  const pin = player.level ? LEVEL_PIN[player.level as PlayerLevelName] : null;
+  const recommendedClasses = await getRecommendedClasses(supabase, pin);
+  return raporResponse(player.name, report, skills, reports, player.photo_url ?? null, recommendedClasses);
 }

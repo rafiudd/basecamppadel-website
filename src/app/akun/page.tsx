@@ -3,8 +3,9 @@ import { ProfileView, parseTab, type ProfileLevel } from "@/components/account/p
 import { signOut } from "@/app/akun/actions";
 import { requireAccount } from "@/lib/account";
 import { googleIdentity } from "@/lib/accountRules";
-import { LEVEL_DEFINITIONS, type PlayerLevelName } from "@/lib/coaching";
+import { LEVEL_DEFINITIONS, LEVEL_PIN, type PlayerLevelName } from "@/lib/coaching";
 import { loadCoaching, loadEventHistory, loadNextCoachingSession } from "@/lib/profileData";
+import { getRecommendedClasses } from "@/lib/server/kelas";
 
 export const metadata: Metadata = { title: "Profil saya — Basecamp Padel", robots: { index: false } };
 
@@ -42,6 +43,9 @@ export default async function AkunPage({
     loadNextCoachingSession(supabase),
   ]);
 
+  const level = profileLevel(player, reports.length > 0);
+  const recommendedClasses = await getRecommendedClasses(supabase, level ? LEVEL_PIN[level.name as PlayerLevelName] : null);
+
   return (
     <ProfileView
       profile={profile}
@@ -53,9 +57,10 @@ export default async function AkunPage({
       claimedName={claimed?.name}
       skills={skills}
       reports={reports}
-      level={profileLevel(player, reports.length > 0)}
+      level={level}
       history={history}
       nextSession={nextSession}
+      recommendedClasses={recommendedClasses}
       points={player?.points ?? 0}
       playerName={player?.name}
       wins={player?.wins ?? 0}

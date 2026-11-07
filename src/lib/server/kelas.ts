@@ -2,6 +2,29 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { filterAndSortClasses, formatScheduleFriendly, type FilterParams } from "@/lib/kelasRules";
 
+export type RecommendedClass = { slug: string; title: string; category: string; price: number };
+
+/**
+ * Published classes whose `suitable_pins` include this pin (the player's coaching level), cheapest
+ * sort_order first — the "kelas rekomendasi" shown next to a level: akun page, rapor, and the
+ * coaching report WA/email.
+ */
+export async function getRecommendedClasses(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  pin: string | null | undefined,
+  limit = 3
+): Promise<RecommendedClass[]> {
+  if (!pin) return [];
+  const { data } = await supabase
+    .from("classes")
+    .select("slug, title, category, price")
+    .eq("published", true)
+    .contains("suitable_pins", [pin])
+    .order("sort_order", { ascending: true })
+    .limit(limit);
+  return (data ?? []).map((c) => ({ slug: c.slug, title: c.title, category: c.category, price: c.price }));
+}
+
 export interface ClassDetailData {
   id: string;
   slug: string;

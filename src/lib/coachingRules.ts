@@ -469,6 +469,8 @@ export function generateCoachingReportNotificationMessage(params?: {
   evaluation?: string | null;
   nextPractice?: string | null;
   linkRapor?: string | null;
+  /** "Kelas rekomendasi"; priceLabel pre-formatted by the caller (this file stays import-free). */
+  recommendedClasses?: { title: string; priceLabel: string }[] | null;
 }): string {
   const nama = (params?.playerName || "").trim() || "Pemain";
   const rawCoach = (params?.coachName || "").trim();
@@ -476,15 +478,20 @@ export function generateCoachingReportNotificationMessage(params?: {
   const evaluasi = (params?.evaluation || "").trim() || "-";
   const fokus = (params?.nextPractice || "").trim() || "-";
   const linkRapor = (params?.linkRapor || "").trim() || "https://www.basecamppadel.id/akun?tab=catatan";
+  const kelas = params?.recommendedClasses ?? [];
 
-  return [
+  const parts = [
     `Halo ${nama}! 🎾`,
     `Makasih udah join sesi latihan kemarin bareng Coach ${namaCoach}. Catatan evaluasi kamu udah siap nih:`,
     `✨ Yang udah oke:\n${evaluasi}`,
     `🎯 Fokus sesi berikutnya:\n${fokus}`,
     `Detail rapor lengkap & progres skill kamu bisa langsung dicek di sini ya:\n👉 ${linkRapor}`,
-    `Sampai ketemu di sesi berikutnya! 🔥\nTim Basecamp Padel`,
-  ].join("\n\n");
+  ];
+  if (kelas.length) {
+    parts.push(`📚 Kelas rekomendasi buat level kamu:\n${kelas.map((k) => `- ${k.title} (${k.priceLabel})`).join("\n")}`);
+  }
+  parts.push(`Sampai ketemu di sesi berikutnya! 🔥\nTim Basecamp Padel`);
+  return parts.join("\n\n");
 }
 
 
