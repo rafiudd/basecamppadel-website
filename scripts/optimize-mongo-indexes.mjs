@@ -106,7 +106,11 @@ async function run() {
         { key: { id: 1 }, options: { name: "idx_matches_id", sparse: true } },
         { key: { event_id: 1, scheduled_order: 1 }, options: { name: "idx_matches_event_order" } },
         {
-          key: { court_id: 1 },
+          // Compound with event_id so two events that reuse the same physical court on different
+          // days don't block each other over this; freeform matches (no event_id) still only
+          // allow one is_live per court among themselves, since Mongo treats the missing field
+          // as the same null key for all of them.
+          key: { event_id: 1, court_id: 1 },
           options: {
             name: "matches_one_on_air_per_court",
             unique: true,
