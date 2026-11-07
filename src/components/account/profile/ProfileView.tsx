@@ -25,6 +25,7 @@ import { LEVEL_PIN, type PlayerLevelName } from "@/lib/coaching";
 import { StatsTab } from "./StatsTab";
 import { NotesTab } from "./NotesTab";
 import { HistoryTab } from "./HistoryTab";
+import { JourneyTab } from "./JourneyTab";
 import { ProfileAvatar } from "../ProfileAvatar";
 import type { ProfilePin, RecommendedClass } from "./SideCards";
 
@@ -34,6 +35,7 @@ const TABS = [
   { id: "statistik", label: "Statistik" },
   { id: "catatan", label: "Catatan coach" },
   { id: "riwayat", label: "Riwayat event" },
+  { id: "journey", label: "Journey pin" },
 ] as const;
 export type ProfileTab = (typeof TABS)[number]["id"];
 
@@ -273,6 +275,9 @@ export function ProfileView({
           )}
           {tab === "riwayat" && (
             <HistoryTab entries={events} points={points} wins={wins} losses={losses} coachingSessions={reports.length} nextSession={nextSession} basePath={basePath} />
+          )}
+          {tab === "journey" && (
+            <JourneyTab level={level ?? null} boards={boards} sessionsCount={reports.length} nextSession={nextSession} />
           )}
 
         </div>
