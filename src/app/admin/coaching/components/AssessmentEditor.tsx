@@ -8,7 +8,9 @@ import { formatDateShortIndo, initials } from "@/lib/format";
 import type { CoachingSkill } from "@/lib/database.types";
 import { LEVEL_DEFINITIONS, type computePlayerLevel } from "@/lib/coaching";
 import { splitNotes } from "@/lib/coachingRules";
+import { formatRupiah } from "@/lib/format";
 import type { SessionPlayerItem } from "@/lib/coaching-db";
+import type { RecommendedClass } from "@/lib/server/kelas";
 import { generateCoachNote } from "../ai-actions";
 import { ScoringRow } from "./ScoringRow";
 import { PlayerProfileModal } from "./PlayerProfileModal";
@@ -16,6 +18,7 @@ import { PlayerProfileModal } from "./PlayerProfileModal";
 export function AssessmentEditor({
   currentPlayerItem,
   currentComputedLevel,
+  recommendedClasses,
   scores,
   activeSkillIds,
   allSkills,
@@ -49,6 +52,8 @@ export function AssessmentEditor({
 }: {
   currentPlayerItem: SessionPlayerItem | null;
   currentComputedLevel: ReturnType<typeof computePlayerLevel>;
+  /** Classes suitable for this player's current pin, cheapest first (see getRecommendedClasses). */
+  recommendedClasses: RecommendedClass[];
   scores: Record<string, number>;
   activeSkillIds: string[] | string[];
   allSkills: CoachingSkill[];
@@ -420,6 +425,31 @@ export function AssessmentEditor({
               ))}
             </div>
           </div>
+
+          {recommendedClasses.length > 0 && (
+            <div className="bg-[#1F1C2B] rounded-xl p-4 lg:p-4.5 border border-[#FBF7F1]/5 flex flex-col gap-2">
+              <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-[#FFD43B]">
+                Rekomendasi kelas ({currentComputedLevel.level})
+              </span>
+              <div className="flex flex-col gap-1.5">
+                {recommendedClasses.map((c) => (
+                  <a
+                    key={c.slug}
+                    href={`/kelas/${c.slug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between gap-3 no-underline text-[#FBF7F1] border border-[#FBF7F1]/10 rounded-lg px-3 py-2 hover:border-[#FFD43B]/50"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-sm truncate">{c.title}</span>
+                      <span className="block text-xs text-[#FBF7F1]/55">{c.category}</span>
+                    </span>
+                    <span className="flex-none font-bold text-sm text-[#FFD43B] whitespace-nowrap">{formatRupiah(c.price)}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* EVALUATION, NEXT PRACTICE & CHECKBOX */}
           <div className="flex flex-col gap-4 pt-2">

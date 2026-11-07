@@ -17,9 +17,11 @@ import type {
 } from "@/lib/coaching-db";
 import {
   computePlayerLevel,
+  LEVEL_PIN,
   type SessionTab,
   type SessionStatus,
 } from "@/lib/coaching";
+import type { RecommendedClass } from "@/lib/server/kelas";
 import { generateRekapClinicExcel } from "@/lib/coaching-excel";
 import {
   saveAssessmentDraftAction,
@@ -49,6 +51,7 @@ export function CoachingClient({
   allPlayers,
   venues,
   events,
+  recommendedClassesByPin,
   isAdmin,
 }: {
   sessions: CoachingSessionSummary[];
@@ -61,6 +64,7 @@ export function CoachingClient({
   allPlayers?: Player[];
   venues: Venue[];
   events: Array<{ id: string; title: string; event_date?: string | null; venue_id?: string | null }>;
+  recommendedClassesByPin: Record<string, RecommendedClass[]>;
   isAdmin: boolean;
 }) {
   const router = useRouter();
@@ -554,6 +558,7 @@ export function CoachingClient({
             <AssessmentEditor
               currentPlayerItem={currentPlayerItem}
               currentComputedLevel={currentComputedLevel}
+              recommendedClasses={recommendedClassesByPin[LEVEL_PIN[currentComputedLevel.level]] ?? []}
               scores={scores}
               activeSkillIds={activeSkillIds}
               allSkills={allSkills}
