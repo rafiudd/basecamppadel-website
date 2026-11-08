@@ -7,7 +7,7 @@ import { compactInputClass } from "@/components/ui/Field";
 import { SearchSelect } from "@/components/ui/SearchSelect";
 import { toast } from "@/components/ui/Toast";
 import { Spinner } from "@/components/ui/Spinner";
-import { addMabarWalkIn, removeMabarParticipant, setMabarCheckIn, substituteMabarPlayer } from "@/app/admin/events/mabar-actions";
+import { addMabarWalkIn, removeMabarParticipant, setMabarCheckIn, setParticipantCourt, substituteMabarPlayer } from "@/app/admin/events/mabar-actions";
 import { isFixedFormat } from "@/lib/eventFormats";
 import { mabarUnits } from "@/lib/mabar";
 import type { CompEvent, GenParticipant } from "@/lib/database.types";
@@ -53,7 +53,16 @@ export function ParticipantsPanel({
           <div key={u.key} className="py-2 border-t border-snow/8 flex flex-col gap-1">
             {fixed && <div className="text-2xs font-bold tracking-tag text-snow/60 uppercase">{u.name}</div>}
             {u.members.map((p) => (
-              <ParticipantRow key={p.id} event={event} p={p} started={started} locked={locked} free={free} removable={!started && (!fixed || p === u.members[0])} />
+              <ParticipantRow
+                key={p.id}
+                event={event}
+                p={p}
+                started={started}
+                locked={locked}
+                free={free}
+                removable={!started && (!fixed || p === u.members[0])}
+                courtCount={!fixed ? event.court_ids.length : 0}
+              />
             ))}
           </div>
         ))}
@@ -71,6 +80,7 @@ function ParticipantRow({
   locked,
   free,
   removable,
+  courtCount,
 }: {
   event: CompEvent;
   p: GenParticipant;
@@ -78,12 +88,19 @@ function ParticipantRow({
   locked: boolean;
   free: PlayerOption[];
   removable: boolean;
+  /** >1 shows the per-court-group select (individual Americano's opt-in "pisah per court" mode). */
+  courtCount: number;
 }) {
   const [pending, start] = useTransition();
+  const [courtPending, startCourt] = useTransition();
   const [swapping, setSwapping] = useState(false);
   const toggle = (checked: boolean) =>
     start(async () => {
       toast.result(await setMabarCheckIn(event.id, p.id, checked), checked ? `${p.display_name} check-in` : `Check-in ${p.display_name} dibatalkan`);
+    });
+  const setCourt = (courtNo: number | null) =>
+    startCourt(async () => {
+      toast.result(await setParticipantCourt(event.id, p.id, courtNo), `Court ${p.display_name} diset`);
     });
 
   return (
@@ -103,6 +120,20 @@ function ParticipantRow({
           {!p.player_id && <Badge tone="faint">Tamu</Badge>}
           {!p.active && <Badge tone="faint">Diganti</Badge>}
         </label>
+        {p.active && courtCount > 1 && (
+          <select
+            value={p.court_no ?? ""}
+            disabled={locked || courtPending}
+            onChange={(e) => setCourt(e.target.value === "" ? null : Number(e.target.value))}
+            aria-label={`Court untuk ${p.display_name}`}
+            className={`${compactInputClass} px-2 py-1 text-caption flex-none w-24`}
+          >
+            <option value="">Gabungan</option>
+            {Array.from({ length: courtCount }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>Court {n}</option>
+            ))}
+          </select>
+        )}
         {p.active && !locked && started && (
           <button type="button" onClick={() => setSwapping((v) => !v)} className="btn bg-transparent text-snow/85 min-h-9 px-2.5 py-1.5 text-caption">
             {swapping ? "Batal" : "Ganti"}

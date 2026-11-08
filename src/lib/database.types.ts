@@ -194,6 +194,12 @@ export type GenParticipant = {
   player_id: string | null;
   display_name: string;
   team_no: number | null;
+  /**
+   * 1-based index into the event's `court_ids` (court 1, 2, …) — individual Americano only, opt-in:
+   * when every checked-in player has one set, `planWholeSchedule` splits into a separate Americano
+   * per court instead of pooling everyone across all courts. Null means "no group, use the shared pool".
+   */
+  court_no: number | null;
   total_points: number;
   sits_out_count: number;
   checked_in: boolean;

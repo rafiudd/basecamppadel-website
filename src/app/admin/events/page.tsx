@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ChipTabs } from "@/components/ui/Tabs";
 import { EventList, type EventRow } from "@/components/admin/event/EventList";
+import { FinishAllActiveMabarButton } from "@/components/admin/event/FinishAllActiveMabarButton";
 import { LeagueFilter } from "@/components/admin/event/LeagueFilter";
 import { LinkPagination } from "@/components/ui/Pagination";
 import { formatSessionDay } from "@/lib/format";
@@ -16,10 +17,11 @@ const PAGE_SIZE = 25;
 export default async function EventsAdmin({ searchParams }: { searchParams: Promise<{ type?: string; league?: string; page?: string }> }) {
   const { type, league, page: pageParam } = await searchParams;
   const supabase = await createClient();
-  const [{ data: metaEvents }, { data: venues }, { data: leagues }] = await Promise.all([
+  const [{ data: metaEvents }, { data: venues }, { data: leagues }, { data: activeMabar }] = await Promise.all([
     supabase.from("events").select("id, type, league_id").order("created_at", { ascending: false }),
     supabase.from("venues").select("id, name"),
     supabase.from("leagues").select("id, name").order("created_at", { ascending: false }),
+    supabase.from("events").select("id").eq("type", "mabar").eq("status", "active"),
   ]);
   const leagueIds = new Set((leagues ?? []).map((l) => l.id));
 
@@ -91,7 +93,12 @@ export default async function EventsAdmin({ searchParams }: { searchParams: Prom
       <PageHeader
         title="Event"
         description="Semua mabar dan kompetisi. Live match dan link OBS selalu nempel ke satu event."
-        actions={<Link href="/admin/events/new" className="btn btn-coral tracking-button no-underline text-ink whitespace-nowrap">+ Buat Event</Link>}
+        actions={
+          <div className="flex items-center gap-2">
+            <FinishAllActiveMabarButton count={activeMabar?.length ?? 0} />
+            <Link href="/admin/events/new" className="btn btn-coral tracking-button no-underline text-ink whitespace-nowrap">+ Buat Event</Link>
+          </div>
+        }
       />
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <ChipTabs value={filter} options={tabs} />

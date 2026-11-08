@@ -10,6 +10,7 @@ import { americanoSchedule, teamRoundRobin } from "@/lib/mabarRules";
 import { isScored, loadMabarRounds, mabarProgress, mabarTable, unitKey } from "@/lib/mabar";
 import { streamUrlFor } from "@/lib/compData";
 import type { GenParticipant, Match } from "@/lib/database.types";
+import { guardResult } from "@/lib/server/action";
 import { guard, revalidateEvent, str, type Supa } from "./_shared";
 
 /**
@@ -47,7 +48,8 @@ function schedulable(ctx: Ctx) {
 
 // ---------------------------------------------------------------- writing rounds
 
-type CourtPlan = { a: string[]; b: string[] }; // participant ids
+/** `courtId` pins this match to a specific court (court-grouped Americano); omitted, it round-robins across `event.court_ids` as before. */
+type CourtPlan = { a: string[]; b: string[]; courtId?: string };
 
 /** One round: gen_round + a gen_match per court + its `matches` row; resting players get a bye counted. */
 async function insertRound(supabase: Supa, ctx: Ctx, roundNo: number, courts: CourtPlan[], resting: string[]) {
@@ -56,7 +58,7 @@ async function insertRound(supabase: Supa, ctx: Ctx, roundNo: number, courts: Co
   const courtIds: (string | null)[] = ctx.event.court_ids.length ? ctx.event.court_ids : [null];
   const { data: genMatches, error: gErr } = await supabase
     .from("gen_matches")
-    .insert(courts.map((c, i) => ({ round_id: round.id, court_id: courtIds[i % courtIds.length], team_a_participant_ids: c.a, team_b_participant_ids: c.b })))
+    .insert(courts.map((c, i) => ({ round_id: round.id, court_id: c.courtId ?? courtIds[i % courtIds.length], team_a_participant_ids: c.a, team_b_participant_ids: c.b })))
     .select("*");
   if (gErr) throw new Error(gErr.message);
 
@@ -110,10 +112,50 @@ async function planWholeSchedule(supabase: Supa, ctx: Ctx, seed: number) {
       await insertRound(supabase, ctx, i + 1, r.courts.map((c) => ({ a: members.get(c.a)!, b: members.get(c.b)! })), r.resting.flatMap((k) => members.get(k)!));
     }
   } else {
+    const assigned = players.filter((p) => p.court_no != null);
+    if (assigned.length > 0 && assigned.length < players.length) {
+      throw new Error("Sebagian pemain sudah dipilih court-nya, sebagian belum — pilih court semua pemain, atau kosongkan semua dulu.");
+    }
+    if (courts > 1 && assigned.length === players.length) {
+      await planCourtGroupedSchedule(supabase, ctx, seed, players);
+      return;
+    }
     const plan = americanoSchedule(players.map((p) => p.id), courts, seed);
     const { error } = await supabase.from("events").update({ rounds: plan.length }).eq("id", ctx.event.id);
     if (error) throw new Error(error.message);
     for (const [i, r] of plan.entries()) await insertRound(supabase, ctx, i + 1, r.courts.map((c) => ({ a: c.a, b: c.b })), r.resting);
+  }
+}
+
+/**
+ * Opt-in variant of individual Americano: every checked-in player has a `court_no`, so instead of one
+ * shared pool rotating across all courts, each court number runs its own self-contained Americano among
+ * only its assigned players. Rounds are merged by index so "Ronde N" still lines up across courts; a
+ * court whose group finishes its own cycle sooner just has nothing more in the later shared rounds.
+ */
+async function planCourtGroupedSchedule(supabase: Supa, ctx: Ctx, seed: number, players: GenParticipant[]) {
+  const courtIds = ctx.event.court_ids;
+  const groups = new Map<number, string[]>();
+  for (const p of players) groups.set(p.court_no!, [...(groups.get(p.court_no!) ?? []), p.id]);
+  const courtNos = [...groups.keys()].sort((a, b) => a - b);
+  if (courtNos.some((n) => n < 1 || n > courtIds.length)) throw new Error("Nomor court tidak valid untuk jumlah court event ini.");
+  for (const n of courtNos) {
+    if (groups.get(n)!.length < 4) throw new Error(`Court ${n} minimal 4 pemain yang sudah check-in.`);
+  }
+  const perCourt = courtNos.map((n) => ({ courtId: courtIds[n - 1], plan: americanoSchedule(groups.get(n)!, 1, seed + n) }));
+  const maxRounds = Math.max(...perCourt.map((g) => g.plan.length));
+  const { error } = await supabase.from("events").update({ rounds: maxRounds }).eq("id", ctx.event.id);
+  if (error) throw new Error(error.message);
+  for (let i = 0; i < maxRounds; i++) {
+    const courts: CourtPlan[] = [];
+    const resting: string[] = [];
+    for (const g of perCourt) {
+      const r = g.plan[i];
+      if (!r) continue;
+      courts.push(...r.courts.map((c) => ({ a: c.a, b: c.b, courtId: g.courtId })));
+      resting.push(...r.resting);
+    }
+    await insertRound(supabase, ctx, i + 1, courts, resting);
   }
 }
 
@@ -253,6 +295,20 @@ export async function setMabarCheckIn(eventId: string, participantId: string, ch
   });
 }
 
+/** Assigns (or clears, `courtNo: null`) which court-group a player belongs to — individual Americano's opt-in per-court mode. */
+export async function setParticipantCourt(eventId: string, participantId: string, courtNo: number | null): Promise<ActionState> {
+  return guard(async () => {
+    await requireAdmin();
+    const supabase = await createClient();
+    const ctx = await loadMabar(supabase, eventId);
+    assertOpen(ctx);
+    if (!ctx.participants.some((p) => p.id === participantId)) throw new Error("Peserta tidak ditemukan");
+    const { error } = await supabase.from("gen_participants").update({ court_no: courtNo }).eq("id", participantId);
+    if (error) throw new Error(error.message);
+    revalidateEvent(eventId);
+  });
+}
+
 /** A participant from a player id (`<field>`) or a guest name (`<field>_guest`). */
 async function readPerson(supabase: Supa, fd: FormData, field: string) {
   const playerId = str(fd, field);
@@ -354,11 +410,8 @@ export async function substituteMabarPlayer(_: ActionState, fd: FormData): Promi
 // ---------------------------------------------------------------- finish
 
 /** Lock the table, record places 1..n, and award leaderboard points by place (preset of the event). */
-export async function finishMabar(_: ActionState, fd: FormData): Promise<ActionState> {
-  return guard(async () => {
-    await requireAdmin();
-    const supabase = await createClient();
-    const ctx = await loadMabar(supabase, str(fd, "event_id"));
+async function finishMabarEvent(supabase: Supa, eventId: string): Promise<string> {
+    const ctx = await loadMabar(supabase, eventId);
     assertOpen(ctx);
     if (!ctx.matches.some(isScored)) throw new Error("Belum ada match yang selesai.");
     if (Object.values(ctx.live).some((m) => m.is_live || (m.status !== "finished" && m.team_a_games + m.team_b_games > 0))) {
@@ -422,6 +475,39 @@ export async function finishMabar(_: ActionState, fd: FormData): Promise<ActionS
     revalidateEvent(ctx.event.id);
     revalidatePath("/leaderboard");
     revalidatePath("/leaderboard/[playerId]", "page");
+    return ctx.event.title;
+}
+
+export async function finishMabar(_: ActionState, fd: FormData): Promise<ActionState> {
+  return guard(async () => {
+    await requireAdmin();
+    const supabase = await createClient();
+    await finishMabarEvent(supabase, str(fd, "event_id"));
+  });
+}
+
+export type FinishAllMabarResult = { finished: string[]; skipped: { title: string; reason: string }[] };
+
+/**
+ * Attempts finishMabarEvent on every currently-active mabar event, same validation and side effects
+ * (awards, match history, status) as the single-event "Selesaikan" button — events not actually ready
+ * (unscored matches, a live court) are left running and reported back instead of failing the whole batch.
+ */
+export async function finishAllActiveMabarAction(): Promise<(FinishAllMabarResult & { error?: undefined }) | { error: string }> {
+  return guardResult(async () => {
+    await requireAdmin();
+    const supabase = await createClient();
+    const { data: active } = await supabase.from("events").select("id, title").eq("type", "mabar").eq("status", "active");
+    const result: FinishAllMabarResult = { finished: [], skipped: [] };
+    for (const e of active ?? []) {
+      try {
+        const title = await finishMabarEvent(supabase, e.id);
+        result.finished.push(title);
+      } catch (err) {
+        result.skipped.push({ title: e.title, reason: err instanceof Error ? err.message : "Gagal." });
+      }
+    }
+    return result;
   });
 }
 

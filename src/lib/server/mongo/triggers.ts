@@ -300,16 +300,18 @@ export async function handleCascadeDelete(
         .toArray();
       await db.collection("gen_matches").deleteMany({ round_id: { $in: ids } });
 
-      const matchIds = genMatches.map((gm) => gm.match_id).filter(Boolean);
-      if (matchIds.length > 0) {
+      // `gen_matches` never carries a `match_id` field (GenMatch has no such column) — the real link
+      // is the reverse one, `matches.gen_match_id` pointing at the gen_match it was created from.
+      const genMatchIds = genMatches.map((gm) => gm.id || gm._id).filter(Boolean);
+      if (genMatchIds.length > 0) {
         const matchesToDelete = await db
           .collection("matches")
-          .find({ $or: [{ _id: { $in: matchIds } }, { id: { $in: matchIds } }] } as any)
+          .find({ gen_match_id: { $in: genMatchIds } })
           .toArray();
-        await db
-          .collection("matches")
-          .deleteMany({ $or: [{ _id: { $in: matchIds } }, { id: { $in: matchIds } }] } as any);
-        await handleCascadeDelete(db, "matches", matchesToDelete);
+        if (matchesToDelete.length > 0) {
+          await db.collection("matches").deleteMany({ gen_match_id: { $in: genMatchIds } });
+          await handleCascadeDelete(db, "matches", matchesToDelete);
+        }
       }
       break;
     }
