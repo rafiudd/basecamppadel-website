@@ -70,8 +70,11 @@ export async function createCoachingSessionAction(data: {
       groupIdMap.set(String(i), gData.id);
     }
 
-    // 3. Add players
-    if (data.playerAssignments && data.playerAssignments.length > 0) {
+    // 3. Add players. `playerAssignments === undefined` (the field omitted entirely, as the quick
+    // "Buat dari Event" modal does) means the caller wants the event's roster auto-fetched below; an
+    // explicit array — even `[]`, e.g. SessionFormClient after the admin cleared everyone — is the
+    // real intent and must never be silently overwritten.
+    if (data.playerAssignments !== undefined) {
       const defaultGroupId = createdGroupIds[0] || null;
       const sessionPlayerRows = data.playerAssignments.map((pa, idx) => {
         let assignedGroupId: string | null = null;
@@ -88,36 +91,34 @@ export async function createCoachingSessionAction(data: {
         };
       });
 
-      const { error: spErr } = await supabase
-        .from("coaching_session_players")
-        .upsert(sessionPlayerRows, { onConflict: "session_id, player_id" });
-      if (spErr) throw new Error(spErr.message);
+      if (sessionPlayerRows.length > 0) {
+        const { error: spErr } = await supabase
+          .from("coaching_session_players")
+          .upsert(sessionPlayerRows, { onConflict: "session_id, player_id" });
+        if (spErr) throw new Error(spErr.message);
+      }
     } else {
       let playerIdsToAdd: string[] = data.playerIds || [];
 
-      // If created from event, automatically fetch participants
+      // Omitted playerAssignments + an event link ("Buat dari Event" quick-create modal): fetch the
+      // event's roster the same way getEventRosterForCoaching does, minus the court/coach splitting
+      // that modal has no UI for.
       if (data.eventId) {
-        // Check gen_participants (mabar)
-        const { data: mabarParts } = await supabase
-          .from("gen_participants")
-          .select("player_id")
-          .eq("event_id", data.eventId);
-
-        if (mabarParts && mabarParts.length > 0) {
-          playerIdsToAdd = mabarParts
-            .map((p) => p.player_id)
-            .filter((id): id is string => Boolean(id));
+        const { data: event } = await supabase.from("events").select("type, gen_event_id").eq("id", data.eventId).maybeSingle();
+        if (event?.type === "mabar" && event.gen_event_id) {
+          const { data: mabarParts } = await supabase
+            .from("gen_participants")
+            .select("player_id")
+            .eq("event_id", event.gen_event_id)
+            .eq("active", true)
+            .eq("checked_in", true);
+          playerIdsToAdd = (mabarParts ?? []).map((p) => p.player_id).filter((id): id is string => Boolean(id));
         } else {
-          // Check comp_team_players
           const { data: compParts } = await supabase
             .from("comp_team_players")
             .select("player_id")
             .eq("event_id", data.eventId);
-          if (compParts && compParts.length > 0) {
-            playerIdsToAdd = compParts
-              .map((p) => p.player_id)
-              .filter((id): id is string => Boolean(id));
-          }
+          playerIdsToAdd = (compParts ?? []).map((p) => p.player_id).filter((id): id is string => Boolean(id));
         }
       }
 
@@ -139,6 +140,74 @@ export async function createCoachingSessionAction(data: {
 
     revalidatePath("/admin/coaching");
     return { success: true, sessionId: session.id };
+  });
+}
+
+export type EventRosterGroup = {
+  /** The court number this group came from (opt-in per-court Americano), or null for a single group. */
+  courtNo: number | null;
+  playerIds: string[];
+  coachId: string | null;
+  /** Guest participants (no player account) that aren't a coach either — can't be imported, just surfaced. */
+  skippedGuestNames: string[];
+};
+
+/**
+ * The event's roster for "buat sesi dari event", split by court if the event used the opt-in
+ * per-court Americano (src/app/admin/events/mabar-actions.ts's planCourtGroupedSchedule) — each
+ * court's guest participant whose name matches a registered coach becomes that court's coach instead
+ * of a player. Kompetisi has no guests or court grouping, so it's always a single group, no coach.
+ */
+export async function getEventRosterForCoaching(eventId: string) {
+  return guardResult(async () => {
+    await requireAdmin();
+    const supabase = await createClient();
+    const { data: event } = await supabase.from("events").select("type, gen_event_id").eq("id", eventId).maybeSingle();
+    if (!event) throw new Error("Event tidak ditemukan.");
+
+    if (event.type !== "mabar" || !event.gen_event_id) {
+      const { data: compParts } = await supabase.from("comp_team_players").select("player_id").eq("event_id", eventId);
+      const playerIds = [...new Set((compParts ?? []).map((p) => p.player_id))];
+      const groups: EventRosterGroup[] = playerIds.length ? [{ courtNo: null, playerIds, coachId: null, skippedGuestNames: [] }] : [];
+      return { groups };
+    }
+
+    const { data: parts } = await supabase
+      .from("gen_participants")
+      .select("player_id, display_name, court_no, active, checked_in")
+      .eq("event_id", event.gen_event_id);
+    const active = (parts ?? []).filter((p) => p.active && p.checked_in);
+    if (!active.length) return { groups: [] as EventRosterGroup[] };
+
+    const { data: coachRows } = await supabase.from("coaches").select("id, name").eq("active", true);
+    const normalize = (s: string) => s.trim().toLowerCase();
+    const coachByName = new Map((coachRows ?? []).map((c) => [normalize(c.name), c.id]));
+    const matchCoach = (name: string) => coachByName.get(normalize(name)) ?? coachByName.get(normalize(name).replace(/^coach\s+/, "")) ?? null;
+
+    const byCourt = new Map<number, typeof active>();
+    for (const p of active) {
+      const key = p.court_no ?? 0;
+      byCourt.set(key, [...(byCourt.get(key) ?? []), p]);
+    }
+
+    const groups: EventRosterGroup[] = [...byCourt.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([courtNo, members]) => {
+        const playerIds: string[] = [];
+        const skippedGuestNames: string[] = [];
+        let coachId: string | null = null;
+        for (const m of members) {
+          const matched = matchCoach(m.display_name);
+          if (matched) {
+            coachId ??= matched;
+            continue;
+          }
+          if (m.player_id) playerIds.push(m.player_id);
+          else skippedGuestNames.push(m.display_name);
+        }
+        return { courtNo: courtNo === 0 ? null : courtNo, playerIds, coachId, skippedGuestNames };
+      });
+    return { groups };
   });
 }
 

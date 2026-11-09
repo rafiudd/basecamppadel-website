@@ -11,6 +11,7 @@ import {
   createCoachingSessionAction,
   updateCoachingSessionAction,
   deleteCoachingSessionAction,
+  getEventRosterForCoaching,
 } from "../session-actions";
 import { SessionDetailsEditor } from "./SessionDetailsEditor";
 import { SessionGroupsEditor, type FormGroupItem } from "./SessionGroupsEditor";
@@ -164,7 +165,9 @@ export function SessionFormClient({
 
 
 
-  // Handle Event link change
+  // Handle Event link change: also auto-imports the event's roster (and coach, per court) the first
+  // time — never once the admin has already picked players, so switching the link back and forth
+  // can't clobber a roster they built by hand.
   const handleEventSelect = (evId: string) => {
     setSelectedEventId(evId);
     if (!evId) return;
@@ -178,6 +181,36 @@ export function SessionFormClient({
         if (v) setVenueName(v.name);
       }
     }
+    if (sessionPlayerIds.length > 0) return;
+    run("import-event", async () => {
+      try {
+        const { groups: rosterGroups } = unwrap(await getEventRosterForCoaching(evId));
+        if (!rosterGroups.length) {
+          toast.error("Event ini belum punya peserta.");
+          return;
+        }
+        const nextGroups = rosterGroups.map((g, i) => ({
+          tempId: `grp_${Date.now()}_${i}`,
+          name: g.courtNo != null ? `Court ${g.courtNo}` : "Grup 1",
+          color: COLOR_PRESETS[i % COLOR_PRESETS.length],
+          coachId: g.coachId || coaches[0]?.id || "",
+        }));
+        setGroups(nextGroups);
+        const nextPlayerIds = [...new Set(rosterGroups.flatMap((g) => g.playerIds))];
+        setSessionPlayerIds(nextPlayerIds);
+        const nextMap: Record<string, string> = {};
+        rosterGroups.forEach((g, i) => {
+          for (const pid of g.playerIds) nextMap[pid] = nextGroups[i].tempId;
+        });
+        setPlayerGroupMap(nextMap);
+        const matchedCoaches = rosterGroups.filter((g) => g.coachId).length;
+        toast.success(`${nextPlayerIds.length} pemain${matchedCoaches ? ` + ${matchedCoaches} coach` : ""} diimpor dari event.`);
+        const skipped = rosterGroups.flatMap((g) => g.skippedGuestNames);
+        if (skipped.length) toast.error(`${skipped.length} peserta tanpa akun pemain dilewati: ${skipped.join(", ")}`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Gagal mengambil peserta event.");
+      }
+    });
   };
 
   // Group helpers
