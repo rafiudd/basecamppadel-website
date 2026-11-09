@@ -32,6 +32,20 @@ test("americano: 8 pemain 2 court, partner tidak pernah berulang, tanpa konflik 
   }
 });
 
+test("americano: 7 pemain 1 court (jumlah partnership ganjil), tidak ada partnership yang hilang", () => {
+  // 7 pemain = 21 partnership (ganjil) — partnership terakhir dulu ke-drop karena nggak ada pasangan
+  // baru yang tersisa untuk dilawan. Sekarang dia dapet lawan dari partnership yang udah main (ulang
+  // lawan, bukan ulang partner), jadi tetap semua 21 partnership kejadwalin.
+  const players = ["P1", "P2", "P3", "P4", "P5", "P6", "P7"];
+  const s = americanoSchedule(players, 1, 2);
+  const p = partners(s);
+  assert.equal(new Set(p).size, 21, "ke-21 partnership harus semuanya kejadwalin tepat sekali");
+  for (const r of s) {
+    const inRound = r.courts.flatMap((c) => [...c.a, ...c.b]);
+    assert.equal(new Set(inRound).size, inRound.length, "nggak ada pemain main dobel dalam 1 ronde");
+  }
+});
+
 test("americano: court terbatas (1 court, 8 pemain) tetap nggak ada yang main dobel per ronde", () => {
   const s = americanoSchedule(["1", "2", "3", "4", "5", "6", "7", "8"], 1, 4);
   assert.ok(s.every((r) => r.courts.length === 1 && r.resting.length === 4));

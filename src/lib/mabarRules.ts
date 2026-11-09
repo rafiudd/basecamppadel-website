@@ -96,6 +96,23 @@ export function americanoSchedule(playerIds: string[], courts: number, seed = 0)
     matchups.push({ a, b });
   }
 
+  // An odd total partnership count (e.g. 7 players → 21) always leaves exactly one partnership here
+  // with nobody fresh left to face — dropping it would mean its two players never partner at all, and
+  // play one match fewer than everyone else all schedule long. Give it the least-repeated already-used
+  // partnership as an opponent instead: that one plays one extra match, but every partnership still
+  // happens at least once.
+  for (const a of left) {
+    const used = matchups.flatMap((m) => [m.a, m.b]);
+    let best = -1;
+    for (let i = 0; i < used.length; i++) {
+      if (used[i].some((p) => a.includes(p))) continue;
+      const seen = a.reduce((s, x) => s + used[i].reduce((t, y) => t + (opponents.get(key(x, y)) ?? 0), 0), 0);
+      const bestSeen = best === -1 ? Infinity : a.reduce((s, x) => s + used[best].reduce((t, y) => t + (opponents.get(key(x, y)) ?? 0), 0), 0);
+      if (seen < bestSeen) best = i;
+    }
+    if (best !== -1) matchups.push({ a, b: used[best] });
+  }
+
   return packRounds(
     matchups.map((m) => ({ game: m, units: [...m.a, ...m.b] })),
     Math.max(1, courts),
