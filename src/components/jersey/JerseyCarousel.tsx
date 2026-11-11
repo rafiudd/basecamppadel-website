@@ -148,7 +148,7 @@ export function JerseyCarousel() {
             type="button"
             onClick={() => setLightbox(null)}
             aria-label="Tutup"
-            className="absolute top-4 right-4 btn bg-snow/10 text-snow min-h-10 w-10 px-0"
+            className="absolute z-10 top-4 right-4 btn bg-snow/10 text-snow min-h-10 w-10 px-0"
           >
             ×
           </button>
@@ -161,7 +161,7 @@ export function JerseyCarousel() {
                 setLightbox(lightbox - 1);
               }}
               aria-label="Foto sebelumnya"
-              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 btn bg-snow/10 text-snow min-h-10 w-10 px-0"
+              className="absolute z-10 left-2 md:left-4 top-1/2 -translate-y-1/2 btn bg-snow/10 text-snow min-h-10 w-10 px-0"
             >
               ‹
             </button>
@@ -174,7 +174,7 @@ export function JerseyCarousel() {
                 setLightbox(lightbox + 1);
               }}
               aria-label="Foto berikutnya"
-              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 btn bg-snow/10 text-snow min-h-10 w-10 px-0"
+              className="absolute z-10 right-2 md:right-4 top-1/2 -translate-y-1/2 btn bg-snow/10 text-snow min-h-10 w-10 px-0"
             >
               ›
             </button>
