@@ -1,72 +1,58 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "nextjs-toploader/app";
 import type { CoachingSessionSummary } from "@/lib/coaching-db";
-import type { SessionTab } from "@/lib/coaching";
+import { defaultSessionDir, sessionListHref, type SessionListQuery, type SessionSort, type SessionTab } from "@/lib/coaching";
 import { formatDateShortIndo } from "@/lib/format";
-import { Pagination } from "@/components/ui/Pagination";
+import { LinkPagination } from "@/components/ui/Pagination";
 import { SearchIcon } from "@/components/ui/icons";
 
-const PAGE_SIZE = 15;
-
-type SortKey = "date" | "title" | "venue" | "participants";
-type SortDir = "asc" | "desc";
-
-const SORT_LABEL: Record<SortKey, string> = {
+const SORT_LABEL: Record<SessionSort, string> = {
   date: "Tanggal",
   title: "Sesi",
   venue: "Venue",
   participants: "Peserta",
 };
 
-function compareSessions(a: CoachingSessionSummary, b: CoachingSessionSummary, key: SortKey): number {
-  switch (key) {
-    case "date":
-      return a.session_date.localeCompare(b.session_date) || a.created_at.localeCompare(b.created_at);
-    case "title":
-      return a.title.localeCompare(b.title);
-    case "venue":
-      return (a.venue_name || "").localeCompare(b.venue_name || "");
-    case "participants":
-      return a.totalPlayers - b.totalPlayers;
-  }
-}
+const SEARCH_DEBOUNCE_MS = 350;
 
-/** Main content of the coaching page when no session is picked yet: every session in the active
- *  status tab, searchable, sortable, and paginated — the <select> this replaced became unusable
- *  once a coach had run a hundred sessions. Click a row to open that session's workspace. */
-export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingSessionSummary[]; sessionTab: SessionTab }) {
+/** Main content of the coaching page when no session is picked yet: one page of the sessions in
+ *  the active status tab. Search, sort and paging live in the URL and run on the server, so the
+ *  page only ever loads the rows it shows. Click a row to open that session's workspace. */
+export function SessionListTable({
+  rows,
+  total,
+  totalPages,
+  query,
+  sessionTab,
+}: {
+  rows: CoachingSessionSummary[];
+  total: number;
+  totalPages: number;
+  query: SessionListQuery;
+  sessionTab: SessionTab;
+}) {
   const router = useRouter();
-  const [q, setQ] = useState("");
-  const [page, setPage] = useState(1);
-  const [sortKey, setSortKey] = useState<SortKey>("date");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [q, setQ] = useState(query.q);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { sort: sortKey, dir: sortDir, page } = query;
 
-  const toggleSort = (key: SortKey) => {
-    if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir(key === "date" ? "desc" : "asc");
-    }
-    setPage(1);
+  const hrefWith = (patch: Partial<SessionListQuery>) => sessionListHref(sessionTab, { ...query, page: 1, ...patch });
+
+  const onSearch = (value: string) => {
+    setQ(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => router.replace(hrefWith({ q: value.trim() })), SEARCH_DEBOUNCE_MS);
   };
 
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    const base = term
-      ? sessions.filter((s) => s.title.toLowerCase().includes(term) || (s.venue_name ?? "").toLowerCase().includes(term))
-      : sessions;
-    return [...base].sort((a, b) => (sortDir === "asc" ? 1 : -1) * compareSessions(a, b, sortKey));
-  }, [sessions, q, sortKey, sortDir]);
+  const toggleSort = (key: SessionSort) => {
+    const dir = key === sortKey ? (sortDir === "asc" ? "desc" : "asc") : defaultSessionDir(key);
+    router.push(hrefWith({ sort: key, dir }));
+  };
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const clampedPage = Math.min(page, totalPages);
-  const paged = filtered.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE);
-
-  const arrow = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? "↑" : "↓") : "");
+  const arrow = (key: SessionSort) => (sortKey === key ? (sortDir === "asc" ? "↑" : "↓") : "");
 
   return (
     <div className="bg-[#1F1C2B] rounded-2xl p-3.5 flex flex-col gap-3 border border-[#FBF7F1]/5">
@@ -77,10 +63,7 @@ export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingS
             type="search"
             placeholder="Cari judul sesi atau venue..."
             value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setPage(1);
-            }}
+            onChange={(e) => onSearch(e.target.value)}
             className="bg-[#FBF7F1]/10 border-0 rounded-lg pl-10 pr-3 py-2.5 min-h-11 font-sans text-[15px] text-[#FBF7F1] w-full box-border focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
           />
         </div>
@@ -89,10 +72,10 @@ export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingS
           <select
             aria-label="Urutkan"
             value={sortKey}
-            onChange={(e) => toggleSort(e.target.value as SortKey)}
+            onChange={(e) => toggleSort(e.target.value as SessionSort)}
             className="bg-[#FBF7F1]/10 border-0 rounded-lg px-3 py-2.5 min-h-11 font-sans text-sm text-[#FBF7F1] flex-1 box-border focus:outline-none focus:ring-1 focus:ring-[#FFD43B]"
           >
-            {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => (
+            {(Object.keys(SORT_LABEL) as SessionSort[]).map((k) => (
               <option key={k} value={k} className="bg-[#17151F]">
                 Urutkan: {SORT_LABEL[k]}
               </option>
@@ -100,7 +83,7 @@ export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingS
           </select>
           <button
             type="button"
-            onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+            onClick={() => router.push(hrefWith({ dir: sortDir === "asc" ? "desc" : "asc" }))}
             aria-label={sortDir === "asc" ? "Urutan naik" : "Urutan turun"}
             className="flex-none w-11 h-11 rounded-lg bg-[#FBF7F1]/10 text-[#FBF7F1] border-0 cursor-pointer text-base"
           >
@@ -109,7 +92,7 @@ export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingS
         </div>
       </div>
 
-      {paged.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="text-center py-10 text-sm text-[#FBF7F1]/50">Tidak ada sesi yang cocok.</div>
       ) : (
         <>
@@ -117,7 +100,7 @@ export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingS
           <table className="hidden sm:table w-full border-collapse text-sm">
             <thead>
               <tr className="text-left text-xs text-[#FBF7F1]/60 uppercase tracking-wide">
-                {(["title", "date", "venue", "participants"] as SortKey[]).map((key) => (
+                {(["title", "date", "venue", "participants"] as SessionSort[]).map((key) => (
                   <th key={key} className={`pb-2.5 pr-3 font-semibold ${key === "participants" ? "text-right" : ""}`}>
                     <button
                       type="button"
@@ -133,7 +116,7 @@ export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingS
               </tr>
             </thead>
             <tbody>
-              {paged.map((s) => (
+              {rows.map((s) => (
                 <tr
                   key={s.id}
                   onClick={() => router.push(`/admin/coaching?when=${sessionTab}&session=${s.id}`)}
@@ -160,7 +143,7 @@ export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingS
 
           {/* Mobile cards */}
           <div className="sm:hidden flex flex-col gap-1.5">
-            {paged.map((s) => (
+            {rows.map((s) => (
               <Link
                 key={s.id}
                 href={`/admin/coaching?when=${sessionTab}&session=${s.id}`}
@@ -186,7 +169,8 @@ export function SessionListTable({ sessions, sessionTab }: { sessions: CoachingS
         </>
       )}
 
-      <Pagination page={clampedPage} totalPages={totalPages} onChange={setPage} />
+      {totalPages > 1 && <div className="text-xs text-[#FBF7F1]/50 text-center">{total} sesi</div>}
+      <LinkPagination page={page} totalPages={totalPages} hrefFor={(p) => sessionListHref(sessionTab, { ...query, page: p })} />
     </div>
   );
 }

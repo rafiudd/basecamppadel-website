@@ -135,22 +135,30 @@ test("Excel: Generate dan Parse Rekap Clinic roundtrip", async () => {
 });
 
 
-test("Sesi: satu tab per status (Draft / Berjalan / Selesai), urutan input tetap", async () => {
-  const { splitSessionsByStatus, pickSessionTab } = await import("../src/lib/coaching.ts");
-  const s = (id, status) => ({ id, status });
-  const split = splitSessionsByStatus([s("c", "active"), s("b", "finished"), s("a", "draft"), s("y", "active"), s("z", "finished")]);
-  assert.deepEqual(split.draft.map((x) => x.id), ["a"]);
-  assert.deepEqual(split.berjalan.map((x) => x.id), ["c", "y"]);
-  assert.deepEqual(split.selesai.map((x) => x.id), ["b", "z"]);
-  assert.equal(pickSessionTab(split), "berjalan");
-  assert.equal(pickSessionTab(split, undefined, "a"), "draft");
-  assert.equal(pickSessionTab(split, undefined, "z"), "selesai");
-  // "c" actually lives in berjalan (its status may have just auto-changed — see deriveSessionStatus) —
-  // follow it there instead of stranding the view on the stale "selesai" tab asked for.
-  assert.equal(pickSessionTab(split, "selesai", "c"), "berjalan");
-  assert.equal(pickSessionTab(split, "bogus"), "berjalan");
-  assert.equal(pickSessionTab({ draft: [s("a", "draft")], berjalan: [], selesai: [s("b", "finished")] }), "draft");
-  assert.equal(pickSessionTab({ draft: [], berjalan: [], selesai: [] }), "berjalan");
+test("Sesi: tab yang dibuka (Draft / Berjalan / Selesai) dari jumlah sesi per tab", async () => {
+  const { pickSessionTab } = await import("../src/lib/coaching.ts");
+  const counts = { draft: 1, berjalan: 2, selesai: 2 };
+  assert.equal(pickSessionTab(counts), "berjalan");
+  assert.equal(pickSessionTab(counts, undefined, "draft"), "draft");
+  assert.equal(pickSessionTab(counts, undefined, "selesai"), "selesai");
+  // The open session actually lives in berjalan (its status may have just auto-changed — see
+  // deriveSessionStatus) — follow it there instead of stranding the view on the stale "selesai" tab asked for.
+  assert.equal(pickSessionTab(counts, "selesai", "berjalan"), "berjalan");
+  assert.equal(pickSessionTab(counts, "selesai"), "selesai");
+  assert.equal(pickSessionTab(counts, "bogus"), "berjalan");
+  assert.equal(pickSessionTab({ draft: 1, berjalan: 0, selesai: 1 }), "draft");
+  assert.equal(pickSessionTab({ draft: 0, berjalan: 0, selesai: 0 }), "berjalan");
+});
+
+test("Sesi: query daftar (cari / urut / halaman) dari dan ke URL", async () => {
+  const { parseSessionListQuery, sessionListHref } = await import("../src/lib/coaching.ts");
+  assert.deepEqual(parseSessionListQuery({}), { q: "", sort: "date", dir: "desc", page: 1 });
+  assert.deepEqual(parseSessionListQuery({ q: " clinic ", sort: "title", page: "3" }), { q: "clinic", sort: "title", dir: "asc", page: 3 });
+  assert.deepEqual(parseSessionListQuery({ sort: "participants", dir: "x", page: "-2" }), { q: "", sort: "participants", dir: "asc", page: 1 });
+  assert.deepEqual(parseSessionListQuery({ sort: "bogus" }), { q: "", sort: "date", dir: "desc", page: 1 });
+  assert.equal(sessionListHref("draft"), "/admin/coaching?when=draft");
+  assert.equal(sessionListHref("selesai", { q: "a b", sort: "venue", dir: "desc", page: 2 }), "/admin/coaching?when=selesai&q=a+b&sort=venue&dir=desc&page=2");
+  assert.equal(sessionListHref("berjalan", { sort: "date", dir: "desc", page: 1 }), "/admin/coaching?when=berjalan");
 });
 
 test("deriveSessionStatus: draft -> active -> finished mengikuti progres penilaian", async () => {

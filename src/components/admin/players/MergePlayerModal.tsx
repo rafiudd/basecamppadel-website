@@ -16,13 +16,16 @@ import type { Player } from "@/lib/database.types";
 
 type Preview = { source: PlayerFootprint; target: PlayerFootprint; blockers: string[] };
 
+/** What the merge picker needs of each player — the admin list passes a slim list of every player. */
+export type MergeCandidate = Pick<Player, "id" | "name" | "level" | "region" | "points" | "photo_url">;
+
 /**
  * "Gabungkan pemain": `source` is a duplicate of someone already in the list. Pick the player that
  * stays, check what moves over, and merge: the duplicate's matches, points, events, coaching and
  * account go to that player, then the duplicate is deleted. Players with a similar name are offered
  * first.
  */
-export function MergePlayerModal({ source, players, onClose }: { source: Player; players: Player[]; onClose: () => void }) {
+export function MergePlayerModal({ source, players, onClose }: { source: Player; players: MergeCandidate[]; onClose: () => void }) {
   const router = useRouter();
   const [targetId, setTargetId] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -133,7 +136,7 @@ export function MergePlayerModal({ source, players, onClose }: { source: Player;
   );
 }
 
-function Side({ label, player, footprint, tone }: { label: string; player: Player; footprint?: PlayerFootprint; tone: string }) {
+function Side({ label, player, footprint, tone }: { label: string; player: MergeCandidate; footprint?: PlayerFootprint; tone: string }) {
   const parts = footprint ? footprintParts(footprint) : [];
   return (
     <div className="rounded-xl bg-snow/6 px-3.5 py-3 flex flex-col gap-2 min-w-0">

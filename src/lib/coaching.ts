@@ -238,25 +238,43 @@ export function statusTab(status: SessionStatus): SessionTab {
   return SESSION_TABS.find((t) => TAB_STATUS[t] === status) ?? "draft";
 }
 
-/** Sessions grouped by tab (= status). Order follows the input. */
-export function splitSessionsByStatus<T extends { status: string }>(sessions: T[]): Record<SessionTab, T[]> {
-  return {
-    draft: sessions.filter((s) => s.status === TAB_STATUS.draft),
-    berjalan: sessions.filter((s) => s.status === TAB_STATUS.berjalan),
-    selesai: sessions.filter((s) => s.status === TAB_STATUS.selesai),
-  };
-}
-
 /**
- * Which tab to open: the one holding the open session (its status may have just auto-changed —
+ * Which tab to open: `holding` — the tab of the open session (its status may have just auto-changed —
  * see deriveSessionStatus — so a stale `?when=` from before that move must not strand the view on
  * an empty tab), else the one asked for, else the first non-empty of Berjalan, Draft, Selesai
- * (Berjalan when all are empty).
+ * (Berjalan when all are empty). `counts` is the number of sessions per tab.
  */
-export function pickSessionTab(split: Record<SessionTab, { id: string }[]>, asked?: string, sessionId?: string): SessionTab {
-  const holding = sessionId && SESSION_TABS.find((t) => split[t].some((s) => s.id === sessionId));
+export function pickSessionTab(counts: Record<SessionTab, number>, asked?: string, holding?: SessionTab | null): SessionTab {
   if (holding) return holding;
   const asTab = SESSION_TABS.find((t) => t === asked);
   if (asTab) return asTab;
-  return (["berjalan", "draft", "selesai"] as const).find((t) => split[t].length) ?? "berjalan";
+  return (["berjalan", "draft", "selesai"] as const).find((t) => counts[t] > 0) ?? "berjalan";
+}
+
+/** Server-side sort keys of the coaching session list. */
+export const SESSION_SORTS = ["date", "title", "venue", "participants"] as const;
+export type SessionSort = (typeof SESSION_SORTS)[number];
+export type SortDir = "asc" | "desc";
+
+/** Paging / search / sort state of the session list, read from and written to the URL. */
+export type SessionListQuery = { q: string; sort: SessionSort; dir: SortDir; page: number };
+
+/** Date sorts newest first by default, text columns A→Z. */
+export const defaultSessionDir = (sort: SessionSort): SortDir => (sort === "date" ? "desc" : "asc");
+
+export function parseSessionListQuery(params: { q?: string; sort?: string; dir?: string; page?: string }): SessionListQuery {
+  const sort = SESSION_SORTS.find((s) => s === params.sort) ?? "date";
+  const dir = params.dir === "asc" || params.dir === "desc" ? params.dir : defaultSessionDir(sort);
+  return { q: (params.q ?? "").trim(), sort, dir, page: Math.max(1, Math.floor(Number(params.page)) || 1) };
+}
+
+/** URL of the session list in `tab` with this query — defaults are left out to keep links short. */
+export function sessionListHref(tab: SessionTab, query: Partial<SessionListQuery> = {}): string {
+  const p = new URLSearchParams({ when: tab });
+  const sort = query.sort ?? "date";
+  if (query.q) p.set("q", query.q);
+  if (sort !== "date") p.set("sort", sort);
+  if (query.dir && query.dir !== defaultSessionDir(sort)) p.set("dir", query.dir);
+  if (query.page && query.page > 1) p.set("page", String(query.page));
+  return `/admin/coaching?${p}`;
 }

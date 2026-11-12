@@ -7,38 +7,14 @@ import { PendingClaims, type PendingClaim } from "@/components/admin/players/Pen
 import { PlayerLoginManagement } from "@/components/admin/players/PlayerLoginManagement";
 import { PlayerReclubLink } from "@/components/admin/players/PlayerReclubLink";
 
-import { getDb } from "@/lib/mongodb";
+import { getAdminPlayersPage } from "@/lib/server/adminPlayers";
+import { parsePlayerListQuery } from "@/lib/adminPlayersQuery";
 
-/** Per-player totals for the list's coaching / rapor columns and filters. Coaching counts distinct
- *  sessions joined; rapor counts submitted assessments (sent to the player or not). */
-async function getActivityCounts(): Promise<{ coaching: Record<string, number>; rapor: Record<string, number> }> {
-  const toMap = (rows: { _id: string; count: number }[]) => {
-    const result: Record<string, number> = {};
-    for (const item of rows) {
-      if (item._id) result[item._id] = item.count;
-    }
-    return result;
-  };
-  try {
-    const db = await getDb();
-    const [coaching, rapor] = await Promise.all([
-      db.collection("coaching_session_players").aggregate<{ _id: string; count: number }>([
-        { $group: { _id: "$player_id", sessions: { $addToSet: "$session_id" } } },
-        { $project: { _id: 1, count: { $size: "$sessions" } } },
-      ]).toArray(),
-      db.collection("coaching_assessments").aggregate<{ _id: string; count: number }>([
-        { $match: { status: "submitted" } },
-        { $group: { _id: "$player_id", count: { $sum: 1 } } },
-      ]).toArray(),
-    ]);
-    return { coaching: toMap(coaching), rapor: toMap(rapor) };
-  } catch {
-    return { coaching: {}, rapor: {} };
-  }
-}
+type SearchParams = { edit?: string; new?: string; q?: string; level?: string; gender?: string; activity?: string; noAccount?: string; noPhoto?: string; sort?: string; page?: string };
 
-export default async function PlayersAdmin({ searchParams }: { searchParams: Promise<{ edit?: string; new?: string }> }) {
-  const { edit, new: isNew } = await searchParams;
+export default async function PlayersAdmin({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
+  const { edit, new: isNew } = params;
   const showForm = !!edit || isNew === "1";
   const supabase = await createClient();
 
@@ -74,19 +50,23 @@ export default async function PlayersAdmin({ searchParams }: { searchParams: Pro
     );
   }
 
-  const [{ data: players }, { data: profiles }, counts] = await Promise.all([
-    supabase.from("players").select("*").order("points", { ascending: false }),
-    supabase.from("profiles").select("user_id, email, nickname, full_name, whatsapp, player_id, claim_player_id"),
-    getActivityCounts(),
+  // One page of players (filters, sort and paging run in the database), plus the two small lists
+  // the page needs in full: open account claims, and a slim id/name list for the merge picker.
+  const query = parsePlayerListQuery(params);
+  const [list, { data: claimProfiles }, { data: mergeCandidates }] = await Promise.all([
+    getAdminPlayersPage(query),
+    supabase.from("profiles").select("user_id, email, nickname, full_name, whatsapp, player_id, claim_player_id").not("claim_player_id", "is", null).is("player_id", null),
+    supabase.from("players").select("id, name, level, region, points, photo_url").order("name"),
   ]);
-  const accountPlayerIds = (profiles ?? []).map((x) => x.player_id).filter((id): id is string => !!id);
 
-  const claims: PendingClaim[] = (profiles ?? [])
-    .filter((x) => x.claim_player_id && !x.player_id)
-    .map((x) => {
-      const p = players?.find((pl) => pl.id === x.claim_player_id);
-      return { ...x, claimed: p ? { id: p.id, name: p.name, points: p.points } : null };
-    });
+  const claimedIds = [...new Set((claimProfiles ?? []).map((x) => x.claim_player_id).filter((id): id is string => !!id))];
+  const { data: claimedPlayers } = claimedIds.length
+    ? await supabase.from("players").select("id, name, points").in("id", claimedIds)
+    : { data: [] as { id: string; name: string; points: number }[] };
+  const claims: PendingClaim[] = (claimProfiles ?? []).map((x) => {
+    const p = claimedPlayers?.find((pl) => pl.id === x.claim_player_id);
+    return { ...x, claimed: p ? { id: p.id, name: p.name, points: p.points } : null };
+  });
 
   return (
     <div className="flex flex-col gap-5">
@@ -95,7 +75,7 @@ export default async function PlayersAdmin({ searchParams }: { searchParams: Pro
         actions={<Link href="/admin/players?new=1" className="btn btn-coral text-ink no-underline tracking-button whitespace-nowrap">+ Tambah Pemain</Link>}
       />
       <PendingClaims claims={claims} />
-      <PlayersList players={players ?? []} coachingCounts={counts.coaching} raporCounts={counts.rapor} accountPlayerIds={accountPlayerIds} />
+      <PlayersList {...list} query={{ ...query, page: list.page }} mergeCandidates={mergeCandidates ?? []} />
     </div>
   );
 }
