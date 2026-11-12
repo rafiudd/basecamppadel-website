@@ -1,3 +1,4 @@
+import type { Document, Filter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireAdmin } from "@/lib/auth";
 import { CoachUsersClient } from "@/components/admin/users/CoachUsersClient";
@@ -50,26 +51,38 @@ export default async function CoachManagementPage() {
     }
   }
 
-  const [
-    authUsers,
-    coachingGroups,
-    coachingAssessments,
-    classSchedules,
-    allClasses,
-  ] = await Promise.all([
+  // Only the fields the coach list / resume shows are read — assessments in particular carry scores
+  // and evaluation text that this page never uses.
+  const [authUsers, coachingGroups, coachingAssessments, classSchedules] = await Promise.all([
     userIds.length
       ? db
           .collection("auth_users")
-          .find({
-            $or: [{ id: { $in: userIds } }, { _id: { $in: userIds } }],
-          } as any)
+          .find(
+            { $or: [{ id: { $in: userIds } }, { _id: { $in: userIds } }] } as any,
+            { projection: { id: 1, email: 1 } },
+          )
           .toArray()
       : Promise.resolve([]),
-    db.collection("coaching_groups").find({ coach_id: { $in: coachIds } }).toArray(),
-    db.collection("coaching_assessments").find({ coach_id: { $in: coachIds } }).toArray(),
-    db.collection("class_schedules").find({ coach_id: { $in: coachIds } }).toArray(),
-    db.collection("classes").find({}).toArray(),
+    db.collection("coaching_groups").find({ coach_id: { $in: coachIds } }, { projection: { coach_id: 1, session_id: 1 } }).toArray(),
+    db.collection("coaching_assessments").find({ coach_id: { $in: coachIds } }, { projection: { coach_id: 1, session_id: 1 } }).toArray(),
+    db.collection("class_schedules").find({ coach_id: { $in: coachIds } }, { projection: { coach_id: 1, class_id: 1 } }).toArray(),
   ]);
+
+  // Only classes a coach is tied to (default coach, or has a schedule in) — not every class.
+  const scheduledClassIds = [...new Set(classSchedules.map((s) => String(s.class_id)).filter(Boolean))];
+  const allClasses = await db
+    .collection("classes")
+    .find<Document>(
+      {
+        $or: [
+          { default_coach_id: { $in: coachIds } },
+          { id: { $in: scheduledClassIds } },
+          { _id: { $in: scheduledClassIds } },
+        ],
+      } as Filter<Document>,
+      { projection: { id: 1, title: 1, category: 1, default_coach_id: 1 } },
+    )
+    .toArray();
 
   const allSessionIds = [
     ...new Set([
@@ -81,9 +94,10 @@ export default async function CoachManagementPage() {
   const coachingSessions = allSessionIds.length > 0
     ? await db
         .collection("coaching_sessions")
-        .find({
-          $or: [{ id: { $in: allSessionIds } }, { _id: { $in: allSessionIds } }] as any,
-        })
+        .find(
+          { $or: [{ id: { $in: allSessionIds } }, { _id: { $in: allSessionIds } }] as any },
+          { projection: { id: 1, title: 1, session_date: 1, venue_name: 1, status: 1 } },
+        )
         .toArray()
     : [];
 
