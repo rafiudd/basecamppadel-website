@@ -9,30 +9,31 @@ import { PlayerReclubLink } from "@/components/admin/players/PlayerReclubLink";
 
 import { getDb } from "@/lib/mongodb";
 
-async function getCoachingCounts(): Promise<Record<string, number>> {
-  try {
-    const db = await getDb();
-    const agg = await db.collection("coaching_session_players").aggregate<{ _id: string; count: number }>([
-      {
-        $group: {
-          _id: "$player_id",
-          sessions: { $addToSet: "$session_id" },
-        },
-      },
-      {
-        $project: {
-          _id: 1,
-          count: { $size: "$sessions" },
-        },
-      },
-    ]).toArray();
+/** Per-player totals for the list's coaching / rapor columns and filters. Coaching counts distinct
+ *  sessions joined; rapor counts submitted assessments (sent to the player or not). */
+async function getActivityCounts(): Promise<{ coaching: Record<string, number>; rapor: Record<string, number> }> {
+  const toMap = (rows: { _id: string; count: number }[]) => {
     const result: Record<string, number> = {};
-    for (const item of agg) {
+    for (const item of rows) {
       if (item._id) result[item._id] = item.count;
     }
     return result;
+  };
+  try {
+    const db = await getDb();
+    const [coaching, rapor] = await Promise.all([
+      db.collection("coaching_session_players").aggregate<{ _id: string; count: number }>([
+        { $group: { _id: "$player_id", sessions: { $addToSet: "$session_id" } } },
+        { $project: { _id: 1, count: { $size: "$sessions" } } },
+      ]).toArray(),
+      db.collection("coaching_assessments").aggregate<{ _id: string; count: number }>([
+        { $match: { status: "submitted" } },
+        { $group: { _id: "$player_id", count: { $sum: 1 } } },
+      ]).toArray(),
+    ]);
+    return { coaching: toMap(coaching), rapor: toMap(rapor) };
   } catch {
-    return {};
+    return { coaching: {}, rapor: {} };
   }
 }
 
@@ -73,11 +74,12 @@ export default async function PlayersAdmin({ searchParams }: { searchParams: Pro
     );
   }
 
-  const [{ data: players }, { data: profiles }, coachingCounts] = await Promise.all([
+  const [{ data: players }, { data: profiles }, counts] = await Promise.all([
     supabase.from("players").select("*").order("points", { ascending: false }),
     supabase.from("profiles").select("user_id, email, nickname, full_name, whatsapp, player_id, claim_player_id"),
-    getCoachingCounts(),
+    getActivityCounts(),
   ]);
+  const accountPlayerIds = (profiles ?? []).map((x) => x.player_id).filter((id): id is string => !!id);
 
   const claims: PendingClaim[] = (profiles ?? [])
     .filter((x) => x.claim_player_id && !x.player_id)
@@ -93,7 +95,7 @@ export default async function PlayersAdmin({ searchParams }: { searchParams: Pro
         actions={<Link href="/admin/players?new=1" className="btn btn-coral text-ink no-underline tracking-button whitespace-nowrap">+ Tambah Pemain</Link>}
       />
       <PendingClaims claims={claims} />
-      <PlayersList players={players ?? []} coachingCounts={coachingCounts} />
+      <PlayersList players={players ?? []} coachingCounts={counts.coaching} raporCounts={counts.rapor} accountPlayerIds={accountPlayerIds} />
     </div>
   );
 }

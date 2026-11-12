@@ -141,6 +141,7 @@ export const UserIcon = make(
   </>,
 );
 export const ChevronDownIcon = make(<polyline points="6 9 12 15 18 9" />, { size: 14, strokeWidth: 2.5 });
+export const FilterIcon = make(<polygon points="3 5 21 5 14 13 14 19 10 21 10 13" />, { size: 18 });
 export const SearchIcon = make(
   <>
     <circle cx="11" cy="11" r="7" />
