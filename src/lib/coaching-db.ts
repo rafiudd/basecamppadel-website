@@ -1,4 +1,7 @@
+import type { Document } from "mongodb";
 import { createClient } from "@/lib/supabase/server";
+import { getDb } from "@/lib/mongodb";
+import { normalizeDoc } from "@/lib/server/mongo/utils";
 import type {
   Coach,
   CoachingAssessment,
@@ -7,7 +10,18 @@ import type {
   CoachingSkill,
   Player,
 } from "@/lib/database.types";
-import { computePlayerLevel, computeScoreDelta, deriveSessionStatus, type PlayerLevelName } from "./coaching";
+import {
+  computePlayerLevel,
+  computeScoreDelta,
+  deriveSessionStatus,
+  SESSION_TABS,
+  TAB_STATUS,
+  type PlayerLevelName,
+  type SessionListQuery,
+  type SessionSort,
+  type SessionStatus,
+  type SessionTab,
+} from "./coaching";
 
 export interface CoachingSessionSummary extends CoachingSession {
   totalPlayers: number;
@@ -80,42 +94,110 @@ export async function getCoaches(): Promise<Coach[]> {
 }
 
 // ------------------------------------------------------------- Sessions
-export async function getCoachingSessions(options?: {
-  coachId?: string | null;
-}): Promise<CoachingSessionSummary[]> {
+export const SESSIONS_PAGE_SIZE = 15;
+
+/** Number of coaching sessions per status tab — counted in the database, nothing loaded. */
+export async function countCoachingSessionsByStatus(): Promise<Record<SessionTab, number>> {
   const supabase = await createClient();
+  const counts = await Promise.all(
+    SESSION_TABS.map((t) =>
+      supabase.from("coaching_sessions").select("id", { count: "exact", head: true }).eq("status", TAB_STATUS[t]),
+    ),
+  );
+  return Object.fromEntries(SESSION_TABS.map((t, i) => [t, counts[i].count ?? 0])) as Record<SessionTab, number>;
+}
 
-  // 1. Fetch sessions
-  const { data: sessions, error } = await supabase
-    .from("coaching_sessions")
-    .select("*")
-    .order("session_date", { ascending: false })
-    .order("created_at", { ascending: false });
+/** One session with its progress totals and assigned coaches, or null when it doesn't exist. */
+export async function getCoachingSessionSummary(sessionId: string): Promise<CoachingSessionSummary | null> {
+  const supabase = await createClient();
+  const { data: session } = await supabase.from("coaching_sessions").select("*").eq("id", sessionId).maybeSingle();
+  if (!session) return null;
+  const [summary] = await summarizeSessions(supabase, [session]);
+  return summary;
+}
 
-  if (error) throw new Error(error.message);
-  if (!sessions || sessions.length === 0) return [];
+/**
+ * One page of the coaching session list for a status tab: search (title / venue), sort and paging
+ * all run in one MongoDB aggregation, and the per-session totals are loaded only for the sessions on
+ * this page — the list no longer pulls every session (plus all their players and assessments).
+ * Text sorts compare lower-cased keys so "agil" and "Agil" sort together; the participant sort
+ * counts each session's players inside the aggregation (only when that sort is picked).
+ */
+export async function getCoachingSessionsPage(
+  status: SessionStatus,
+  query: SessionListQuery,
+): Promise<{ rows: CoachingSessionSummary[]; total: number; page: number; totalPages: number }> {
+  const db = await getDb();
+  const sessionsColl = db.collection("coaching_sessions");
 
+  const match: Document = { status };
+  const term = query.q.trim();
+  if (term) {
+    const rx = { $regex: term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
+    match.$or = [{ title: rx }, { venue_name: rx }];
+  }
+
+  const total = await sessionsColl.countDocuments(match);
+  const totalPages = Math.max(1, Math.ceil(total / SESSIONS_PAGE_SIZE));
+  const page = Math.min(query.page, totalPages);
+  if (total === 0) return { rows: [], total, page, totalPages };
+
+  const dir = query.dir === "asc" ? 1 : -1;
+  const newestFirst = { session_date: -1, created_at: -1, _id: 1 } as const;
+  const sortKey: Record<SessionSort, Record<string, 1 | -1>> = {
+    date: { session_date: dir, created_at: dir, _id: 1 },
+    title: { _titleKey: dir, ...newestFirst },
+    venue: { _venueKey: dir, ...newestFirst },
+    participants: { _players: dir, ...newestFirst },
+  };
+  const extra: Document[] = [];
+  if (query.sort === "title") extra.push({ $addFields: { _titleKey: { $toLower: { $ifNull: ["$title", ""] } } } });
+  if (query.sort === "venue") extra.push({ $addFields: { _venueKey: { $toLower: { $ifNull: ["$venue_name", ""] } } } });
+  if (query.sort === "participants") {
+    extra.push(
+      {
+        $lookup: {
+          from: "coaching_session_players",
+          let: { sid: { $ifNull: ["$id", { $toString: "$_id" }] } },
+          pipeline: [{ $match: { $expr: { $eq: ["$session_id", "$$sid"] } } }, { $count: "n" }],
+          as: "_cnt",
+        },
+      },
+      { $addFields: { _players: { $ifNull: [{ $arrayElemAt: ["$_cnt.n", 0] }, 0] } } },
+    );
+  }
+
+  const docs = await sessionsColl
+    .aggregate([
+      { $match: match },
+      ...extra,
+      { $sort: sortKey[query.sort] },
+      { $skip: (page - 1) * SESSIONS_PAGE_SIZE },
+      { $limit: SESSIONS_PAGE_SIZE },
+      { $project: { _titleKey: 0, _venueKey: 0, _players: 0, _cnt: 0 } },
+    ])
+    .toArray();
+
+  const supabase = await createClient();
+  const sessions = docs.map((d) => normalizeDoc(d) as CoachingSession);
+  return { rows: await summarizeSessions(supabase, sessions), total, page, totalPages };
+}
+
+/** Adds player / rating totals and assigned coaches to each session — children loaded only for these sessions. */
+async function summarizeSessions(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  sessions: CoachingSession[],
+): Promise<CoachingSessionSummary[]> {
+  if (sessions.length === 0) return [];
   const sessionIds = sessions.map((s) => s.id);
 
-  // 2. Fetch groups with coach
-  const { data: groups } = await supabase
-    .from("coaching_groups")
-    .select("id, session_id, coach_id, coaches(id, name)")
-    .in("session_id", sessionIds);
+  const [{ data: groups }, { data: sessionPlayers }, { data: assessments }] = await Promise.all([
+    supabase.from("coaching_groups").select("id, session_id, coach_id, coaches(id, name)").in("session_id", sessionIds),
+    supabase.from("coaching_session_players").select("session_id, player_id, group_id").in("session_id", sessionIds),
+    supabase.from("coaching_assessments").select("session_id, player_id, status").in("session_id", sessionIds),
+  ]);
 
-  // 3. Fetch players count per session
-  const { data: sessionPlayers } = await supabase
-    .from("coaching_session_players")
-    .select("session_id, player_id, group_id")
-    .in("session_id", sessionIds);
-
-  // 4. Fetch assessments
-  const { data: assessments } = await supabase
-    .from("coaching_assessments")
-    .select("session_id, player_id, status")
-    .in("session_id", sessionIds);
-
-  const results: CoachingSessionSummary[] = sessions.map((s) => {
+  return sessions.map((s) => {
     const sGroups = (groups || []).filter((g) => g.session_id === s.id);
     const assignedCoaches: Array<{ id: string; name: string }> = [];
     const seenCoach = new Set<string>();
@@ -144,12 +226,6 @@ export async function getCoachingSessions(options?: {
       coaches: assignedCoaches,
     };
   });
-
-  if (options?.coachId) {
-    return results.filter((s) => s.coaches.some((c) => c.id === options.coachId));
-  }
-
-  return results;
 }
 
 /**

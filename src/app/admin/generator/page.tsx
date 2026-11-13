@@ -3,6 +3,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { GenEventForm } from "@/components/admin/GenEventForm";
 import { deleteEvent } from "@/app/admin/generator/actions";
+import { LinkPagination } from "@/components/ui/Pagination";
+
+const PAGE_SIZE = 25;
 
 const FORMAT_LABEL: Record<string, string> = {
   americano: "Americano",
@@ -17,14 +20,21 @@ const STATUS_LABEL: Record<string, string> = {
   finished: "Selesai",
 };
 
-export default async function GeneratorAdmin({ searchParams }: { searchParams: Promise<{ new?: string }> }) {
-  const { new: isNew } = await searchParams;
+export default async function GeneratorAdmin({ searchParams }: { searchParams: Promise<{ new?: string; page?: string }> }) {
+  const { new: isNew, page: pageParam } = await searchParams;
   const supabase = await createClient();
-  const [{ data: events }, { data: courts }] = await Promise.all([
-    supabase.from("gen_events").select("*").order("created_at", { ascending: false }),
+  const [{ count }, { data: courts }] = await Promise.all([
+    supabase.from("gen_events").select("id", { count: "exact", head: true }),
     supabase.from("courts").select("*").eq("active", true).order("name"),
   ]);
   const showForm = isNew === "1";
+  // One page of events, newest first — not every event ever generated.
+  const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
+  const page = Math.min(Math.max(1, Number(pageParam) || 1), totalPages);
+  const offset = (page - 1) * PAGE_SIZE;
+  const { data: events } = showForm
+    ? { data: [] }
+    : await supabase.from("gen_events").select("*").order("created_at", { ascending: false }).range(offset, offset + PAGE_SIZE - 1);
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,6 +83,9 @@ export default async function GeneratorAdmin({ searchParams }: { searchParams: P
             </tbody>
           </table>
           {events?.length === 0 && <p className="text-sm text-snow/50 mt-3">Belum ada event.</p>}
+          <div className="mt-3">
+            <LinkPagination page={page} totalPages={totalPages} hrefFor={(p) => (p > 1 ? `/admin/generator?page=${p}` : "/admin/generator")} />
+          </div>
         </div>
       )}
     </div>

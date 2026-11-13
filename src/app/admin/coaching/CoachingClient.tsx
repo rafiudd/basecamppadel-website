@@ -18,6 +18,7 @@ import type {
 import {
   computePlayerLevel,
   LEVEL_PIN,
+  type SessionListQuery,
   type SessionTab,
   type SessionStatus,
 } from "@/lib/coaching";
@@ -42,7 +43,8 @@ import { AssessmentEditor } from "./components/AssessmentEditor";
 import { toast } from "@/components/ui/Toast";
 
 export function CoachingClient({
-  sessions,
+  sessionList,
+  activeSessionCoaches,
   sessionTab,
   sessionCounts,
   sessionData,
@@ -56,7 +58,10 @@ export function CoachingClient({
   missionsByLevel,
   isAdmin,
 }: {
-  sessions: CoachingSessionSummary[];
+  /** One page of the open tab's session list (null while a session is open). */
+  sessionList: { rows: CoachingSessionSummary[]; total: number; totalPages: number; query: SessionListQuery } | null;
+  /** Coaches assigned to a group in the open session — not every coach in the system. */
+  activeSessionCoaches: Array<{ id: string; name: string }>;
   sessionTab: SessionTab;
   sessionCounts: Record<SessionTab, number>;
   sessionData: SessionFullData | null;
@@ -74,11 +79,7 @@ export function CoachingClient({
   const [selectedCoachFilter, setSelectedCoachFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"belum" | "selesai">("belum");
-  // Only coaches actually assigned to a group in this session — not every coach in the system.
-  const sessionCoaches = useMemo(
-    () => sessions.find((s) => s.id === activeSessionId)?.coaches ?? [],
-    [sessions, activeSessionId],
-  );
+  const sessionCoaches = activeSessionCoaches;
 
   // The coach dropdown's options are scoped to the active session — reset a stale selection
   // (a coach from the previous session) back to "all" when the session changes, without an
@@ -643,12 +644,12 @@ export function CoachingClient({
             />
           )}
         </>
-      ) : sessions.length === 0 ? (
+      ) : sessionCounts[sessionTab] === 0 || !sessionList ? (
         <p className="m-0 bg-[#221F30] rounded-2xl p-6 text-sm text-[#FBF7F1]/70 border border-[#FBF7F1]/5">
           {EMPTY_TAB_TEXT[sessionTab]}
         </p>
       ) : (
-        <SessionListTable sessions={sessions} sessionTab={sessionTab} />
+        <SessionListTable key={sessionTab} {...sessionList} sessionTab={sessionTab} />
       )}
 
       {showMasterTeknik && (

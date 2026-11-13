@@ -4,16 +4,26 @@ import { createClient } from "@/lib/supabase/server";
 import { SessionForm } from "@/components/admin/SessionForm";
 import { deleteSession } from "@/app/admin/actions";
 import { formatSessionDay } from "@/lib/format";
+import { LinkPagination } from "@/components/ui/Pagination";
 
-export default async function SessionsAdmin({ searchParams }: { searchParams: Promise<{ edit?: string; new?: string }> }) {
-  const { edit, new: isNew } = await searchParams;
+const PAGE_SIZE = 25;
+
+export default async function SessionsAdmin({ searchParams }: { searchParams: Promise<{ edit?: string; new?: string; page?: string }> }) {
+  const { edit, new: isNew, page: pageParam } = await searchParams;
   const supabase = await createClient();
-  const [{ data: sessions }, { data: venues }] = await Promise.all([
-    supabase.from("sessions").select("*").order("session_date", { ascending: false }),
+  // Only the session being edited and one page of the list are loaded — not every session.
+  const [{ count }, { data: venues }, { data: editing }] = await Promise.all([
+    supabase.from("sessions").select("id", { count: "exact", head: true }),
     supabase.from("venues").select("*").eq("active", true).order("name"),
+    edit ? supabase.from("sessions").select("*").eq("id", edit).maybeSingle() : Promise.resolve({ data: null }),
   ]);
-  const editing = sessions?.find((s) => s.id === edit);
   const showForm = !!editing || isNew === "1";
+  const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
+  const page = Math.min(Math.max(1, Number(pageParam) || 1), totalPages);
+  const offset = (page - 1) * PAGE_SIZE;
+  const { data: sessions } = showForm
+    ? { data: [] }
+    : await supabase.from("sessions").select("*").order("session_date", { ascending: false }).order("created_at", { ascending: false }).range(offset, offset + PAGE_SIZE - 1);
 
   return (
     <div className="flex flex-col gap-6">
@@ -26,7 +36,7 @@ export default async function SessionsAdmin({ searchParams }: { searchParams: Pr
         )}
       </div>
 
-      {showForm && <SessionForm key={editing?.id ?? "new"} session={editing} venues={venues ?? []} />}
+      {showForm && <SessionForm key={editing?.id ?? "new"} session={editing ?? undefined} venues={venues ?? []} />}
 
       {!showForm && (
       <div className="overflow-x-auto">
@@ -65,6 +75,9 @@ export default async function SessionsAdmin({ searchParams }: { searchParams: Pr
           </tbody>
         </table>
         {sessions?.length === 0 && <p className="text-sm text-snow/50 mt-3">Belum ada sesi.</p>}
+        <div className="mt-3">
+          <LinkPagination page={page} totalPages={totalPages} hrefFor={(p) => (p > 1 ? `/admin/sessions?page=${p}` : "/admin/sessions")} />
+        </div>
       </div>
       )}
     </div>
