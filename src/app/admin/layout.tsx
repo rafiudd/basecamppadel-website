@@ -73,8 +73,8 @@ async function AdminContent({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <div className="flex-1 min-w-0 flex flex-col min-h-screen">
-        <header className="md:hidden flex-none flex items-center justify-between gap-3 h-14 pl-4 pr-2 py-1.5 border-b border-snow/10">
-          {brand(false)}
+        <header className="md:hidden flex-none flex items-center justify-between gap-3 min-h-14 pl-4 pr-2 py-2 border-b border-snow/10">
+          {brand(true)}
           <AdminAccountMenu email={user.email ?? ""} isAdmin={role === "admin"} />
         </header>
         <main className="flex-1 px-4 pt-5 pb-24 md:px-8 md:pt-8 md:pb-12 max-w-360 w-full box-border mx-auto">{children}</main>

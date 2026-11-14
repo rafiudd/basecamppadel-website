@@ -51,13 +51,17 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   },
 ];
 
-/** Phone bottom tab bar, in this order (user management sits in the account menu there). */
+/** Phone bottom tab bar's pinned tabs — the items used most often (the rest sit behind "Lainnya"). */
 export const MOBILE_NAV: AdminNavItem[] = [
   { href: "/admin/events", label: "Event", icon: <TrophyIcon /> },
   { href: "/admin/liga", label: "Liga", icon: <TrophyIcon /> },
   { href: "/admin/kelas", label: "Kelas", icon: <KelasIcon /> },
-  { href: "/admin/live", label: "Live", icon: <PlayIcon /> },
   { href: "/admin/players", label: "Pemain", icon: <PeopleIcon /> },
+];
+
+/** Phone bottom tab bar's "Lainnya" overflow menu. */
+export const MOBILE_NAV_MORE: AdminNavItem[] = [
+  { href: "/admin/live", label: "Live", icon: <PlayIcon /> },
   { href: "/admin/coaching", label: "Coaching", icon: <CoachingIcon /> },
   { href: "/admin/point", label: "Poin", icon: <StarIcon /> },
   { href: "/admin/venues", label: "Venue", icon: <PinIcon /> },

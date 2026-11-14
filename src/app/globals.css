@@ -94,6 +94,10 @@ body {
   background: var(--color-snow);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  /* iOS gives installed PWAs elastic horizontal rubber-banding by default — any stray sideways
+     swipe drags the page and flashes this background past the edge. Lock it to vertical only. */
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 button {
