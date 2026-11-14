@@ -5,7 +5,7 @@
  */
 import { LEVELS } from "@/lib/config";
 
-export const PLAYERS_PAGE_SIZE = 25;
+export const PLAYERS_PAGE_SIZE = 10;
 
 export const PLAYER_SORTS = ["poin", "nama", "wl", "match", "coaching", "rapor"] as const;
 export type PlayerSort = (typeof PLAYER_SORTS)[number];
@@ -27,6 +27,8 @@ export type PlayerListQuery = {
   level: string;
   gender: PlayerGender;
   activity: PlayerActivity;
+  /** Minimum total coaching session count, e.g. `3` shows players coached 3 times or more. `null` = no filter. */
+  coachingCount: number | null;
   noAccount: boolean;
   noPhoto: boolean;
   sort: PlayerSort;
@@ -38,20 +40,23 @@ export const DEFAULT_PLAYER_QUERY: PlayerListQuery = {
   level: "",
   gender: "",
   activity: "",
+  coachingCount: null,
   noAccount: false,
   noPhoto: false,
   sort: "poin",
   page: 1,
 };
 
-type RawParams = Partial<Record<"q" | "level" | "gender" | "activity" | "noAccount" | "noPhoto" | "sort" | "page", string>>;
+type RawParams = Partial<Record<"q" | "level" | "gender" | "activity" | "coachingCount" | "noAccount" | "noPhoto" | "sort" | "page", string>>;
 
 export function parsePlayerListQuery(params: RawParams): PlayerListQuery {
+  const cc = Number(params.coachingCount);
   return {
     q: (params.q ?? "").trim(),
     level: (LEVELS as readonly string[]).includes(params.level ?? "") ? params.level! : "",
     gender: params.gender === "M" || params.gender === "F" ? params.gender : "",
     activity: params.activity && params.activity in PLAYER_ACTIVITIES ? (params.activity as PlayerActivity) : "",
+    coachingCount: params.coachingCount && Number.isInteger(cc) && cc >= 0 ? cc : null,
     noAccount: params.noAccount === "1",
     noPhoto: params.noPhoto === "1",
     sort: PLAYER_SORTS.find((s) => s === params.sort) ?? "poin",
@@ -66,6 +71,7 @@ export function playerListHref(query: Partial<PlayerListQuery>): string {
   if (query.level) p.set("level", query.level);
   if (query.gender) p.set("gender", query.gender);
   if (query.activity) p.set("activity", query.activity);
+  if (query.coachingCount != null) p.set("coachingCount", String(query.coachingCount));
   if (query.noAccount) p.set("noAccount", "1");
   if (query.noPhoto) p.set("noPhoto", "1");
   if (query.sort && query.sort !== "poin") p.set("sort", query.sort);

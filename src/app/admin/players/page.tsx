@@ -10,7 +10,7 @@ import { PlayerReclubLink } from "@/components/admin/players/PlayerReclubLink";
 import { getAdminPlayersPage } from "@/lib/server/adminPlayers";
 import { parsePlayerListQuery } from "@/lib/adminPlayersQuery";
 
-type SearchParams = { edit?: string; new?: string; q?: string; level?: string; gender?: string; activity?: string; noAccount?: string; noPhoto?: string; sort?: string; page?: string };
+type SearchParams = { edit?: string; new?: string; q?: string; level?: string; gender?: string; activity?: string; coachingCount?: string; noAccount?: string; noPhoto?: string; sort?: string; page?: string };
 
 export default async function PlayersAdmin({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;

@@ -93,6 +93,7 @@ export async function getAdminPlayersPage(query: PlayerListQuery): Promise<Admin
           },
         },
         ...(query.activity ? [{ $match: ACTIVITY_MATCH[query.activity] }] : []),
+        ...(query.coachingCount != null ? [{ $match: { _coaching: { $gte: query.coachingCount } } }] : []),
         {
           $facet: {
             rows: [

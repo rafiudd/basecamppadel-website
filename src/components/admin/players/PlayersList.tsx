@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "nextjs-toploader/app";
 import { Avatar } from "@/components/ui/Avatar";
@@ -66,11 +66,13 @@ export function PlayersList({
 }) {
   const router = useRouter();
   const [q, setQ] = useState(query.q);
+  const [coachingCountInput, setCoachingCountInput] = useState(query.coachingCount ?? null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const coachingCountTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
   const [mergeSource, setMergeSource] = useState<Player | null>(null);
-  const { level, sort, gender, activity, noAccount, noPhoto } = query;
+  const { level, sort, gender, activity, coachingCount, noAccount, noPhoto } = query;
 
   /** Any filter / sort change goes back to page 1. */
   const hrefWith = (patch: Partial<PlayerListQuery>) => playerListHref({ ...query, page: 1, ...patch });
@@ -80,8 +82,16 @@ export function PlayersList({
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => router.replace(hrefWith({ q: value.trim() })), SEARCH_DEBOUNCE_MS);
   };
+  // The chip to clear this filter (and any direct URL nav) updates `query` without remounting —
+  // keep the input in sync when that happens outside of typing into it.
+  useEffect(() => setCoachingCountInput(query.coachingCount ?? null), [query.coachingCount]);
+  const onCoachingCount = (value: string) => {
+    const n = value.trim() === "" ? null : Math.max(0, Math.floor(Number(value)));
+    setCoachingCountInput(Number.isInteger(n) ? n : null);
+    if (coachingCountTimer.current) clearTimeout(coachingCountTimer.current);
+    coachingCountTimer.current = setTimeout(() => go({ coachingCount: Number.isInteger(n) ? n : null }), SEARCH_DEBOUNCE_MS);
+  };
 
-  const matchCount = (p: Player) => p.wins + p.losses;
   const chips = [
     { id: "" as const, label: "Semua", n: chipCounts.all },
     { id: "M" as const, label: GENDER_LABELS.M, n: chipCounts.M },
@@ -105,11 +115,15 @@ export function PlayersList({
     gender ? { label: GENDER_LABELS[gender], clear: { gender: "" } } : null,
     level ? { label: level, clear: { level: "" } } : null,
     activity ? { label: PLAYER_ACTIVITIES[activity], clear: { activity: "" } } : null,
+    coachingCount != null ? { label: `Total coaching ≥ ${coachingCount}`, clear: { coachingCount: null } } : null,
     noAccount ? { label: "Belum punya akun", clear: { noAccount: false } } : null,
     noPhoto ? { label: "Belum ada foto", clear: { noPhoto: false } } : null,
   ];
   const active = candidates.filter((f): f is ActiveFilter => !!f);
-  const clearAll = () => go({ gender: "", level: "", activity: "", noAccount: false, noPhoto: false });
+  const clearAll = () => {
+    setCoachingCountInput(null);
+    go({ gender: "", level: "", activity: "", coachingCount: null, noAccount: false, noPhoto: false });
+  };
 
   return (
     <>
@@ -179,6 +193,18 @@ export function PlayersList({
                 {Object.entries(PLAYER_ACTIVITIES).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
               </select>
             </label>
+            <label className="flex flex-col gap-2">
+              <span className="label">Total coaching (minimal)</span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                placeholder="misal 5"
+                value={coachingCountInput ?? ""}
+                onChange={(e) => onCoachingCount(e.target.value)}
+                className={inputClass}
+              />
+            </label>
           </div>
         )}
 
@@ -209,12 +235,7 @@ export function PlayersList({
             <th className="pb-2.5 pr-3 font-semibold" />
             <th className="pb-2.5 pr-3 font-semibold">Nama</th>
             <th className="pb-2.5 pr-3 font-semibold">Level</th>
-            <th className="pb-2.5 pr-3 font-semibold">Region</th>
-            <th className="pb-2.5 pr-3 font-semibold">Poin</th>
-            <th className="pb-2.5 pr-3 font-semibold">W-L</th>
-            <th className="pb-2.5 pr-3 font-semibold">Match</th>
             <th className="pb-2.5 pr-3 font-semibold">Coaching</th>
-            <th className="pb-2.5 pr-3 font-semibold">Rapor</th>
             <th className="pb-2.5" />
           </tr>
         </thead>
@@ -232,12 +253,7 @@ export function PlayersList({
                 </button>
               </td>
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{p.level}</td>
-              <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{p.region || "—"}</td>
-              <td className="py-2.5 pr-3 font-display font-bold">{p.points}</td>
-              <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{p.wins}–{p.losses}</td>
-              <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{matchCount(p)}×</td>
               <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{p.coachingCount}×</td>
-              <td className="py-2.5 pr-3 text-snow/80 whitespace-nowrap">{p.raporCount}×</td>
               <td className="py-2"><Actions p={p} onMerge={() => setMergeSource(p)} /></td>
             </tr>
           ))}
@@ -250,9 +266,8 @@ export function PlayersList({
             <Avatar name={p.name} photoUrl={p.photo_url} size={36} />
             <button type="button" onClick={() => setProfilePlayer(p)} className="flex-1 min-w-0 border-0 bg-transparent cursor-pointer text-left p-0">
               <div className="font-display font-bold text-input flex items-center gap-2 text-snow">{p.name} <GenderBadge gender={p.gender} /> <ReclubBadge p={p} /></div>
-              <div className="text-caption text-snow/70">{[p.level, p.region].filter(Boolean).join(" · ")}</div>
-              <div className="text-caption text-snow/70"><b className="text-snow">{p.points}</b> poin · {p.wins}–{p.losses} W-L</div>
-              <div className="text-caption text-snow/70">{matchCount(p)}× match · {p.coachingCount}× coaching · {p.raporCount}× rapor</div>
+              <div className="text-caption text-snow/70">{p.level}</div>
+              <div className="text-caption text-snow/70">{p.coachingCount}× coaching</div>
             </button>
             <Actions p={p} onMerge={() => setMergeSource(p)} />
           </div>
