@@ -4,7 +4,7 @@ import type { Supa } from "@/lib/server/action";
 
 /** Helpers shared by the event server actions (not actions themselves). Generic ones: @/lib/server/action. */
 
-export { friendly, guard, int, str, type Supa } from "@/lib/server/action";
+export { friendly, guard, guardResult, int, str, type Supa } from "@/lib/server/action";
 
 export function revalidateEvent(id: string) {
   revalidatePath(`/admin/events/${id}`);

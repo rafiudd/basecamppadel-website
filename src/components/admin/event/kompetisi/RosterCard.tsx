@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "nextjs-toploader/app";
 import { ActionForm } from "@/components/admin/ActionForm";
 import { CloseIcon } from "@/components/ui/icons";
 import { SearchSelect } from "@/components/ui/SearchSelect";
-import { addTeam, removeTeam, saveGroups, shuffleGroups } from "@/app/admin/events/actions";
+import { addTeam, importReclubTeams, removeTeam, saveGroups, shuffleGroups } from "@/app/admin/events/actions";
 import { generateGroupSchedule } from "@/app/admin/events/match-actions";
 import { FINAL_STAGE_LABEL, groupLabel } from "@/lib/competition";
+import { unwrap } from "@/lib/actionState";
+import { ReclubImportModal } from "@/components/admin/ReclubImportModal";
+import { toast } from "@/components/ui/Toast";
 import type { CompetitionData, TeamWithPlayers } from "@/lib/compData";
 import type { PlayerSummary } from "@/components/admin/event/types";
 
@@ -14,8 +18,46 @@ import type { PlayerSummary } from "@/components/admin/event/types";
 export function RosterCard({ data, players }: { data: CompetitionData; players: PlayerSummary[] }) {
   const { event, teams, matches } = data;
   const editable = matches.length === 0;
+  const router = useRouter();
+  const [, startTransition] = useTransition();
   const [adding, setAdding] = useState(false);
   const [moving, setMoving] = useState(false);
+  const [reclubOpen, setReclubOpen] = useState(false);
+
+  const onReclubImport = (result: { players: { playerId: string; team: string | null }[] }) => {
+    const grouped = new Map<string, string[]>();
+    let solo = 0;
+    for (const p of result.players) {
+      if (p.team) grouped.set(p.team, [...(grouped.get(p.team) ?? []), p.playerId]);
+      else solo++;
+    }
+    const pairs: { p1: string; p2: string }[] = [];
+    for (const ids of grouped.values()) {
+      if (ids.length >= 2) pairs.push({ p1: ids[0], p2: ids[1] });
+      else solo++;
+    }
+    if (!pairs.length) {
+      toast.error("Tidak ada pasangan lengkap untuk dijadikan tim. Peserta tanpa pasangan harus ditambah manual.");
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const res = unwrap(await importReclubTeams(event.id, pairs));
+        toast.success(
+          [
+            `${res.added} tim ditambahkan dari Reclub.`,
+            res.skipped > 0 && `${res.skipped} pasangan dilewati (tim penuh atau pemain sudah ada di tim lain).`,
+            solo > 0 && `${solo} peserta tanpa pasangan dilewati.`,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        );
+        router.refresh();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Gagal mengimpor tim");
+      }
+    });
+  };
   const labels = [...new Set(teams.map((t) => t.group_label).filter((l): l is string => !!l))].sort();
   const ungrouped = teams.filter((t) => !t.group_label);
   const sections = [
@@ -44,6 +86,11 @@ export function RosterCard({ data, players }: { data: CompetitionData; players: 
               </button>
             )}
             {teams.length < event.num_teams && (
+              <button type="button" onClick={() => setReclubOpen(true)} className="btn min-h-10 px-3.5 py-2 text-caption">
+                Ambil dari Reclub
+              </button>
+            )}
+            {teams.length < event.num_teams && (
               <button type="button" onClick={() => setAdding((v) => !v)} className="btn min-h-10 px-3.5 py-2 text-caption">
                 {adding ? "Batal" : "+ Tambah tim"}
               </button>
@@ -51,6 +98,15 @@ export function RosterCard({ data, players }: { data: CompetitionData; players: 
           </div>
         )}
       </div>
+
+      {editable && reclubOpen && (
+        <ReclubImportModal
+          players={players}
+          teamNote="Peserta berpasangan di Reclub otomatis dimasukkan ke satu tim. Peserta tanpa pasangan dilewati — tambah manual."
+          onClose={() => setReclubOpen(false)}
+          onImport={onReclubImport}
+        />
+      )}
 
       {editable && adding && <AddTeamForm eventId={event.id} players={players} teams={teams} />}
 

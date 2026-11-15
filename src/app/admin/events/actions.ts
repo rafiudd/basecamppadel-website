@@ -7,7 +7,7 @@ import { groupLabel, planFormat, splitIntoGroups } from "@/lib/competition";
 import type { CompEvent, GenFormat, ScoreMode } from "@/lib/database.types";
 import type { ActionState } from "@/lib/actionState";
 import { isAmericanoFormat, isFixedFormat, presetPoints } from "@/lib/events";
-import { assertEditableRoster, friendly, guard, int, load, revalidateEvent, str, type Supa } from "./_shared";
+import { assertEditableRoster, friendly, guard, guardResult, int, load, revalidateEvent, str, type Supa } from "./_shared";
 import { resetMabarEvent } from "./mabar-actions";
 import { resetCompetition } from "./match-actions";
 import { sendPushToAll } from "@/lib/webpush";
@@ -334,6 +334,30 @@ export async function addTeam(_: ActionState, fd: FormData): Promise<ActionState
     if (data.teams.length >= data.event.num_teams) throw new Error(`Format hanya untuk ${data.event.num_teams} tim.`);
     await insertTeams(supabase, id, [{ p1, p2 }]);
     revalidateEvent(id);
+  });
+}
+
+/** "Ambil dari Reclub" on an already-created event: one team per Reclub pair. Pairs that clash with
+ *  an existing team's player, or that don't fit the format's team count, are silently skipped. */
+export async function importReclubTeams(eventId: string, pairs: { p1: string; p2: string }[]) {
+  return guardResult(async () => {
+    await requireAdmin();
+    const supabase = await createClient();
+    const data = await load(supabase, eventId);
+    assertEditableRoster(data);
+    const used = new Set(data.teams.flatMap((t) => t.players.map((p) => p.id)));
+    const room = Math.max(0, data.event.num_teams - data.teams.length);
+    const valid: { p1: string; p2: string }[] = [];
+    for (const { p1, p2 } of pairs) {
+      if (!p1 || !p2 || p1 === p2 || used.has(p1) || used.has(p2)) continue;
+      used.add(p1);
+      used.add(p2);
+      valid.push({ p1, p2 });
+    }
+    const toAdd = valid.slice(0, room);
+    if (toAdd.length) await insertTeams(supabase, eventId, toAdd);
+    revalidateEvent(eventId);
+    return { added: toAdd.length, skipped: pairs.length - toAdd.length };
   });
 }
 
