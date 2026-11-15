@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getEventIdBySlug, getLiveMatch } from "@/lib/queries";
-import { offAirFallback } from "@/lib/compData";
+import { attachMatchPlayers, offAirFallback } from "@/lib/compData";
 import { OverlayScoreboard } from "@/components/OverlayScoreboard";
 
 export const dynamic = "force-dynamic";
@@ -32,5 +32,7 @@ export default async function OverlayPage({ searchParams }: Props) {
     // duplication matters).
     if (!initial && eventId) initial = await offAirFallback(supabase, eventId, court);
   }
+  // Off air: resolve the waiting match's players so the "Starting Soon" card can show who's up next.
+  if (initial && !initial.is_live) initial = await attachMatchPlayers(supabase, initial);
   return <OverlayScoreboard initial={initial} matchId={matchId} eventId={eventId} courtId={matchId ? undefined : court} showBackdrop={bg === "1"} />;
 }

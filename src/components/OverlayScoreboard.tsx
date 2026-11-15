@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { DEFAULT_MATCH_SETS, type Match } from "@/lib/database.types";
+import { DEFAULT_MATCH_SETS } from "@/lib/database.types";
+import type { OverlayMatch, OverlayPlayer } from "@/lib/compData";
 import { useLiveMatch, useTick } from "@/lib/useLiveMatch";
 import { formatStartLine, formatTimer, matchElapsedSeconds } from "@/lib/format";
 import { MEDIA_PARTNER_LOGOS, SPONSOR_LOGOS } from "@/lib/config";
@@ -65,9 +66,48 @@ function LogoStep({ src, height, shape = "circle" }: { src: string; height: numb
  * before looping back to the event info. Each one getting the whole screen to itself (instead of
  * sharing a small card) is what lets it run this big.
  */
-function OffAirTicker({ match, isEastLiga }: { match: Match | null; isEastLiga: boolean }) {
+/** One player: photo (or initials disc) above their name, for the "Siap main" step. */
+function PlayerFace({ player, accentClass }: { player: OverlayPlayer; accentClass: string }) {
+  const initials = player.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+  return (
+    <div className="flex flex-col items-center gap-3 w-[220px]">
+      {player.photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- player photo from storage, overlay has no Next Image loader
+        <img src={player.photoUrl} alt="" referrerPolicy="no-referrer" className="w-[180px] h-[180px] rounded-full object-cover object-top bg-indigo" />
+      ) : (
+        <div className={`w-[180px] h-[180px] rounded-full bg-indigo flex items-center justify-center font-display font-bold text-[56px] ${accentClass}`}>
+          {initials || "?"}
+        </div>
+      )}
+      <div className="font-display font-bold text-[24px] text-snow text-center leading-tight uppercase">{player.name}</div>
+    </div>
+  );
+}
+
+/** Both sides of a team, stacked when there are two players (a pair). */
+function TeamFaces({ players, name, accentClass }: { players: OverlayPlayer[] | undefined; name: string; accentClass: string }) {
+  if (players?.length) {
+    return (
+      <div className="flex items-start gap-8">
+        {players.map((p, i) => (
+          <PlayerFace key={i} player={p} accentClass={accentClass} />
+        ))}
+      </div>
+    );
+  }
+  return <div className="font-display font-bold text-[40px] text-snow uppercase text-center max-w-[460px]">{name}</div>;
+}
+
+function OffAirTicker({ match, isEastLiga }: { match: OverlayMatch | null; isEastLiga: boolean }) {
   const dateLine = match?.starts_at ? formatStartLine(match.starts_at, match.ends_at) : null;
   const dateClass = isEastLiga ? "text-win" : "text-volt";
+  const accentClass = isEastLiga ? "text-win" : "text-volt";
+  const hasPlayers = !!(match?.team_a_players?.length || match?.team_b_players?.length);
 
   const steps = useMemo((): TickerStep[] => {
     const list: TickerStep[] = [
@@ -91,6 +131,21 @@ function OffAirTicker({ match, isEastLiga }: { match: Match | null; isEastLiga: 
         ),
       },
     ];
+    if (hasPlayers) {
+      list.push({
+        ms: 5000,
+        node: (
+          <div className="flex flex-col items-center gap-10">
+            <div className="font-sans font-bold text-[22px] tracking-[0.14em] uppercase text-snow/45">Siap main</div>
+            <div className="flex items-center gap-14">
+              <TeamFaces players={match?.team_a_players} name={match?.team_a_name ?? "Team A"} accentClass={accentClass} />
+              <div className="font-display font-bold text-[40px] text-snow/30">VS</div>
+              <TeamFaces players={match?.team_b_players} name={match?.team_b_name ?? "Team B"} accentClass={accentClass} />
+            </div>
+          </div>
+        ),
+      });
+    }
     for (const src of SPONSOR_LOGOS) list.push({ ms: 2000, node: <LogoStep src={src} height={260} /> });
     for (const src of MEDIA_PARTNER_LOGOS) {
       list.push({
@@ -104,14 +159,18 @@ function OffAirTicker({ match, isEastLiga }: { match: Match | null; isEastLiga: 
       });
     }
     return list;
-  }, [match, dateLine, dateClass]);
+  }, [match, dateLine, dateClass, hasPlayers, accentClass]);
 
   const [index, setIndex] = useState(0);
   useEffect(() => setIndex(0), [steps.length]); // a match loading in/out shouldn't land on an out-of-range step
   useEffect(() => {
+    // Depending on `steps.length` (not `steps`) matters: `steps` gets a new reference on every 1.5s
+    // live-match poll even when its content is unchanged, which would clear and restart this timer
+    // before it ever fires, freezing the ticker on step 0.
     const id = setTimeout(() => setIndex((i) => (i + 1) % steps.length), steps[index]?.ms ?? 2000);
     return () => clearTimeout(id);
-  }, [index, steps]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally excludes `steps`, see above
+  }, [index, steps.length]);
 
   return (
     <div className="relative w-full h-full flex items-center justify-center">
@@ -129,7 +188,7 @@ function OffAirTicker({ match, isEastLiga }: { match: Match | null; isEastLiga: 
   );
 }
 
-function StartingSoonCard({ match, isEastLiga }: { match: Match | null; isEastLiga: boolean }) {
+function StartingSoonCard({ match, isEastLiga }: { match: OverlayMatch | null; isEastLiga: boolean }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center">
       <div className="pt-12 flex flex-col items-center gap-4">
@@ -154,13 +213,13 @@ export function OverlayScoreboard({
   courtId,
   showBackdrop,
 }: {
-  initial: Match | null;
+  initial: OverlayMatch | null;
   matchId?: string;
   eventId?: string;
   courtId?: string;
   showBackdrop: boolean;
 }) {
-  const match = useLiveMatch(initial, matchId, eventId, courtId);
+  const match = useLiveMatch(initial, matchId, eventId, courtId) as OverlayMatch | null;
   const live = !!match?.is_live;
   useTick(!!match?.timer_running);
   const timer = match ? formatTimer(matchElapsedSeconds(match)) : "00:00";

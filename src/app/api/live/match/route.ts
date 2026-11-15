@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { createClient } from "@/lib/supabase/server";
-import { offAirFallback } from "@/lib/compData";
+import { attachMatchPlayers, offAirFallback } from "@/lib/compData";
 import { normalizeDoc } from "@/lib/server/mongo/utils";
 
 export async function GET(req: NextRequest) {
@@ -10,17 +10,18 @@ export async function GET(req: NextRequest) {
     const matchId = searchParams.get("matchId");
     const eventId = searchParams.get("eventId");
     const courtId = searchParams.get("courtId");
+    const supabase = await createClient();
 
     const db = await getDb();
     const coll = db.collection("matches");
 
     if (matchId) {
-      const match = await coll.findOne({
+      const found = await coll.findOne({
         $or: [{ _id: matchId }, { id: matchId }],
       } as any);
-      return NextResponse.json({
-        match: match ? normalizeDoc(match) : null,
-      });
+      let match = found ? normalizeDoc(found) : null;
+      if (match && !match.is_live) match = await attachMatchPlayers(supabase, match);
+      return NextResponse.json({ match });
     }
 
     const limitParam = searchParams.get("limit");
@@ -41,9 +42,9 @@ export async function GET(req: NextRequest) {
     let match = formatted.length > 0 ? formatted[0] : null;
 
     if (!match && eventId) {
-      const supabase = await createClient();
       match = await offAirFallback(supabase, eventId, courtId || undefined);
     }
+    if (match && !match.is_live) match = await attachMatchPlayers(supabase, match);
 
     const response = NextResponse.json({ match, matches: formatted });
     response.headers.set(

@@ -123,6 +123,26 @@ export async function offAirFallback(supabase: AnySupa, eventId: string, courtId
   });
 }
 
+export type OverlayPlayer = { name: string; photoUrl: string | null };
+export type OverlayMatch = Match & { team_a_players?: OverlayPlayer[]; team_b_players?: OverlayPlayer[] };
+
+/**
+ * Who's about to play, for the overlay's "Starting Soon" card: each side's player name + photo (when
+ * they have one), resolved from the scheduled match's own team_a/b_player_ids. Only worth the extra
+ * query while off air — a live match's lower third already names the teams.
+ */
+export async function attachMatchPlayers(supabase: AnySupa, match: Match): Promise<OverlayMatch> {
+  const ids = [...(match.team_a_player_ids ?? []), ...(match.team_b_player_ids ?? [])];
+  if (!ids.length) return match;
+  const { data: players } = await supabase.from("players").select("id, name, photo_url").in("id", ids);
+  const byId = new Map<string, Pick<Player, "id" | "name" | "photo_url">>(
+    (players ?? []).map((p: Pick<Player, "id" | "name" | "photo_url">) => [p.id, p]),
+  );
+  const resolve = (pids: string[] | null | undefined): OverlayPlayer[] =>
+    (pids ?? []).map((id) => ({ name: byId.get(id)?.name ?? "?", photoUrl: byId.get(id)?.photo_url ?? null }));
+  return { ...match, team_a_players: resolve(match.team_a_player_ids), team_b_players: resolve(match.team_b_player_ids) };
+}
+
 /** UTC ISO -> "HH:MM" WIB, for <input type="time">. */
 export function isoToWibTime(iso: string | null): string {
   if (!iso) return "";
