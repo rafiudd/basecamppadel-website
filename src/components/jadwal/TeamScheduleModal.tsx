@@ -26,7 +26,10 @@ export function TeamScheduleModal({ name, rows, onClose }: { name: string; rows:
         <div className="flex flex-col gap-0.5">
           {rows.map((r, i) => (
             <div key={i} className="flex items-center gap-3 py-2.5 border-t border-ink/8 first:border-t-0">
-              <div className="flex-none w-16 text-[10px] font-bold text-ink/45 uppercase tracking-wide truncate">{r.label}</div>
+              <div className="flex-none w-16 text-[10px] font-bold text-ink/45 uppercase tracking-wide truncate">
+                {r.label}
+                {r.round != null && <span className="block normal-case font-semibold text-ink/35">Ronde {r.round}</span>}
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold truncate">vs {r.opponent}</div>
               </div>

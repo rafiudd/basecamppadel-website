@@ -231,7 +231,7 @@ export function MatchTab({
             </div>
 
             <div className={`grid gap-2.5 ${rows.length > 1 ? "sm:grid-cols-2" : ""}`}>
-              {rows.map((g, idx) => (
+              {[...rows].sort((a, b) => a.group.localeCompare(b.group)).map((g, idx) => (
                 <MatchCard key={idx} title={g.group} subtitle={g.court} status={g.status} team1={g.team1} team2={g.team2} onTeamClick={setOpenKey} />
               ))}
             </div>

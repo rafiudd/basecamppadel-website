@@ -89,6 +89,8 @@ export interface GroupMatch {
 /** One match in a kompetisi team's own history — "lihat jadwal" popup, same idea as a mabar pair's UnitMatchRow. */
 export interface TeamMatchRow {
   label: string;
+  /** Group-stage queue position within this team's group (1st match on its court, 2nd, ...); unset for knockout rows. */
+  round?: number;
   opponent: string;
   mine: number | null;
   theirs: number | null;
@@ -643,11 +645,13 @@ function mapCompetitionToMatchesData(data: CompetitionData): EventMatchesData {
     .sort((a, b) => (a.starts_at ?? "").localeCompare(b.starts_at ?? ""));
   for (const m of historyMatches) {
     const label = m.stage === "group" ? `Grup ${m.group_label ?? ""}` : STAGE_LABEL[m.stage as KoStage] ?? "Final";
+    const round = m.stage === "group" ? slotByMatchId.get(m.id) : undefined;
     const scored = m.status === "finished";
     const addRow = (teamId: string, oppId: string, mine: number, theirs: number) => {
       if (!teamSchedules[teamId]) teamSchedules[teamId] = { name: teamNameOf(teams, teamId), rows: [] };
       teamSchedules[teamId].rows.push({
         label,
+        round,
         opponent: teamNameOf(teams, oppId),
         mine: scored ? mine : null,
         theirs: scored ? theirs : null,
