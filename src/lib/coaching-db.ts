@@ -96,13 +96,25 @@ export async function getCoaches(): Promise<Coach[]> {
 // ------------------------------------------------------------- Sessions
 export const SESSIONS_PAGE_SIZE = 15;
 
-/** Number of coaching sessions per status tab — counted in the database, nothing loaded. */
-export async function countCoachingSessionsByStatus(): Promise<Record<SessionTab, number>> {
+/** Session ids a coach is assigned to (has a group in), via coaching_groups.coach_id. */
+async function getCoachSessionIds(supabase: Awaited<ReturnType<typeof createClient>>, coachId: string): Promise<string[]> {
+  const { data } = await supabase.from("coaching_groups").select("session_id").eq("coach_id", coachId);
+  return [...new Set((data ?? []).map((g) => g.session_id))];
+}
+
+/**
+ * Number of coaching sessions per status tab — counted in the database, nothing loaded. Pass
+ * `coachId` to count only the sessions that coach is assigned to (a coach's own view).
+ */
+export async function countCoachingSessionsByStatus(coachId?: string | null): Promise<Record<SessionTab, number>> {
   const supabase = await createClient();
+  const sessionIds = coachId ? await getCoachSessionIds(supabase, coachId) : null;
   const counts = await Promise.all(
-    SESSION_TABS.map((t) =>
-      supabase.from("coaching_sessions").select("id", { count: "exact", head: true }).eq("status", TAB_STATUS[t]),
-    ),
+    SESSION_TABS.map((t) => {
+      let q = supabase.from("coaching_sessions").select("id", { count: "exact", head: true }).eq("status", TAB_STATUS[t]);
+      if (sessionIds) q = q.in("id", sessionIds.length ? sessionIds : ["__none__"]);
+      return q;
+    }),
   );
   return Object.fromEntries(SESSION_TABS.map((t, i) => [t, counts[i].count ?? 0])) as Record<SessionTab, number>;
 }
@@ -126,15 +138,21 @@ export async function getCoachingSessionSummary(sessionId: string): Promise<Coac
 export async function getCoachingSessionsPage(
   status: SessionStatus,
   query: SessionListQuery,
+  coachId?: string | null,
 ): Promise<{ rows: CoachingSessionSummary[]; total: number; page: number; totalPages: number }> {
   const db = await getDb();
   const sessionsColl = db.collection("coaching_sessions");
+  const supabase = await createClient();
 
   const match: Document = { status };
   const term = query.q.trim();
   if (term) {
     const rx = { $regex: term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
     match.$or = [{ title: rx }, { venue_name: rx }];
+  }
+  if (coachId) {
+    const sessionIds = await getCoachSessionIds(supabase, coachId);
+    match.$expr = { $in: [{ $ifNull: ["$id", { $toString: "$_id" }] }, sessionIds.length ? sessionIds : ["__none__"]] };
   }
 
   const total = await sessionsColl.countDocuments(match);
@@ -178,7 +196,6 @@ export async function getCoachingSessionsPage(
     ])
     .toArray();
 
-  const supabase = await createClient();
   const sessions = docs.map((d) => normalizeDoc(d) as CoachingSession);
   return { rows: await summarizeSessions(supabase, sessions), total, page, totalPages };
 }

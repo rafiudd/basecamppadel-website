@@ -10,8 +10,13 @@ import { MOBILE_NAV, MOBILE_NAV_MORE, isActive, navFor } from "./nav";
 /** Phone tab bar, fixed to the bottom (hidden from md up, where the side menu shows). */
 export function AdminBottomNav({ role }: { role: StaffRole }) {
   const pathname = usePathname();
-  const navItems = navFor(role, MOBILE_NAV);
-  const moreItems = navFor(role, MOBILE_NAV_MORE);
+  const primary = navFor(role, MOBILE_NAV);
+  const secondary = navFor(role, MOBILE_NAV_MORE);
+  // A role with nothing pinned (e.g. coach: only Coaching, which lives in the overflow list) gets
+  // its accessible item(s) shown directly instead of hidden behind a "Lainnya" button with nothing
+  // else competing for space.
+  const navItems = primary.length > 0 ? primary : secondary;
+  const moreItems = primary.length > 0 ? secondary : [];
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const moreOn = moreItems.some((l) => isActive(pathname, l.href));
